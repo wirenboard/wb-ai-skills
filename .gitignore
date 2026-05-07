@@ -1,0 +1,35 @@
+# Bun / node
+node_modules/
+.bun/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs / runtime
+*.log
+*.pid
+
+# Local config (содержит секреты — пароли SSH, токены)
+.mcp.json
+
+# Claude Code project state
+.claude/projects/
+.claude/settings.local.json
+
+# opencode local
+.opencode/
+
+# Build artefacts (если когда-нибудь появятся)
+dist/
+build/
+
+# Локальные тестовые скрипты пользователя
+/scratch/
+/tmp/
+/playground/
+
+# Внутренний анализ (не для публикации)
+/wb-ai-helper-analysis.md
