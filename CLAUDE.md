@@ -58,6 +58,7 @@ No external dependencies except `@modelcontextprotocol/sdk`, `zod` and `@types/b
 | `WB_SSH_PASSWORD` | `wirenboard` | SSH password |
 | `WB_SSH_KEY` | — | path to private key (alternative to password) |
 | `WB_DISCOVERY_INTERVAL` | `15000` | mDNS scan period, ms |
+| `WB_CHART_FORMAT` | — | `svg` forces wb_history_chart to write an SVG file instead of Mermaid (for TUI clients). Unset / `mermaid` / `auto` — Mermaid (default). |
 
 ## skills — structure
 

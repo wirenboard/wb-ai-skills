@@ -168,6 +168,7 @@ Note the differences vs Claude Code:
 | `WB_SSH_PASSWORD` | `wirenboard` | SSH password (used if no key) |
 | `WB_SSH_KEY` | — | Path to a private key (preferred over password) |
 | `WB_DISCOVERY_INTERVAL` | `15000` | mDNS scan period in ms |
+| `WB_CHART_FORMAT` | — | `svg` forces `wb_history_chart` to write an SVG file (auto path under `/tmp/wb-charts/`) instead of emitting Mermaid. Useful for TUI clients that don't render Mermaid (Claude Code CLI, opencode TUI). Unset / `mermaid` / `auto` keep the default Mermaid output for browser clients. |
 
 ### 6. Verify
 

@@ -129,6 +129,7 @@ Job script and log live in `/mnt/data/ai/wb-ai-skills/jobs/<id>.{sh,log}`. Logs 
 | `WB_SSH_PASSWORD` | `wirenboard` | SSH password (used only if `WB_SSH_KEY` is unset) |
 | `WB_SSH_KEY` | — | Path to private key (preferred) |
 | `WB_DISCOVERY_INTERVAL` | `15000` | mDNS scan period in ms |
+| `WB_CHART_FORMAT` | — | `svg` forces `wb_history_chart` to write an SVG file (auto path under `/tmp/wb-charts/`) instead of returning Mermaid. Useful for TUI clients (Claude Code CLI, opencode TUI). Unset / `mermaid` / `auto` keeps Mermaid as default. |
 
 ## Architecture
 

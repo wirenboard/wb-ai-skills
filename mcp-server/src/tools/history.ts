@@ -122,7 +122,18 @@ export function registerHistoryTools(server: McpServer, ctx: Ctx) {
     const rpc = await ctx.ssh.mqttRpc(c, 'db_logger', 'history', 'get_values', params, 30) as HistoryRpcResult
     const series = rpcToSeries(channels, rpc)
     const totalPoints = series.reduce((a, s) => a + s.points.length, 0)
-    const useSvg = outputPath != null || format === 'svg'
+    // WB_CHART_FORMAT env: server-side override. `svg` forces SVG even when the call asks for mermaid;
+    // useful for TUI clients (Claude Code CLI, opencode TUI) that don't render Mermaid blocks.
+    // `mermaid` / `auto` / unset — keep the per-call default (mermaid).
+    const envFormat = (process.env['WB_CHART_FORMAT'] ?? '').toLowerCase()
+    const envForceSvg = envFormat === 'svg'
+    let resolvedOutputPath = outputPath
+    if (envForceSvg && !outputPath && format !== 'svg') {
+      // auto-generate a path so the user gets an actual file to open
+      const ts = new Date().toISOString().replace(/[:.]/g, '-')
+      resolvedOutputPath = `/tmp/wb-charts/chart-${ts}.svg`
+    }
+    const useSvg = resolvedOutputPath != null || format === 'svg' || envForceSvg
     if (!useSvg) {
       const mermaid = renderMermaidChart(series, tsFrom, tsTo, title ?? '', ylabel ?? '')
       return text({
@@ -136,9 +147,23 @@ export function registerHistoryTools(server: McpServer, ctx: Ctx) {
       })
     }
     const svg = await renderHistoryChart(series, tsFrom, tsTo, title ?? '', ylabel ?? '', chartType as ChartType)
-    if (outputPath) {
-      await writeFile(outputPath, svg, 'utf8')
-      return text({ ok: true, format: 'svg', outputPath, svgBytes: svg.length, totalPoints, channels: channels.length, from: tsFrom, to: tsTo })
+    if (resolvedOutputPath) {
+      // Ensure parent dir exists for auto-generated paths under /tmp/wb-charts/.
+      const { mkdir } = await import('node:fs/promises')
+      const { dirname } = await import('node:path')
+      await mkdir(dirname(resolvedOutputPath), { recursive: true })
+      await writeFile(resolvedOutputPath, svg, 'utf8')
+      return text({
+        ok: true,
+        format: 'svg',
+        outputPath: resolvedOutputPath,
+        svgBytes: svg.length,
+        totalPoints,
+        channels: channels.length,
+        from: tsFrom,
+        to: tsTo,
+        ...(envForceSvg && !outputPath ? { note: 'Auto-saved because WB_CHART_FORMAT=svg is set in MCP server env. Pass outputPath= to override the path.' } : {}),
+      })
     }
     if (svg.length > 200_000) {
       return err(`SVG too large (${svg.length} bytes) for an inline response. Pass outputPath to write it to a file, or shorten the period / reduce the channel count.`)

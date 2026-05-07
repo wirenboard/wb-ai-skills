@@ -114,7 +114,7 @@ Add to `~/.claude.json`:
     "wiren-board": {
       "command": "bun",
       "args": ["run", "/ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts"],
-      "env": { "WB_SSH_USER": "root", "WB_SSH_PASSWORD": "wirenboard" }
+      "env": { "WB_SSH_USER": "root", "WB_SSH_PASSWORD": "wirenboard", "WB_CHART_FORMAT": "svg" }
     }
   }
 }
