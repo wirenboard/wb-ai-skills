@@ -1,6 +1,6 @@
 ---
 name: wb-zigbee
-description: Zigbee devices on WB — discovery, pairing, control via zigbee2mqtt.
+description: Zigbee devices on WB via zigbee2mqtt — bridge/state liveness probe, native vs Docker install detection, wb-mqtt-zigbee vs wb-zigbee2mqtt converter recognition, IEEE-address (0x...) and zigbee_<id> topic patterns, pairing, control, OTA.
 allowed-tools: Bash Read WebFetch
 ---
 
