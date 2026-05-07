@@ -12,7 +12,7 @@ node_modules/
 *.log
 *.pid
 
-# Local config (содержит секреты — пароли SSH, токены)
+# Local config (contains secrets — SSH passwords, tokens)
 .mcp.json
 
 # Claude Code project state
@@ -22,15 +22,15 @@ node_modules/
 # opencode local
 .opencode/
 
-# Build artefacts (если когда-нибудь появятся)
+# Build artefacts (if any)
 dist/
 build/
 
-# Локальные тестовые скрипты пользователя
+# Local user scratch
 /scratch/
 /tmp/
 /playground/
 
-# Внутренний анализ (не для публикации)
+# Internal analysis (not for publication)
 /wb-ai-helper-analysis.md
 /PLAN.md

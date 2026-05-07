@@ -4,18 +4,17 @@ Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning 
 
 ## [Unreleased]
 
-### Fixed
-- `wb_modbus_add_devices` now reads the template of every device being added
-  and copies parameter default values (`device.parameters[].default`) into the
-  device record. Without this, `wb-mqtt-serial` schema validation failed on
-  required parameters (typical case — WB-MAI6 `in1_type..in6_type`), and the
-  whole config was rejected → polling of the entire bus didn't start. The
-  `added[]` report now includes a `paramDefaults` field (number of copied
-  parameters).
-
-## [0.1.0] — 2026-05-07
+## [0.1.0] — 2026-05-08
 
 First public release. Tested on A25NDEMJ (wb7, wb-2410/wb-2602) and A2V6W7I6 (wb8, wb-2507).
+
+### Versioning
+
+- Single source of truth — root `VERSION` file. The MCP server reads it at
+  startup and reports it in the standard MCP `initialize` handshake (visible
+  in Claude Code under `/mcp` as `wiren-board v<VERSION>`). Master skill
+  `wiren-board` (both bash and mcp flavors) prints the same version in its
+  header. `mcp-server/package.json` is kept in sync manually.
 
 ### MCP server
 
@@ -46,6 +45,7 @@ First public release. Tested on A25NDEMJ (wb7, wb-2410/wb-2602) and A2V6W7I6 (wb
 - **No external SQLite/npm bindings:** the MCP server uses only `@modelcontextprotocol/sdk`, `zod`, `vega`, `vega-lite`. State — JSON files in `~/.wb-mcp/`.
 - **MQTT via system utilities:** `mosquitto_sub -F '%t\t%p'` (TAB separator — correct parsing of control names with spaces like `Input 0`, `Input 0 counter`).
 - **Security:** validation of invalid wildcards (`+` inside a MQTT topic level), jobId regex validation, protection from shell injection via `shellQuote`.
+- **Charts default to inline Mermaid** (`xychart-beta`, single Y-axis, downsampled to ~30 points) so `wb_history_chart` renders directly in browser-based Claude Code. `format="svg"` / `outputPath=` (or env `WB_CHART_FORMAT=svg`) switches to Vega-Lite SVG with line/bar/area/point/histogram/heatmap/boxplot, dual Y-axis (2 units) and normalization (3+ units). The env override exists for TUI clients that don't render Mermaid blocks (Claude Code CLI, opencode TUI) — set once in `.mcp.json`, every chart goes to `/tmp/wb-charts/<ts>.svg`.
 
 ### Key architectural decisions and caught domain bugs
 
@@ -58,6 +58,7 @@ During development and testing on live controllers, around two dozen bugs were c
 - **rules_save/load**: an absolute path was interpreted by RPC as relative → created a file in `/etc/wb-rules/etc/wb-rules/` — fixed via relative path.
 - **modbus_scan**: `wb-mqtt-serial/port/Scan` silently skipped live WB devices (observed on WB-MAP6S) — switched to `wb-device-manager/bus-scan/Start`.
 - **modbus_template**: scanning 250+ files via jq was timing out — switched to mapping via RPC `config/Load.types`.
+- **modbus_add_devices**: `wb-mqtt-serial` schema validation rejected the whole config when a required parameter (typical: WB-MAI6 `in1_type..in6_type`) had no value, halting polling of the entire bus. Now reads the template of every device being added and copies `device.parameters[].default` into the device record; the `added[]` report includes a `paramDefaults` count.
 
 [Unreleased]: https://github.com/wirenboard/wb-ai-skills/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/wirenboard/wb-ai-skills/releases/tag/v0.1.0

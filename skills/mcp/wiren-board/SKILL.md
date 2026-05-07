@@ -6,6 +6,8 @@ allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 
 # wiren-board (MCP)
 
+**Skill set version:** 0.1.0 · flavor: mcp · single source of truth: `VERSION` at the repo root. The MCP server reports the same version via the standard MCP `initialize` handshake — visible in Claude Code under `/mcp` as `wiren-board v<VERSION>`. Skill set and server are guaranteed to match because both read the same file.
+
 Master skill for working with Wiren Board controllers via `wb_*` MCP tools. All controller operations go through MCP, not directly via `ssh`/`mosquitto_*`/`avahi-browse`. Load this on any mention of WB controllers, MQTT topics, devices on the bus, automation rules, hardware configuration.
 
 ## Tool routing

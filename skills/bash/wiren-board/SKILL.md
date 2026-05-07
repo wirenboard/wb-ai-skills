@@ -6,6 +6,8 @@ allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 
 # wiren-board
 
+**Skill set version:** 0.1.0 · flavor: bash · single source of truth: `VERSION` at the repo root. To check at runtime: `cat $(dirname $(readlink -f $0))/../../../VERSION` from inside the installed skill, or run `cat VERSION` in the repo. The version of this skill set and the MCP server (when used) are kept in sync by being read from the same file.
+
 Master skill for working with Wiren Board controllers from the Claude Code CLI. All operations go through Bash: SSH, mosquitto_sub, mosquitto_pub, avahi-browse, scp. Load this on any mention of WB controllers, MQTT topics, devices on the bus, automation rules, hardware configuration.
 
 ## Discovering controllers

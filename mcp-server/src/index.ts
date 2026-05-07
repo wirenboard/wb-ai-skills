@@ -6,6 +6,9 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
 import { SshPool } from './lib/ssh.ts'
 import { Discovery } from './lib/discovery.ts'
@@ -29,6 +32,17 @@ const SSH_KEY = process.env['WB_SSH_KEY'] ?? ''
 const SSH_PASSWORD = SSH_KEY ? '' : (process.env['WB_SSH_PASSWORD'] ?? 'wirenboard')
 const DISCOVERY_INTERVAL = Number(process.env['WB_DISCOVERY_INTERVAL']) || 15000
 
+// Single source of truth — root VERSION file. Reported to MCP clients via initialize().
+function readVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url))
+    return readFileSync(resolve(here, '../../VERSION'), 'utf8').trim()
+  } catch {
+    return '0.0.0+unknown'
+  }
+}
+const VERSION = readVersion()
+
 async function main() {
   const ssh = new SshPool({ user: SSH_USER, password: SSH_PASSWORD || undefined, keyPath: SSH_KEY || undefined })
   const discovery = new Discovery()
@@ -36,7 +50,7 @@ async function main() {
 
   const ctx: Ctx = { ssh, discovery }
 
-  const server = new McpServer({ name: 'wiren-board', version: '0.1.0' })
+  const server = new McpServer({ name: 'wiren-board', version: VERSION })
 
   registerDiscoveryTools(server, ctx)
   registerSshTools(server, ctx)
@@ -53,7 +67,7 @@ async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
   const ts = () => new Date().toISOString()
-  console.error(`[wb-mcp ${ts()}] Started: ${SSH_USER}@*, discovery ${DISCOVERY_INTERVAL}ms`)
+  console.error(`[wb-mcp ${ts()}] Started v${VERSION}: ${SSH_USER}@*, discovery ${DISCOVERY_INTERVAL}ms`)
 
   // Graceful shutdown: stop the discovery timer so the event loop can exit;
   // ManualStore persists on every change (via atomic rename), no separate flush needed.
