@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -43,7 +43,11 @@ export class ManualStore {
   }
 
   private save() {
+    // Атомарная запись: сначала во временный файл рядом, потом rename.
+    // Защищает от полу-записи при SIGINT/kill в процессе сохранения.
     mkdirSync(dirname(this.path), { recursive: true })
-    writeFileSync(this.path, JSON.stringify([...this.entries.values()], null, 2))
+    const tmp = `${this.path}.tmp.${process.pid}`
+    writeFileSync(tmp, JSON.stringify([...this.entries.values()], null, 2))
+    renameSync(tmp, this.path)
   }
 }

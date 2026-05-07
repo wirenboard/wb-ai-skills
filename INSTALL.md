@@ -29,7 +29,7 @@ sudo apt install avahi-utils mosquitto-clients sshpass jq
 ### 2. Клонирование и установка скиллов
 
 ```bash
-git clone <repo-url> wb-ai-integration
+git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration
 cd wb-ai-integration
 
 # Глобально для Claude Code:
@@ -90,7 +90,7 @@ curl -fsSL https://bun.sh/install | bash
 ### 2. Установка MCP-сервера
 
 ```bash
-git clone <repo-url> wb-ai-integration
+git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration
 cd wb-ai-integration/mcp-server
 bun install
 ```
@@ -246,11 +246,13 @@ ssh root@<host> 'curl -sI http://deb.wirenboard.com/wb7/bullseye/dists/stable/In
 Удали созданные файлы/симлинки в директории, которую `install-skills.sh` печатает в конце.
 
 ```bash
-# Claude Code (global)
-rm -rf ~/.claude/skills/wiren-board ~/.claude/skills/wb-mqtt-serial …  # каждый по имени
+# Claude Code (global) — install-skills.sh кладёт симлинки на каталоги:
+unlink ~/.claude/skills/wiren-board   # каждый по имени
+# или массово:
+find ~/.claude/skills -maxdepth 1 -type l -lname '*wb-ai-integration/skills/*' -delete
 
-# opencode (global)
-rm ~/.config/opencode/agents/wiren-board.md …
+# opencode (global) — это плоские .md файлы:
+rm ~/.config/opencode/agents/wiren-board.md   # каждый по имени
 ```
 
 ### MCP-сервер

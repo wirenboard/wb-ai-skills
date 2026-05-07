@@ -77,7 +77,7 @@ ssh root@<HOST> "docker logs --tail 1000 --timestamps <container>" 2>&1 > /tmp/<
 ssh root@<HOST> "journalctl -p err --since '7 days ago' --no-pager" > /tmp/errors-7d.log
 
 # Снимок состояния MQTT (для багов про устройства):
-ssh root@<HOST> "mosquitto_sub -t '/devices/+/meta/name' -W 5 -v" > /tmp/mqtt-devices.txt
+ssh root@<HOST> "mosquitto_sub -F '%t\t%p' -t '/devices/+/meta/name' -W 5" > /tmp/mqtt-devices.txt
 ```
 
 В багрепорт прикладывай **архив + дополнительно собранные логи** под понятными именами, чтобы поддержка не искала.

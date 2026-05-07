@@ -41,11 +41,13 @@ export type AuditResult = {
 
 function parseRelease(s: string): ReleaseInfo {
   const out: ReleaseInfo = { raw: s }
+  // Снимаем кавычки если они есть: RELEASE_NAME="bullseye" → bullseye.
+  const unquote = (v: string): string => v.replace(/^["']|["']$/g, '')
   for (const line of s.split('\n')) {
     const eq = line.indexOf('=')
     if (eq < 0) continue
     const k = line.slice(0, eq).trim()
-    const v = line.slice(eq + 1).trim()
+    const v = unquote(line.slice(eq + 1).trim())
     if (k === 'RELEASE_NAME') out.name = v
     else if (k === 'SUITE') out.suite = v
     else if (k === 'TARGET') out.target = v
@@ -135,10 +137,12 @@ function diff(before: string[], after: string[]): { added: string[]; removed: st
 }
 
 export async function runDiffSnapshot(ssh: SshPool, c: Controller, beforePath: string): Promise<DiffResult> {
-  const before = JSON.parse(await ssh.readFile(c, beforePath, 1_000_000)) as {
-    manualPackages?: string[]
-    enabledUnits?: string[]
-    opt?: string[]
+  const raw = await ssh.readFile(c, beforePath, 1_000_000)
+  let before: { manualPackages?: string[]; enabledUnits?: string[]; opt?: string[] }
+  try {
+    before = JSON.parse(raw)
+  } catch (e) {
+    throw new Error(`runDiffSnapshot: snapshot ${beforePath} повреждён (невалидный JSON): ${(e as Error).message}`)
   }
   const a = await runAudit(ssh, c)
   const pkgs = diff(before.manualPackages ?? [], a.manualPackages)

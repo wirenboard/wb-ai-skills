@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { type Ctx, resolveController, text, SN } from '../helpers.ts'
+import { shellQuote } from '../lib/shell.ts'
 
 export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
   server.registerTool('wb_metrics', {
@@ -43,9 +44,10 @@ export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
     }),
   }, async ({ sn, unit, action }) => {
     const c = resolveController(ctx, sn)
-    const u = unit.replace(/'/g, `'\\''`)
+    if (!/^[A-Za-z0-9@._:\\-]+$/.test(unit)) return text({ error: `Invalid unit name "${unit}". Allowed: A-Za-z0-9, @, ., _, :, -.` })
+    const u = shellQuote(unit)
     if (action === 'status') {
-      const sh = `systemctl is-active '${u}' 2>/dev/null || true; echo ===WB-SD===; systemctl show '${u}' -p ActiveState,LoadState,SubState,UnitFileState,Result,ExecMainStatus,ExecMainExitTimestamp,ExecMainPID,ActiveEnterTimestamp --no-pager 2>/dev/null || true; echo ===WB-SD===; systemctl status '${u}' --no-pager -n 5 2>&1 || true`
+      const sh = `systemctl is-active ${u} 2>/dev/null || true; echo ===WB-SD===; systemctl show ${u} -p ActiveState,LoadState,SubState,UnitFileState,Result,ExecMainStatus,ExecMainExitTimestamp,ExecMainPID,ActiveEnterTimestamp --no-pager 2>/dev/null || true; echo ===WB-SD===; systemctl status ${u} --no-pager -n 5 2>&1 || true`
       const r = await ctx.ssh.exec(c, sh, 10000)
       const parts = r.stdout.split('===WB-SD===')
       const active = (parts[0] ?? '').trim()
@@ -70,14 +72,14 @@ export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
       })
     }
     if (action === 'cat') {
-      const r = await ctx.ssh.exec(c, `systemctl cat '${u}' 2>&1`, 10000)
+      const r = await ctx.ssh.exec(c, `systemctl cat ${u} 2>&1`, 10000)
       return text({ unit, content: r.stdout, ok: r.code === 0 })
     }
     if (action === 'list-deps') {
-      const r = await ctx.ssh.exec(c, `systemctl list-dependencies '${u}' --no-pager 2>&1`, 10000)
+      const r = await ctx.ssh.exec(c, `systemctl list-dependencies ${u} --no-pager 2>&1`, 10000)
       return text({ unit, dependencies: r.stdout, ok: r.code === 0 })
     }
-    const r = await ctx.ssh.exec(c, `systemctl ${action} '${u}' 2>&1; echo ===CODE=$?`, 30000)
+    const r = await ctx.ssh.exec(c, `systemctl ${action} ${u} 2>&1; echo ===CODE=$?`, 30000)
     const m = r.stdout.match(/===CODE=(\d+)/)
     const code = m ? Number(m[1]) : -1
     const output = m ? r.stdout.slice(0, r.stdout.lastIndexOf('===CODE=')).trim() : r.stdout
@@ -92,6 +94,7 @@ export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
     }),
   }, async ({ sn, pingTarget }) => {
     const c = resolveController(ctx, sn)
+    // Whitelist hostname/IP characters (RFC 1035 + IPv6) — shellQuote сверху как страховка.
     const safeTarget = pingTarget ? pingTarget.replace(/[^A-Za-z0-9.:_-]/g, '') : ''
     const sh = [
       'echo ===IP===',
@@ -102,7 +105,7 @@ export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
       "nmcli -t -f NAME,UUID,TYPE,DEVICE,STATE connection show 2>/dev/null",
       'echo ===NM_DEV===',
       "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device 2>/dev/null",
-      ...(safeTarget ? ['echo ===PING===', `ping -c1 -W2 ${safeTarget} 2>&1 | tail -2`] : []),
+      ...(safeTarget ? ['echo ===PING===', `ping -c1 -W2 ${shellQuote(safeTarget)} 2>&1 | tail -2`] : []),
     ].join('; ')
     const r = await ctx.ssh.exec(c, sh, 15000)
     const sec = (label: string) => {

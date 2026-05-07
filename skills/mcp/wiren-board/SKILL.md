@@ -127,10 +127,12 @@ allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 
 | Метод | Tool | params |
 |-------|------|--------|
-| `config/Load` | `wb_mqtt_rpc` или `wb_confed_load(path=/etc/wb-mqtt-serial.conf)` | `{}` |
-| `device/LoadConfig` | `wb_modbus_template` | `{device_id:"wb-mr6c_138"}` или полный набор по адресу |
+| `config/Load` (конфиг + `types[]` шаблонов) | `wb_mqtt_rpc` или `wb_confed_load(path=/etc/wb-mqtt-serial.conf)` | `{}` |
+| Шаблон устройства (channels/parameters/groups) | `wb_modbus_template` | `{device_type:"WB-MR6C"}` или `{device_type:"wb-mr6c"}` (mqtt-id, регистронезависимо) |
+| `device/LoadConfig` (параметры прошивки fw/model/parameters) | `wb_modbus_device_info` | `{device_id:"wb-mr6c_138"}` или полный набор по адресу |
 | `device/Probe` | `wb_modbus_probe` | `{path,baud_rate,slave_id}` |
-| `port/Scan` | `wb_modbus_scan` | `{path,baud_rate,mode:"all"}` (5-30 сек, у tool правильный таймаут внутри) |
+| Сканирование шины (через `wb-device-manager/bus-scan`) | `wb_modbus_scan` | `{port?, baud_rate?, scan_type:"extended"\|"standard"}` |
+| Авто-добавить найденное в конфиг | `wb_modbus_add_devices` | `{dryRun:true}` для предпросмотра |
 | `ports/Load` | `wb_modbus_ports` | `{}` |
 
 #### confed — редактор конфигов

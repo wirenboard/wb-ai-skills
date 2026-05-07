@@ -49,8 +49,9 @@ export class Discovery {
     return this.controllers.get(sn.toUpperCase())
   }
 
-  /** Find by SN (registry) or by hostname/IP among known controllers. */
-  getOrCreate(snOrHost: string): Controller | undefined {
+  /** Find by SN (registry) or by hostname/IP among known controllers.
+   *  Не создаёт новых записей — для добавления используй `addManual`. */
+  findByKey(snOrHost: string): Controller | undefined {
     const upper = snOrHost.toUpperCase()
     const byKey = this.controllers.get(upper)
     if (byKey) return byKey

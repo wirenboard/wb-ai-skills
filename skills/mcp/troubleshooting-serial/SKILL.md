@@ -35,14 +35,13 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 2. Жив ли драйвер: `wb_ssh_exec` `systemctl is-active wb-mqtt-serial` (или `wb_failed` — если в списке, всё плохо).
 
-3. Логи — масштаб + последние строки + гистограмма по slave_id (regex `device modbus:\\K\\d+` пропускает `[mqtt] connection lost`, `[serial client] Reading events failed` и т.п. — поэтому ВМЕСТЕ с гистограммой нужны и сырые последние строки):
+3. Логи — масштаб + последние строки + гистограмма по slave_id. `wb_logs` поддерживает `since`/`grep` — пользуйся ими (regex `device modbus:\\K\\d+` пропускает `[mqtt] connection lost`, `[serial client] Reading events failed` и т.п., поэтому ВМЕСТЕ с гистограммой нужны и сырые последние строки):
 
    ```
-   wb_logs sn=<SN> unit=wb-mqtt-serial priority=warning lines=30
-   wb_ssh_exec sn=<SN> cmd='journalctl -u wb-mqtt-serial -p warning --since "1 hour ago" --no-pager | grep -oP "device modbus:\\K\\d+" | sort | uniq -c | sort -rn'
+   wb_logs sn=<SN> unit=wb-mqtt-serial since="1 hour ago" priority=warning lines=30
+   wb_logs sn=<SN> unit=wb-mqtt-serial since="1 hour ago" priority=warning grep="device modbus:" lines=500
    ```
-
-   `wb_logs` сам не принимает `since` — окно времени задавай через `journalctl --since` в `wb_ssh_exec`. Для последних N строк — `wb_logs lines=N`.
+   Гистограмма по slave_id — постобработка вывода второго вызова локально (regex `device modbus:(\d+)` → count).
 
 4. **Debug — raw-пакеты. ВЫПОЛНЯЙ СРАЗУ, НЕ СПРАШИВАЯ.** Это безопасная операция — `wb_serial_debug` атомарно включает debug в `/etc/wb-mqtt-serial.conf`, рестартует драйвер, собирает journalctl за окно, **гарантированно** через `trap` возвращает `debug:false` и рестартует обратно (даже при ошибке посередине). Это **исключение** из общего правила «спрашивать перед рестартом wb-mqtt-serial» — рестарты входят в саму процедуру.
 

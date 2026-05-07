@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Интеграция Claude Code и opencode с контроллерами [Wiren Board](https://wirenboard.com). Три части:
 
-- `mcp-server/` — MCP-сервер (TypeScript на Bun) с 42 типизированными инструментами для управления WB по SSH/MQTT.
+- `mcp-server/` — MCP-сервер (TypeScript на Bun) с 43 типизированными инструментами для управления WB по SSH/MQTT.
 - `skills/bash/` — 21 скилл с Bash-рецептами (SSH + `mosquitto_*` + `avahi-browse`), работают без MCP.
 - `skills/mcp/` — 19 тонких скиллов, маршрутизирующих интенты на `wb_*` tools MCP-сервера.
 
@@ -48,7 +48,7 @@ bun --watch run src/index.ts # dev с авторестартом
 - Длинные операции (`apt`, `docker run/pull/build`, `wb-release -t/-y`) определяются регексом `LONG_COMMANDS_RE` в `helpers.ts:27` — используются для маршрутизации в фоновые задачи (`wb_ssh_exec_async`).
 - Описания инструментов и сообщения об ошибках — на русском (соответствует существующему стилю).
 
-42 инструмента в 11 группах: discovery (3) · ssh+files (4) · jobs (3) · mqtt (4) · mqtt-devices (3) · confed (2) · wb-rules (5) · history (2) · audit/state (3) · modbus/serial (6) · diagnostics (7). Полная таблица — в `mcp-server/README.md`.
+43 инструмента в 11 группах: discovery (3) · ssh+files (4) · jobs (3) · mqtt (4) · mqtt-devices (3) · confed (2) · wb-rules (5) · history (2) · audit/state (3) · modbus/serial (7) · diagnostics (7). Полная таблица — в `mcp-server/README.md`.
 
 ## Переменные окружения mcp-server
 

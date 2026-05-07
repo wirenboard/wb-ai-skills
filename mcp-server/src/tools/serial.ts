@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { type Ctx, resolveController, text, err, SN } from '../helpers.ts'
+import { shellQuote } from '../lib/shell.ts'
 
 type TplEntry = { type: string; 'mqtt-id': string; name: string; deprecated?: boolean; protocol?: string; hw?: Array<{ signature?: string }> }
 
@@ -61,8 +62,9 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
       if (mqttId) break
     }
     if (!mqttId) return err(`device_type="${device_type}" не найден в wb-mqtt-serial config/Load.types — попробуй wb_modbus_templates_list filter="${device_type}"`)
+    if (!/^[A-Za-z0-9._-]+$/.test(mqttId)) return err(`mqtt-id "${mqttId}" содержит недопустимые символы — отказ от чтения файла шаблона`)
     const path = `/usr/share/wb-mqtt-serial/templates/config-${mqttId}.json`
-    const cat = await ctx.ssh.exec(c, `cat ${path}`)
+    const cat = await ctx.ssh.exec(c, `cat ${shellQuote(path)}`)
     if (cat.code !== 0) return err(`cat ${path}: ${cat.stderr.trim()}`)
     let tpl: any
     try { tpl = JSON.parse(cat.stdout) } catch { return err(`Не удалось распарсить ${path}`) }
@@ -236,7 +238,8 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
     if (!stateRaw) return err('Нет данных скана. Сначала выполни wb_modbus_scan.')
     let state: any
     try { state = JSON.parse(stateRaw) } catch { return err('Не удалось распарсить /wb-device-manager/state JSON') }
-    const scanned = (state.devices ?? []).filter((d: any) => !d.bootloader_mode && d.device_signature)
+    const stateDevices = Array.isArray(state?.devices) ? state.devices : []
+    const scanned = stateDevices.filter((d: any) => !d.bootloader_mode && d.device_signature)
     // Дедуп по path:slave_id (повторные сканы могут дублировать)
     const seen = new Set<string>()
     const uniq = scanned.filter((d: any) => {
@@ -258,7 +261,8 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
     // 3. Загрузить confed-конфиг для записи (с schema)
     const confed = await ctx.ssh.mqttRpc(c, 'confed', 'Editor', 'Load', { path: '/etc/wb-mqtt-serial.conf' }, 10) as { content: { ports?: any[] } }
     const content = confed.content
-    const ports: any[] = content.ports ?? (content.ports = [])
+    if (!Array.isArray(content.ports)) content.ports = []
+    const ports: any[] = content.ports
     const idsByPort = new Map<string, Set<number>>()
     for (const p of ports) {
       const set = new Set<number>()

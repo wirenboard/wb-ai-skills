@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import type { Controller, ExecResult, SshAuth } from './types.ts'
+import { shellQuote } from './shell.ts'
 
 const DEFAULT_TIMEOUT = 30_000
 const SHORT_TIMEOUT = 10_000
@@ -65,7 +66,11 @@ export class SshPool {
   /** Subscribe with `-W <timeoutSec>` and parse "topic\tpayload" pairs.
    *  WB control names may contain spaces (e.g. WB-MR6C "Input 0", "Input 0 counter"),
    *  so we use TAB as the field separator instead of mosquitto_sub -v.
-   *  Captures stderr separately to surface invalid-topic errors (e.g. `+` inside a level). */
+   *  Captures stderr separately to surface invalid-topic errors (e.g. `+` inside a level).
+   *
+   *  Limitation: line-based parsing. If payload contains `\n`, the message will split
+   *  across lines and lose its topic — known case for WB is `meta`-JSON payloads,
+   *  but mosquitto_sub renders them as single-line JSON, so это не задевает. */
   async mqttListTopics(c: Controller, prefix: string, timeoutSec: number = 3): Promise<{ topic: string; payload: string }[]> {
     const t = shellQuote(prefix)
     const cmd = `mosquitto_sub -F '%t\\t%p' -t ${t} -W ${timeoutSec}`
@@ -83,15 +88,17 @@ export class SshPool {
     return out
   }
 
-  /** RPC over MQTT: subscribe to reply, publish request, parse JSON response. */
+  /** RPC over MQTT: subscribe to reply, publish request, parse JSON response.
+   *  Все user-controlled куски топика и payload проходят через shellQuote — даже
+   *  для «доверенных» драйверов это страховка от случайных `'`/`$()` в имени. */
   async mqttRpc(c: Controller, driver: string, service: string, method: string, params: unknown, timeoutSec: number = 10): Promise<unknown> {
     const id = randomId()
     const req = { id: 1, params }
-    const reqJson = JSON.stringify(req).replace(/'/g, `'\\''`)
+    const reqJson = JSON.stringify(req)
     const replyTopic = `/rpc/v1/${driver}/${service}/${method}/${id}/reply`
     const reqTopic = `/rpc/v1/${driver}/${service}/${method}/${id}`
     // Subscribe in background, sleep 0.2s to ensure subscription is active, publish, wait.
-    const sh = `mosquitto_sub -t '${replyTopic}' -C 1 -W ${timeoutSec} & SUB=$!; sleep 0.2; mosquitto_pub -t '${reqTopic}' -m '${reqJson}'; wait $SUB`
+    const sh = `mosquitto_sub -t ${shellQuote(replyTopic)} -C 1 -W ${timeoutSec} & SUB=$!; sleep 0.2; mosquitto_pub -t ${shellQuote(reqTopic)} -m ${shellQuote(reqJson)}; wait $SUB`
     const r = await this.exec(c, sh, (timeoutSec + 5) * 1000)
     const out = r.stdout.trim()
     if (!out) throw new Error(`mqtt rpc ${driver}/${service}/${method}: timeout (no reply in ${timeoutSec}s)`)
@@ -314,10 +321,6 @@ function runProcess(cmd: string, args: string[], timeoutMs: number, stdinData?: 
     }
     p.stdin.end()
   })
-}
-
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`
 }
 
 /** Extract a section between unique delimiter markers `<D><LABEL>\n...<D><NEXT>` or end-of-string. */

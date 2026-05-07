@@ -52,10 +52,24 @@ async function main() {
 
   const transport = new StdioServerTransport()
   await server.connect(transport)
-  console.error(`[wb-mcp] Started: ${SSH_USER}@*, discovery ${DISCOVERY_INTERVAL}ms`)
+  const ts = () => new Date().toISOString()
+  console.error(`[wb-mcp ${ts()}] Started: ${SSH_USER}@*, discovery ${DISCOVERY_INTERVAL}ms`)
+
+  // Graceful shutdown: остановить discovery-таймер, чтобы не висел event loop;
+  // ManualStore сохраняется при каждом изменении (атомарным rename), отдельно flush'ить не надо.
+  let shuttingDown = false
+  const shutdown = (signal: string) => {
+    if (shuttingDown) return
+    shuttingDown = true
+    console.error(`[wb-mcp ${ts()}] ${signal} received, shutting down`)
+    discovery.stop()
+    process.exit(0)
+  }
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+  process.on('SIGINT', () => shutdown('SIGINT'))
 }
 
 main().catch((e) => {
-  console.error('[wb-mcp] Fatal:', e)
+  console.error(`[wb-mcp ${new Date().toISOString()}] Fatal:`, e)
   process.exit(1)
 })

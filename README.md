@@ -25,7 +25,7 @@
 Минимальный путь для нетерпеливых:
 
 ```bash
-git clone <repo> wb-ai-integration && cd wb-ai-integration
+git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration && cd wb-ai-integration
 
 # Bash-flavor для Claude Code (без MCP-сервера, только SSH)
 ./install-skills.sh bash claude --global
@@ -70,7 +70,7 @@ cd mcp-server && bun install && cd ..
 | `diagrams` | ✓ | — | Mermaid-диаграммы автоматизации |
 | `documentation-search` | ✓ | — | Поиск по wiki/GitHub Wiren Board |
 
-`diagrams` и `documentation-search` не зависят от контроллера — MCP-варианты избыточны. Подключай их из `skills/bash/` независимо от того, какой основной flavor используешь.
+`diagrams` и `documentation-search` не зависят от контроллера — MCP-варианты избыточны. `install-skills.sh` для mcp-flavor подтягивает их автоматически из `skills/bash/`, отдельно ставить не нужно.
 
 ## MCP Tools (краткая карта)
 
@@ -97,7 +97,7 @@ cd mcp-server && bun install && cd ..
 
 ## Требования
 
-- **Хост-машина:** Linux (для bun-MCP-сервера). MacOS — не тестировался, должен работать. Windows — нет.
+- **Хост-машина:** Linux. MacOS — не тестировался, потребует доустановки `avahi-utils`-эквивалентов (на macOS mDNS делает системный mDNSResponder, отдельной утилиты `avahi-browse` нет — нужен порт через `dns-sd`). Windows — не поддерживается.
 - **Bun 1.3+** — для MCP-flavor.
 - **avahi (`avahi-browse`, mDNS)** — для discovery контроллеров.
 - **`mosquitto-clients`** — `mosquitto_sub`/`mosquitto_pub` нужны на хосте, если используешь bash-flavor извне; на контроллерах WB они есть по умолчанию.

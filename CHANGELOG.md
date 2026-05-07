@@ -38,16 +38,17 @@
 - **MQTT через системные утилиты:** `mosquitto_sub -F '%t\t%p'` (TAB-разделитель — корректный парсинг имён контролов с пробелами типа `Input 0`, `Input 0 counter`).
 - **Безопасность:** валидация invalid wildcards (`+` внутри уровня MQTT-топика), валидация jobId regex, защита от shell-инъекции через `shellQuote`.
 
-### Найденные и исправленные баги (внутренний журнал)
+### Ключевые архитектурные решения и пойманные доменные баги
 
-В процессе разработки и тестирования было поймано **15+ багов** (доменных и архитектурных), полный лог — в `PLAN.md` журнале. Краткая выжимка:
-- audit: парсер `===WB-AUDIT===<name>` ломался при `cat` файла без trailing `\n` — фикс через `printf "\n===…\n"`.
-- mqtt-controls: `mosquitto_sub -v` резал имена контролов с пробелами по первому пробелу — фикс через TAB-разделитель.
-- async jobs: `bash -c 'CMD > LOG'` редиректил только последнюю команду из цепочки `;` — фикс через script-file + `StandardOutput=append:`.
-- confed_save: content как строка ломал конфиг (escape-quoted JSON) — добавлен `JSON.parse` для строк.
-- rules_save/load: абсолютный путь интерпретировался RPC как относительный → создавал файл в `/etc/wb-rules/etc/wb-rules/` — фикс через relative path.
-- modbus_scan: `wb-mqtt-serial/port/Scan` молча пропускал живые WB-устройства (наблюдалось на WB-MAP6S) — переход на `wb-device-manager/bus-scan/Start`.
-- modbus_template: скан 250+ файлов через jq падал по timeout — переход на mapping через RPC `config/Load.types`.
+В процессе разработки и тестирования на живых контроллерах поймано и исправлено около двух десятков ошибок — доменных (несоответствие реальному поведению WB-стека) и интеграционных (shell-quoting, async-jobs, MQTT-парсинг). Из заметного:
+
+- **audit**: парсер `===WB-AUDIT===<name>` ломался при `cat` файла без trailing `\n` — фикс через `printf "\n===…\n"`.
+- **mqtt-controls**: `mosquitto_sub -v` резал имена контролов с пробелами по первому пробелу — фикс через TAB-разделитель (`-F '%t\t%p'`).
+- **async jobs**: `bash -c 'CMD > LOG'` редиректил только последнюю команду из цепочки `;` — фикс через script-file + `StandardOutput=append:`.
+- **confed_save**: content как строка ломал конфиг (escape-quoted JSON) — добавлен `JSON.parse` для строк.
+- **rules_save/load**: абсолютный путь интерпретировался RPC как относительный → создавал файл в `/etc/wb-rules/etc/wb-rules/` — фикс через relative path.
+- **modbus_scan**: `wb-mqtt-serial/port/Scan` молча пропускал живые WB-устройства (наблюдалось на WB-MAP6S) — переход на `wb-device-manager/bus-scan/Start`.
+- **modbus_template**: скан 250+ файлов через jq падал по timeout — переход на mapping через RPC `config/Load.types`.
 
 [Unreleased]: https://github.com/wirenboard/wb-ai-integration/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/wirenboard/wb-ai-integration/releases/tag/v0.1.0

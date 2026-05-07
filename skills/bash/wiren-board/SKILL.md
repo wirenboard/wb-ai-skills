@@ -288,18 +288,7 @@ done'
 ssh root@<host> 'mosquitto_sub -t /wb-device-manager/state -C 1 -W 3 | jq ".devices"'
 ```
 
-Старый паттерн через `wb-mqtt-serial/port/Scan` оставлен для обратной совместимости, но **не использовать** — он молча пропускает живые WB-устройства (наблюдалось на WB-MAP6S):
-
-```bash
-ssh root@<host> bash -c '
-  ID=$(cat /dev/urandom | tr -dc a-z0-9 | head -c8)
-  mosquitto_sub -t "/rpc/v1/wb-mqtt-serial/port/Scan/${ID}/reply" -C 1 -W 30 &
-  SUB_PID=$!
-  sleep 0.3
-  mosquitto_pub -t "/rpc/v1/wb-mqtt-serial/port/Scan/${ID}" -m '"'"'{"id":"'"'"'"$ID"'"'"'","params":{"path":"/dev/ttyRS485-1","baud_rate":9600,"mode":"all"}}'"'"'
-  wait $SUB_PID
-'
-```
+**Не использовать `wb-mqtt-serial/port/Scan`** — он молча пропускает живые WB-устройства (наблюдалось на WB-MAP6S). Только `wb-device-manager/bus-scan/Start` (см. выше).
 
 #### confed — редактор конфигов
 
