@@ -1,6 +1,6 @@
 ---
 name: wb-software-install
-description: Installing third-party software on a WB controller via MCP. By default — Docker; native — only Zigbee2MQTT and rare exceptions.
+description: Installing third-party software on a WB controller via MCP. Default path — Docker via wb-docker-manager.sh; native install only for Zigbee2MQTT (adapter binding) and rare exceptions. Covers Node-RED, Home Assistant, Grafana, InfluxDB, Telegraf, Dockge.
 allowed-tools: Bash Read Write WebFetch
 ---
 

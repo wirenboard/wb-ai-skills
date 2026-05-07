@@ -1,6 +1,6 @@
 ---
 name: wb-diagrams
-description: Mermaid diagrams to visualize automation logic before writing code.
+description: Mermaid diagrams for automation logic — design mode (state diagrams and conflict tables before writing rules) and reverse-engineering mode (explaining what an existing wb-rules script does). Renders inside Claude Code chat.
 allowed-tools: Bash Read Write
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: wb-software-install
-description: Installing third-party software on a WB controller. Default — Docker; native — only Zigbee2MQTT (adapter binding) and rare exceptions.
+description: Installing third-party software on a WB controller. Default path — Docker via wb-docker-manager.sh; native install only for Zigbee2MQTT (adapter binding) and rare exceptions. Covers Node-RED, Home Assistant, Grafana, InfluxDB, Telegraf, Dockge.
 allowed-tools: Bash Read Write WebFetch
 ---
 

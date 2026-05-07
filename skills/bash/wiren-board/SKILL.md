@@ -1,6 +1,6 @@
 ---
 name: wiren-board
-description: Managing Wiren Board controllers via SSH/MQTT. Load this for any work with WB controllers.
+description: Master skill for Wiren Board controllers via SSH + mosquitto + avahi. Load on any mention of WB, MQTT topics, Modbus devices on the bus, wb-rules automation, or hardware config. Covers mDNS discovery (wirenboard-<SN>.local), serial-number conventions, safety rules, and links to all other wb-* skills.
 allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 ---
 
