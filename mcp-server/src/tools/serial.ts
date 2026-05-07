@@ -248,13 +248,13 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
       seen.add(k); return true
     })
     if (!uniq.length) return err('Скан пустой (нет non-bootloader устройств).')
-    // 2. Resolve signature → device_type через RPC types
+    // 2. Resolve signature → {device_type, mqtt-id} через RPC types
     const cfgLoad = await ctx.ssh.mqttRpc(c, 'wb-mqtt-serial', 'config', 'Load', {}, 15) as { config?: { ports?: any[] }, types?: Array<{ types: TplEntry[] }> }
-    const sigToType: Record<string, string> = {}
+    const sigInfo: Record<string, { type: string; mqttId: string }> = {}
     for (const g of cfgLoad.types ?? []) {
       for (const t of g.types ?? []) {
         for (const h of t.hw ?? []) {
-          if (h.signature && !sigToType[h.signature]) sigToType[h.signature] = t.type
+          if (h.signature && !sigInfo[h.signature]) sigInfo[h.signature] = { type: t.type, mqttId: t['mqtt-id'] }
         }
       }
     }
@@ -269,7 +269,32 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
       for (const d of p.devices ?? []) set.add(Number(d.slave_id))
       idsByPort.set(p.path, set)
     }
-    // 4. План
+    // 4. Кэш defaults параметров шаблона. Без default'ов schema валидация падает
+    //    на required-параметрах (типичный кейс: WB-MAI6 in1_type..in6_type).
+    const tplDefaultsCache = new Map<string, Record<string, unknown>>()
+    const loadTplDefaults = async (mqttId: string): Promise<Record<string, unknown>> => {
+      const cached = tplDefaultsCache.get(mqttId)
+      if (cached) return cached
+      if (!/^[A-Za-z0-9._-]+$/.test(mqttId)) return {}
+      const r = await ctx.ssh.exec(c, `cat ${shellQuote(`/usr/share/wb-mqtt-serial/templates/config-${mqttId}.json`)}`)
+      let defaults: Record<string, unknown> = {}
+      if (r.code === 0) {
+        try {
+          const tpl = JSON.parse(r.stdout)
+          const params = tpl.device?.parameters
+          if (Array.isArray(params)) {
+            for (const p of params) {
+              if (p && typeof p.id === 'string' && 'default' in p && !(p.id in defaults)) {
+                defaults[p.id] = p.default
+              }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      tplDefaultsCache.set(mqttId, defaults)
+      return defaults
+    }
+    // 5. План
     const added: any[] = []
     const skipped: any[] = []
     for (const dev of uniq) {
@@ -280,14 +305,15 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
       if (!port) { skipped.push({ slave_id: slaveId, reason: `порт ${portPath} не в конфиге wb-mqtt-serial` }); continue }
       const ids = idsByPort.get(portPath) ?? new Set<number>()
       if (ids.has(slaveId)) { skipped.push({ slave_id: slaveId, port: portPath, reason: 'slave_id уже сконфигурирован' }); continue }
-      const deviceType = sigToType[sig]
-      if (!deviceType) { skipped.push({ slave_id: slaveId, port: portPath, signature: sig, reason: 'шаблон для signature не найден' }); continue }
-      const newDevice = { device_type: deviceType, slave_id: slaveId, enabled }
+      const info = sigInfo[sig]
+      if (!info) { skipped.push({ slave_id: slaveId, port: portPath, signature: sig, reason: 'шаблон для signature не найден' }); continue }
+      const defaults = await loadTplDefaults(info.mqttId)
+      const newDevice: Record<string, unknown> = { device_type: info.type, slave_id: slaveId, enabled, ...defaults }
       port.devices = port.devices ?? []
       port.devices.push(newDevice)
       ids.add(slaveId)
       idsByPort.set(portPath, ids)
-      added.push({ port: portPath, slave_id: slaveId, device_type: deviceType, signature: sig, fw: dev.fw?.version, sn: dev.sn })
+      added.push({ port: portPath, slave_id: slaveId, device_type: info.type, signature: sig, fw: dev.fw?.version, sn: dev.sn, paramDefaults: Object.keys(defaults).length })
     }
     if (dryRun || !added.length) {
       return text({ dryRun, added, skipped, message: added.length ? `План: добавить ${added.length} устройств(а). Запусти без dryRun для записи.` : 'Нечего добавлять.' })
