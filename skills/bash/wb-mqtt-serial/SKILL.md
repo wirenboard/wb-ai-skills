@@ -24,7 +24,7 @@ Modbus/RS-485 driver. Config `/etc/wb-mqtt-serial.conf`, templates `/usr/share/w
 | Bus scanning | RPC `wb-device-manager/bus-scan/Start` (async, progress/devices in retained `/wb-device-manager/state`) | `scan_type:"extended"` — Fast Modbus, `"standard"` — regular. The old `wb-mqtt-serial/port/Scan` silently misses live WB devices (bug observed on WB-MAP6S) |
 | Pinpoint slave_id check | RPC `device/Probe` | |
 
-Direct `ssh ... cat >` to a `.conf` — only with backup and consciously (see below).
+Direct `ssh ... cat >` to a `.conf` — only with a backup and deliberately (see below).
 
 - **"Channel not in MQTT" ≠ "not supported."** Many template channels are `"enabled": false` (Uptime, Counter, Total, Serial). First read the template, then conclude.
 - **Look for the template on the controller, not on GitHub.** On the hardware — it matches the firmware. `WebFetch` for templates is almost always a waste.

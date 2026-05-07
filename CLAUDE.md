@@ -67,7 +67,7 @@ Each skill is a directory `skills/<flavor>/<name>/SKILL.md` with YAML frontmatte
 
 Skills in `bash/` — 21, in `mcp/` — 19 (no `diagrams` and `documentation-search`: they don't depend on the controller, MCP adds no value — the user takes them from `bash/` regardless of whether MCP is present).
 
-When editing skills keep the existing style: Russian-language descriptions, serial `A25NDEMJ` (8 characters). MCP variants are short (~30-50 lines), with an "intent → tool" table and a link to the bash counterpart. Bash variants contain the full domain logic; the largest is `wb-rules/SKILL.md` (635 lines, ES5 subset, `defineRule`, virtual devices).
+When editing skills keep the existing style: English-language descriptions, serial `A25NDEMJ` (8 characters). MCP variants are short (~30-50 lines), with an "intent → tool" table and a link to the bash counterpart. Bash variants contain the full domain logic; the largest is `wb-rules/SKILL.md` (635 lines, ES5 subset, `defineRule`, virtual devices).
 
 ## Consistency between mcp-server and skills
 

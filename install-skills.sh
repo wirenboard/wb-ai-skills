@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Установка wb-ai-integration skills для Claude Code или opencode.
+# Install wb-ai-integration skills into Claude Code or opencode.
 #
 # Usage:
 #   ./install-skills.sh <flavor> <target> [--global]
 #     flavor: bash | mcp
 #     target: claude | opencode
-#     --global: системно (~/.claude или ~/.config/opencode), иначе в .claude/.opencode текущей директории
+#     --global: system-wide (~/.claude or ~/.config/opencode); otherwise into .claude/.opencode of the current dir
 #
-# Примеры:
+# Examples:
 #   ./install-skills.sh bash claude --global
 #   ./install-skills.sh mcp opencode
-#   ./install-skills.sh mcp claude     # в ./.claude/skills/
+#   ./install-skills.sh mcp claude     # into ./.claude/skills/
 
 set -euo pipefail
 
@@ -29,10 +29,10 @@ usage() {
 [[ "$target" =~ ^(claude|opencode)$ ]] || usage
 
 src="$REPO/skills/$flavor"
-[[ -d "$src" ]] || { echo "Нет директории $src" >&2; exit 1; }
+[[ -d "$src" ]] || { echo "Source dir not found: $src" >&2; exit 1; }
 
-# Скиллы, которые не зависят от наличия MCP (рендер диаграмм, поиск по wiki):
-# для mcp-flavor доустанавливаются из bash-набора, чтобы cross-references работали.
+# Skills that don't depend on MCP being present (Mermaid rendering, wiki search):
+# for the mcp flavor we additionally install them from the bash set so cross-references resolve.
 SHARED_FROM_BASH=(diagrams documentation-search)
 
 if [[ "$scope" == "--global" ]]; then
@@ -49,7 +49,7 @@ fi
 
 mkdir -p "$dst"
 
-# Список директорий-источников: основной flavor + (для mcp) общие скиллы из bash/
+# Source dirs: primary flavor + (for mcp) the shared bash skills above.
 declare -a sources=()
 for d in "$src"/*/; do sources+=("$d"); done
 if [[ "$flavor" == "mcp" ]]; then
@@ -59,22 +59,22 @@ if [[ "$flavor" == "mcp" ]]; then
 fi
 
 if [[ "$target" == "claude" ]]; then
-  # Claude Code: каталог <skill>/SKILL.md, симлинками
+  # Claude Code: <skill>/SKILL.md directories, installed as symlinks.
   for d in "${sources[@]}"; do
     name="$(basename "$d")"
     ln -sfn "$d" "$dst/$name"
     echo "linked $dst/$name -> $d"
   done
 else
-  # opencode: плоский <name>.md, конвертация frontmatter
+  # opencode: flat <name>.md, with frontmatter conversion.
   for d in "${sources[@]}"; do
     name="$(basename "$d")"
     f="$d/SKILL.md"
     [[ -f "$f" ]] || continue
-    # Извлекаем description из исходного frontmatter (первый блок --- ... ---)
+    # Pull description from the source frontmatter (the first --- ... --- block).
     desc="$(awk '/^---$/{c++; next} c==1 && /^description:/ {sub(/^description:[[:space:]]*/, ""); gsub(/^"|"$/, ""); print; exit}' "$f")"
     [[ -n "$desc" ]] || desc="Wiren Board: $name"
-    # Тело — всё после второго ---
+    # Body — everything after the second ---.
     body="$(awk 'BEGIN{c=0} /^---$/{c++; next} c>=2{print}' "$f")"
     {
       echo "---"
@@ -89,4 +89,4 @@ else
 fi
 
 echo
-echo "Готово. flavor=$flavor target=$target dst=$dst"
+echo "Done. flavor=$flavor target=$target dst=$dst"

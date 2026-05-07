@@ -10,7 +10,7 @@ Zigbee devices on a Wiren Board controller via zigbee2mqtt.
 
 ## Architecture
 
-**zigbee2mqtt** talks to the Zigbee adapter via `/dev/ttyMOD<N>` and publishes to `zigbee2mqtt/<friendly_name>`. It can run **either natively** (`systemctl is-active zigbee2mqtt`) **or in Docker** (`docker ps | grep zigbee`) — both cases occur. The install method is **not determined by `systemctl`** — it'll definitively show `inactive` for a containerized install even when the bridge is working.
+**zigbee2mqtt** talks to the Zigbee adapter via `/dev/ttyMOD<N>` and publishes to `zigbee2mqtt/<friendly_name>`. It can run **either natively** (`systemctl is-active zigbee2mqtt`) **or in Docker** (`docker ps | grep zigbee`) — both cases occur. The install method is **not determined by `systemctl`** — it always shows `inactive` for a containerized install even when the bridge is working.
 
 WB converters turn Z2M devices into native WB MQTT (`/devices/...`) so wb-rules and the web UI can see them:
 

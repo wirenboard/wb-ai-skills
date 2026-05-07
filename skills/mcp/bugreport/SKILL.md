@@ -104,7 +104,7 @@ wb_mqtt_list sn=<SN> prefix=zigbee2mqtt/bridge/
 
 Attach to the bug report **the archive + extra collected logs** under clear names.
 
-**When the archive isn't needed:** for a failed systemd unit, `wb_logs unit=<unit>` + `wb_ssh_exec` `systemctl status <unit>; systemctl cat <unit>` is often enough. Hundreds-of-KB archives are eMMC load; collect if support asks or if the cause isn't localized within 5 minutes.
+**When the archive isn't needed:** for a failed systemd unit, `wb_logs unit=<unit>` + `wb_ssh_exec` `systemctl status <unit>; systemctl cat <unit>` is often enough. A hundreds-of-KB archive is eMMC load; collect if support asks or if the cause isn't localized within 5 minutes.
 
 ### 3. Describe the problem
 

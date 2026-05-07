@@ -556,7 +556,7 @@ defineRule("climate_morning", {
 
 ## Conventions
 
-- File: `wb-la-<slug>.js` (hyphens, Latin), header `// wb-la: description in English`.
+- File: `wb-la-<slug>.js` (hyphens, Latin), header `// wb-la: short description (Russian text is fine — controllers ship to Russian-speaking integrators)`.
 - Rule name in `defineRule`: `wb-la-<slug>` (matches the file name without `.js`).
 - **In responses to the user:** the script file and the rules inside it are different entities, always distinguish visually:
   - File: always with `.js` (e.g. `wb-la-kran-protect.js`)

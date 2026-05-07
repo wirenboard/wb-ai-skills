@@ -113,7 +113,7 @@ keyfile /etc/mosquitto/certs/server.key
 
 - **`per_listener_settings false`** — disabling allows anonymous to all, including 1883. WB sets `true` in `00default_listener.conf` — don't reset it.
 - **Editing `mosquitto.conf` directly** — everything in `conf.d/`. The base is overwritten by updates.
-- **Closed 1883, forgot about WB services** — they use Unix socket, unaffected. But if you broke `per_listener_settings`, they'll fall off.
+- **Closed 1883, forgot about WB services** — they use Unix socket, unaffected. But if you broke `per_listener_settings`, they'll lose connection.
 - **mosquitto_passwd without `-c` for a new file** — the password won't save. With `-c` — wipes existing. First time — `-c`, then without.
 - **ACL without `topic deny #`** — anonymous (if allowed) gets full readwrite.
 - **Bridge without `cleansession false`** — message loss on disconnect.
