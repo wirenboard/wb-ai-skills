@@ -225,7 +225,7 @@ export function registerSerialTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_modbus_add_devices', {
-    description: 'Добавить устройства, найденные `wb_modbus_scan`, в /etc/wb-mqtt-serial.conf. Читает retained `/wb-device-manager/state` (устанавливается сканером), для каждого устройства находит шаблон через RPC config/Load.types[].hw[].signature → device_type, добавляет в соответствующий port.devices. Уже сконфигурированные slave_id пропускаются. Не меняет настройки устройства (baud/parity/stop_bits/slave_id) — для этого используй `device/Setup` RPC отдельно.',
+    description: 'Добавить устройства, найденные `wb_modbus_scan`, в /etc/wb-mqtt-serial.conf. Читает retained `/wb-device-manager/state` (устанавливается сканером), для каждого устройства находит шаблон через RPC config/Load.types[].hw[].signature → device_type, читает файл шаблона и копирует все default-значения параметров (p.default из device.parameters[]) в device-record — без этого schema-валидация драйвера падает на required-параметрах (типичный кейс: WB-MAI6 in1_type..in6_type). Поле `paramDefaults` в `added[]` показывает количество скопированных параметров. Уже сконфигурированные slave_id пропускаются. Не меняет настройки самого устройства (baud/parity/stop_bits/slave_id) — для этого используй `device/Setup` RPC отдельно.',
     inputSchema: z.object({
       sn: SN,
       enabled: z.boolean().optional().default(true).describe('Поставить enabled=true для добавленных (по умолчанию true).'),

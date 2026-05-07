@@ -22,7 +22,7 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 | Жив ли slave_id N на порту X | `wb_modbus_probe` |
 | Параметры RS-485 портов | `wb_modbus_ports` |
 | Что подключено на шине (Fast Modbus, WB+Onokom + standard для сторонних) | `wb_modbus_scan` (через wb-device-manager, async) |
-| Авто-добавить найденное сканером в конфиг | `wb_modbus_add_devices` (с `dryRun=true` для предпросмотра) |
+| Авто-добавить найденное сканером в конфиг | `wb_modbus_add_devices` (с `dryRun=true` для предпросмотра; tool сам подгружает default-значения параметров из шаблона — без них schema-валидация драйвера упадёт на required-параметрах) |
 | Прочитать `/etc/wb-mqtt-serial.conf` | `wb_confed_load` |
 | Сохранить конфиг (валидация + рестарт сервиса) | `wb_confed_save` |
 | Текущее значение канала из MQTT | `wb_mqtt_read` |

@@ -180,10 +180,12 @@ ssh root@<HOST> "mosquitto_pub -t '/devices/<device_id>/controls/<channel>/on' -
 
 4. **Для каждого подтверждённого устройства** — отдельный Load → mutate → Save:
    - `confed/Editor/Load /etc/wb-mqtt-serial.conf` — свежий снимок (между шагами могло измениться).
-   - В `result.content.ports[]` найди port с нужным `path`. Если `slave_id` уже в его `devices` — пропусти и доложи. Иначе допиши `{device_type, slave_id, enabled:true}` в его `devices`.
+   - **Прочитай шаблон устройства** (`/usr/share/wb-mqtt-serial/templates/config-<mqtt-id>.json`) и собери default-значения параметров: `jq -c '[.device.parameters[] | select(.default != null) | {(.id): .default}] | add' <template>`. Это **обязательно** — schema драйвера требует все required-параметры в device-record (типичный кейс: WB-MAI6 `in1_type..in6_type`). Без default'ов конфиг отвергается, опрос всей шины не запускается.
+   - В `result.content.ports[]` найди port с нужным `path`. Если `slave_id` уже в его `devices` — пропусти и доложи. Иначе допиши `{device_type, slave_id, enabled:true, ...defaults}` в его `devices`.
    - Покажи мини-diff пользователю (что добавится в этот port).
    - `confed/Editor/Save` с `content` — **JSON-объект, не строка** (формат payload — см. блок «Запись конфига» выше). Confed валидирует и сам рестартует `wb-mqtt-serial`, опрос замрёт ~5-10 сек.
    - Через 10-20 сек проверь публикацию: `mosquitto_sub -t /devices/+/meta/name -C 100 -W 5 | grep <ожидаемое имя>`.
+   - Если save упал по validation (`Missing required property '...'`) — посмотри `journalctl -u wb-mqtt-serial -p err --since "1 min ago"` и допиши недостающие параметры.
 
 5. **Не сливай несколько устройств в один Save** — если один из них упадёт по schema-валидации (неизвестный `device_type` или коллизия), остальные тоже не применятся, и придётся диагностировать что именно сломалось.
 
