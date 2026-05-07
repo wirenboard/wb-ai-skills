@@ -1,42 +1,42 @@
 ---
 name: notifications
-description: Уведомления с Wiren Board через MCP — Telegram, Email, SMS из правил wb-rules, alarms.conf, Notify-API.
+description: Notifications from Wiren Board via MCP — Telegram, Email, SMS from wb-rules, alarms.conf, Notify API.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # notifications (MCP)
 
-Уведомления через каналы Telegram/Email/SMS из `wb-rules` (`Notify.*`) или централизованного `alarms.conf`. Тонкий маршрутизатор поверх `wb_*` tools.
+Notifications via Telegram/Email/SMS channels from `wb-rules` (`Notify.*`) or centralized `alarms.conf`. Thin router on top of `wb_*` tools.
 
-Подгружай при: «отправь телеграм когда…», «настрой email», «SMS при аварии», «не приходят уведомления», «alarms.conf», «Notify.sendTelegramMessage».
+Load this when: "send Telegram when…", "configure email", "SMS on alarm", "notifications don't arrive", "alarms.conf", "Notify.sendTelegramMessage".
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Отправить тестовый Telegram (без правил) | `wb_ssh_exec` `curl ... api.telegram.org/bot.../sendMessage` |
-| Установить msmtp-mta (для email) | `wb_ssh_exec_async` `apt-get install -y msmtp-mta` |
-| Записать `/etc/msmtprc` | `wb_write_file path=/etc/msmtprc` + `wb_ssh_exec chmod 0600 ...` |
-| Тестовый email | `wb_ssh_exec` `echo "Subject: t\n\nbody" \| msmtp <to>` |
-| Создать SMS через mmcli | `wb_ssh_exec` `mmcli -m 0 --messaging-create-sms=...; mmcli -s <path> --send` |
-| Записать правило с `Notify.*` | `wb_rules_save` |
-| Записать `/etc/wb-rules/alarms.conf` | `wb_write_file path=/etc/wb-rules/alarms.conf` |
-| Перезагрузить wb-rules после правки alarms.conf | `wb_systemd_unit unit=wb-rules action=restart` |
-| Логи попыток отправки | `wb_logs unit=wb-rules grep="(?i)notify|telegram|email|sms"` |
+| Intent | Tool |
+|--------|------|
+| Send a test Telegram (without rules) | `wb_ssh_exec` `curl ... api.telegram.org/bot.../sendMessage` |
+| Install msmtp-mta (for email) | `wb_ssh_exec_async` `apt-get install -y msmtp-mta` |
+| Write `/etc/msmtprc` | `wb_write_file path=/etc/msmtprc` + `wb_ssh_exec chmod 0600 ...` |
+| Test email | `wb_ssh_exec` `echo "Subject: t\n\nbody" \| msmtp <to>` |
+| Create SMS via mmcli | `wb_ssh_exec` `mmcli -m 0 --messaging-create-sms=...; mmcli -s <path> --send` |
+| Write a rule with `Notify.*` | `wb_rules_save` |
+| Write `/etc/wb-rules/alarms.conf` | `wb_write_file path=/etc/wb-rules/alarms.conf` |
+| Reload wb-rules after editing alarms.conf | `wb_systemd_unit unit=wb-rules action=restart` |
+| Logs of send attempts | `wb_logs unit=wb-rules grep="(?i)notify|telegram|email|sms"` |
 
-## Каналы
+## Channels
 
-| Канал | API в правиле | Требует |
-|-------|---------------|---------|
+| Channel | Rule API | Requires |
+|---------|----------|----------|
 | Telegram | `Notify.sendTelegramMessage(token, chatId, text)` | Bot token + chat_id |
-| Email | `Notify.sendEmail(to, subject, body)` | Локальный MTA (msmtp-mta) с релеем |
-| SMS | `Notify.sendSMS(phone, body)` | Встроенный GSM-модем + симка |
+| Email | `Notify.sendEmail(to, subject, body)` | Local MTA (msmtp-mta) with relay |
+| SMS | `Notify.sendSMS(phone, body)` | Built-in GSM modem + SIM |
 
-## Сценарий: настроить Telegram уведомления
+## Scenario: configure Telegram notifications
 
-1. Создать бота через `@BotFather` → bot token.
-2. Получить chat_id (см. bash-двойник, `getUpdates`).
-3. Хранить секреты в PersistentStorage (не в коде):
+1. Create a bot via `@BotFather` → bot token.
+2. Get chat_id (see bash-flavor twin, `getUpdates`).
+3. Store secrets in PersistentStorage (not in code):
 
    ```js
    var ps = new PersistentStorage("notify_creds", {global: true});
@@ -44,18 +44,18 @@ allowed-tools: Bash Read Write WebFetch
    ps["telegram_chat"] = "...";
    ```
 
-4. Создать правило через `wb_rules_save` с `Notify.sendTelegramMessage(ps["telegram_token"], ps["telegram_chat"], "...")`.
+4. Create a rule via `wb_rules_save` with `Notify.sendTelegramMessage(ps["telegram_token"], ps["telegram_chat"], "...")`.
 
-## Сценарий: настроить email через msmtp
+## Scenario: configure email via msmtp
 
 ```
 wb_ssh_exec_async sn=<SN> cmd='DEBIAN_FRONTEND=noninteractive apt-get install -y msmtp-mta'
-wb_write_file sn=<SN> path=/etc/msmtprc content='<конфиг>'
+wb_write_file sn=<SN> path=/etc/msmtprc content='<config>'
 wb_ssh_exec sn=<SN> cmd='chmod 0600 /etc/msmtprc'
 wb_ssh_exec sn=<SN> cmd='echo -e "Subject: test\n\ntest" | msmtp <recipient>'
 ```
 
-Шаблон `/etc/msmtprc` для Gmail (App Password обязательно):
+Template `/etc/msmtprc` for Gmail (App Password mandatory):
 
 ```
 defaults
@@ -71,35 +71,35 @@ user controller@example.com
 password <App Password>
 ```
 
-## Сценарий: alarms.conf
+## Scenario: alarms.conf
 
-`wb_write_file path=/etc/wb-rules/alarms.conf` + `wb_systemd_unit unit=wb-rules action=restart`. Формат — см. bash-двойник.
+`wb_write_file path=/etc/wb-rules/alarms.conf` + `wb_systemd_unit unit=wb-rules action=restart`. Format — see bash-flavor twin.
 
-В правиле один раз:
+In a rule, once:
 
 ```js
 Alarms.load("/etc/wb-rules/alarms.conf");
 ```
 
-## Грабли
+## Gotchas
 
-- **Хардкод токена** — секреты через `PersistentStorage` или отдельный конфиг-файл, не в коде правила.
-- **Telegram chat_id для канала** — с `-100` префиксом.
-- **Gmail без App Password** — не работает.
-- **MTA не настроен** — `Notify.sendEmail` тихо проваливается; смотри `wb_logs unit=wb-rules grep=email`.
-- **SMS-кириллица** — 70 символов = 1 SMS, многобайтные = multipart с ×N тарификацией.
-- **alarms.conf без рестарта wb-rules** — изменения не подхватятся.
-- **Доставка не подтверждается** — для критичных уведомлений делай retry в коде.
+- **Hardcoded token** — secrets via `PersistentStorage` or a separate config file, not in rule code.
+- **Telegram chat_id for a channel** — with `-100` prefix.
+- **Gmail without App Password** — doesn't work.
+- **MTA not configured** — `Notify.sendEmail` silently fails; check `wb_logs unit=wb-rules grep=email`.
+- **SMS Cyrillic** — 70 chars = 1 SMS, multibyte = multipart with ×N tariffing.
+- **alarms.conf without wb-rules restart** — changes won't be picked up.
+- **Delivery isn't confirmed** — for critical notifications add retry in code.
 
-## Связанные скиллы
+## Related skills
 
-- `/wb-rules` — синтаксис и принципы правил с уведомлениями.
-- `/network` — нет интернета → нет Telegram/email; SMS через GSM работает.
-- `/services` — msmtp/exim как systemd-юниты.
+- `/wb-rules` — syntax and principles of rules with notifications.
+- `/network` — no internet → no Telegram/email; SMS over GSM works.
+- `/services` — msmtp/exim as systemd units.
 
-Подробности (bot setup через BotFather, App Password, формат alarms.conf) — bash-двойник `/notifications`.
+Details (bot setup via BotFather, App Password, alarms.conf format) — bash-flavor twin `/notifications`.
 
-## Документация
+## Documentation
 
 - Telegram Bot API: <https://core.telegram.org/bots/api>
 - msmtp: <https://marlam.de/msmtp/>

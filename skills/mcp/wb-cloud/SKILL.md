@@ -1,55 +1,55 @@
 ---
 name: wb-cloud
-description: Wiren Board Cloud — облачный агент `wb-cloud-agent` через MCP. Активация, статус, отвязка, диагностика связи с облаком, свой backend.
+description: Wiren Board Cloud — `wb-cloud-agent` cloud agent via MCP. Activation, status, unbinding, cloud connectivity diagnostics, custom backend.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # wb-cloud (MCP)
 
-Облачный агент Wiren Board (`wb-cloud-agent`) через MCP-tool `wb_cloud_status` + ассоциированные.
+The Wiren Board cloud agent (`wb-cloud-agent`) via the `wb_cloud_status` MCP tool + associated tools.
 
-Подгружай при: «привязать к облаку», «активировать в wirenboard.cloud», «не открывается через облако», «отвязать», «свой cloud backend», «статус облака», «удалённый доступ».
+Load this when: "bind to cloud", "activate at wirenboard.cloud", "won't open via cloud", "unbind", "custom cloud backend", "cloud status", "remote access".
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Сводный статус (сервис, сертификат, MQTT-controls, providers) | `wb_cloud_status` |
-| Активность сервиса | `wb_systemd_unit unit=wb-cloud-agent` |
-| Запустить / остановить / перезапустить | `wb_systemd_unit unit=wb-cloud-agent action=start|stop|restart` |
-| Включить автозагрузку | `wb_systemd_unit unit=wb-cloud-agent action=enable` |
-| Логи агента | `wb_logs unit=wb-cloud-agent` (с `since`/`grep` если нужно) |
-| Изменить URL облака (CLOUD_BASE_URL) | `wb_write_file path=/etc/wb-cloud-agent.conf` |
-| Получить activation_link (готовая ссылка для пользователя) | `wb_mqtt_read topic=/devices/system__wb-cloud-agent__<provider>/controls/activation_link` |
-| Сбросить привязку | `wb_systemd_unit stop` + `wb_ssh_exec rm -rf /var/lib/wb-cloud-agent/providers/<provider>/` + `wb_systemd_unit start` |
+| Intent | Tool |
+|--------|------|
+| Summary status (service, certificate, MQTT controls, providers) | `wb_cloud_status` |
+| Service activity | `wb_systemd_unit unit=wb-cloud-agent` |
+| Start / stop / restart | `wb_systemd_unit unit=wb-cloud-agent action=start|stop|restart` |
+| Enable autostart | `wb_systemd_unit unit=wb-cloud-agent action=enable` |
+| Agent logs | `wb_logs unit=wb-cloud-agent` (with `since`/`grep` if needed) |
+| Change cloud URL (CLOUD_BASE_URL) | `wb_write_file path=/etc/wb-cloud-agent.conf` |
+| Get activation_link (ready URL for the user) | `wb_mqtt_read topic=/devices/system__wb-cloud-agent__<provider>/controls/activation_link` |
+| Reset binding | `wb_systemd_unit stop` + `wb_ssh_exec rm -rf /var/lib/wb-cloud-agent/providers/<provider>/` + `wb_systemd_unit start` |
 
-## Сценарий: активировать (привязать к аккаунту)
+## Scenario: activate (bind to an account)
 
-1. **Сводный статус**:
+1. **Summary status**:
    ```
    wb_cloud_status sn=<SN>
    ```
-   Проверь: `serviceActive`, `certPresent`, `providers`, `mqtt.<provider>.status`, `mqtt.<provider>.activation_link`.
+   Check: `serviceActive`, `certPresent`, `providers`, `mqtt.<provider>.status`, `mqtt.<provider>.activation_link`.
 
-2. **Если сервис неактивен** — включи и стартуй:
+2. **If service is inactive** — enable and start:
    ```
    wb_systemd_unit sn=<SN> unit=wb-cloud-agent action=enable
    wb_systemd_unit sn=<SN> unit=wb-cloud-agent action=start
    ```
 
-3. **Возьми activation_link** (после старта подожди 5-15 сек):
+3. **Take the activation_link** (after start, wait 5-15 sec):
    ```
    wb_mqtt_read sn=<SN> topic=/devices/system__wb-cloud-agent__wirenboard.cloud/controls/activation_link
    ```
-   Покажи URL пользователю — он откроет в браузере и привяжет.
+   Show the URL to the user — they open it in a browser and bind.
 
-4. **Проверь через 30 сек**:
+4. **Verify in 30 sec**:
    ```
    wb_cloud_status sn=<SN>
    ```
-   `mqtt.wirenboard.cloud.status` должен стать `ok` (или `active`).
+   `mqtt.wirenboard.cloud.status` should become `ok` (or `active`).
 
-## Сценарий: отвязать / сбросить активацию
+## Scenario: unbind / reset activation
 
 ```
 wb_systemd_unit sn=<SN> unit=wb-cloud-agent action=stop
@@ -57,9 +57,9 @@ wb_ssh_exec sn=<SN> cmd='rm -rf /var/lib/wb-cloud-agent/providers/wirenboard.clo
 wb_systemd_unit sn=<SN> unit=wb-cloud-agent action=start
 ```
 
-После этого `wb_cloud_status` через минуту даст новый `activation_link`. Старую привязку в личном кабинете wirenboard.cloud удали вручную.
+After this `wb_cloud_status` will give a new `activation_link` within a minute. Delete the old binding from the wirenboard.cloud account manually.
 
-## Сценарий: свой backend
+## Scenario: custom backend
 
 ```
 wb_write_file sn=<SN> path=/etc/wb-cloud-agent.conf content='{
@@ -70,35 +70,35 @@ wb_write_file sn=<SN> path=/etc/wb-cloud-agent.conf content='{
 wb_systemd_unit sn=<SN> unit=wb-cloud-agent action=restart
 ```
 
-Это редкий случай — для self-hosted облака (своя API, совместимая с wirenboard.cloud).
+This is a rare case — for self-hosted clouds (own API, compatible with wirenboard.cloud).
 
-## Сценарий: «не подключается к облаку»
+## Scenario: "doesn't connect to cloud"
 
 1. `wb_cloud_status sn=<SN>` — `serviceActive`, `certPresent`, `mqtt.*.status`.
-2. Если `serviceActive: false` — `wb_systemd_unit unit=wb-cloud-agent action=start`.
-3. Если `certPresent: false` — контроллер не WB или ATECC сломан, эскалация в support.
-4. `wb_logs unit=wb-cloud-agent lines=50`. Типовые ошибки:
-   - `connection refused`/`timeout` → проверь интернет: `wb_network_status pingTarget=wirenboard.cloud` или `wb_ssh_exec curl -s -m5 https://wirenboard.cloud`.
-   - `Certificate verification failed` → дата на контроллере, NTP. `wb_ssh_exec date; systemctl is-active ntp`.
-   - `Authentication failed` → сертификат отозван или устройство удалено из БД облака. Cleanup providers/ + рестарт.
+2. If `serviceActive: false` — `wb_systemd_unit unit=wb-cloud-agent action=start`.
+3. If `certPresent: false` — non-WB controller or ATECC broken, escalate to support.
+4. `wb_logs unit=wb-cloud-agent lines=50`. Typical errors:
+   - `connection refused`/`timeout` → check internet: `wb_network_status pingTarget=wirenboard.cloud` or `wb_ssh_exec curl -s -m5 https://wirenboard.cloud`.
+   - `Certificate verification failed` → controller date, NTP. `wb_ssh_exec date; systemctl is-active ntp`.
+   - `Authentication failed` → certificate revoked or device removed from cloud DB. Cleanup providers/ + restart.
 
-## Связанные скиллы
+## Related skills
 
-- `/network` — если облако недоступно из-за интернета.
-- `/services` — `wb-cloud-agent` это systemd-юнит.
-- `/controller-backup` — `/etc/wb-cloud-agent.conf` уже в core-tar.
+- `/network` — if cloud is unreachable due to internet.
+- `/services` — `wb-cloud-agent` is a systemd unit.
+- `/controller-backup` — `/etc/wb-cloud-agent.conf` is already in core-tar.
 
-## Грабли
+## Gotchas
 
-- **Время врёт** — TLS handshake к облаку упадёт. NTP должен работать.
-- **VPN с default route** — может ломать доступ к облаку. `wb_ssh_exec` `ip route get wirenboard.cloud-IP`.
-- **`CLIENT_CERT_ENGINE_KEY`** руками не меняй — адрес сертификата в ATECC, прошит на заводе.
-- **Удалил из Web UI облака без локального сброса** — agent продолжит ломиться с `Authentication failed`. Делай cleanup providers/ + рестарт.
-- **Activation-ссылка одноразовая** — если не довёл до конца, agent сгенерит новую при рестарте.
+- **Time is wrong** — TLS handshake to the cloud will fail. NTP must work.
+- **VPN with default route** — can break access to the cloud. `wb_ssh_exec` `ip route get wirenboard.cloud-IP`.
+- **`CLIENT_CERT_ENGINE_KEY`** don't change by hand — the certificate address in ATECC is factory-flashed.
+- **Removed from Web UI cloud without local reset** — agent keeps banging with `Authentication failed`. Do cleanup providers/ + restart.
+- **Activation link is one-shot** — if you didn't finish, the agent generates a new one on restart.
 
-Подробности (свой backend, провайдеры) — bash-двойник `/wb-cloud`.
+Details (custom backend, providers) — bash-flavor twin `/wb-cloud`.
 
-## Документация
+## Documentation
 
 - WB Cloud: <https://wirenboard.com/wiki/Wiren_Board_Cloud>
-- Удалённый доступ: <https://wirenboard.com/wiki/Remote_access>
+- Remote access: <https://wirenboard.com/wiki/Remote_access>

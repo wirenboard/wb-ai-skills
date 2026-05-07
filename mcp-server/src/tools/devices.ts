@@ -4,7 +4,7 @@ import { type Ctx, resolveController, text, SN } from '../helpers.ts'
 
 /** WB MQTT Conventions error codes (https://github.com/wirenboard/conventions):
  *  `r` — read error / device reports error; `w` — write error; `p` — period miss.
- *  Combinations возможны: "rw", "rp", "rwp". Пустая строка/null = нет ошибок. */
+ *  Combinations are possible: "rw", "rp", "rwp". Empty string/null = no errors. */
 type ErrorFlags = { raw: string; read: boolean; write: boolean; periodMiss: boolean; unknown?: string }
 
 function parseErrorFlags(raw: string | undefined): ErrorFlags | undefined {
@@ -23,7 +23,7 @@ function parseErrorFlags(raw: string | undefined): ErrorFlags | undefined {
 
 type Control = {
   name: string
-  value?: string         // при error.read=true это last-known-good (по WB convention)
+  value?: string         // when error.read=true this is last-known-good (per WB convention)
   type?: string
   units?: string
   readonly?: boolean
@@ -51,7 +51,7 @@ function parseMetaJson(s: string): Record<string, unknown> | null {
 
 export function registerDeviceTools(server: McpServer, ctx: Ctx) {
   server.registerTool('wb_mqtt_devices', {
-    description: 'Список MQTT-устройств на контроллере (только id → human name). Не путать с wb_discover (тот ищет контроллеры в сети). Для полной картины с контролами — wb_mqtt_inventory.',
+    description: 'List of MQTT devices on the controller (id → human name only). Not to be confused with wb_discover (which finds controllers on the network). For the full picture with controls, use wb_mqtt_inventory.',
     inputSchema: z.object({ sn: SN }),
   }, async ({ sn }) => {
     const topics = await ctx.ssh.mqttListTopics(resolveController(ctx, sn), '/devices/+/meta/name', 3)
@@ -64,23 +64,23 @@ export function registerDeviceTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_mqtt_controls', {
-    description: 'Список контролов одного MQTT-устройства (raw топики со значениями). Для структурированной картины со всеми meta — wb_mqtt_inventory с device-фильтром.',
+    description: 'List of controls for a single MQTT device (raw topics with values). For a structured picture with full meta, use wb_mqtt_inventory with a device filter.',
     inputSchema: z.object({
       sn: SN,
-      device: z.string().describe('ID устройства (например wb-mr6c_7)'),
+      device: z.string().describe('Device ID (e.g. wb-mr6c_7)'),
     }),
   }, async ({ sn, device }) => {
     return text(await ctx.ssh.mqttListTopics(resolveController(ctx, sn), `/devices/${device}/controls/+`, 3))
   })
 
   server.registerTool('wb_mqtt_inventory', {
-    description: 'Сводная картина MQTT-устройств: id, name, driver, error, для каждого — список контролов с value/type/units/readonly/order/error. Один вызов вместо N+1 запросов через wb_mqtt_devices+wb_mqtt_controls. Поле `error` парсится по WB MQTT Conventions (r=read, w=write, p=period miss; комбинации возможны). При `error.read=true` value-топик содержит last-known-good значение. Возвращает также сводку всех ошибок отдельным массивом `errors`. По умолчанию includeEmpty=false (устройства без контролов скрыты).',
+    description: 'Combined view of MQTT devices: id, name, driver, error, plus per-device controls list with value/type/units/readonly/order/error. One call instead of N+1 via wb_mqtt_devices+wb_mqtt_controls. The `error` field is parsed per WB MQTT Conventions (r=read, w=write, p=period miss; combinations possible). When `error.read=true` the value topic holds the last-known-good value. Also returns a summary of all errors as a separate `errors` array. By default includeEmpty=false (devices without controls are hidden).',
     inputSchema: z.object({
       sn: SN,
-      device: z.string().optional().describe('Фильтр по device_id (substring, регистронезависимо). Без — все устройства.'),
-      timeout: z.number().optional().default(3).describe('Таймаут сбора в секундах'),
-      includeEmpty: z.boolean().optional().default(false).describe('Включить устройства без контролов (только meta).'),
-      includeMeta: z.boolean().optional().default(false).describe('Включить полный raw meta-объект для каждого контрола (по умолчанию только распакованные поля).'),
+      device: z.string().optional().describe('Filter by device_id (substring, case-insensitive). Empty — all devices.'),
+      timeout: z.number().optional().default(3).describe('Collection timeout in seconds'),
+      includeEmpty: z.boolean().optional().default(false).describe('Include devices without controls (meta only).'),
+      includeMeta: z.boolean().optional().default(false).describe('Include the full raw meta object for each control (by default only unpacked fields).'),
     }),
   }, async ({ sn, device, timeout, includeEmpty, includeMeta }) => {
     const topics = await ctx.ssh.mqttListTopics(resolveController(ctx, sn), '/devices/#', timeout)
@@ -123,7 +123,7 @@ export function registerDeviceTools(server: McpServer, ctx: Ctx) {
       const ctrlMatch = rest.match(/^controls\/(.+)$/)
       if (!ctrlMatch) continue
       const ctrlPart = ctrlMatch[1]!
-      // Имя контрола может содержать '/' только в виде /meta или /meta/<key>; иначе это control name (с пробелами).
+      // A control name may contain '/' only as /meta or /meta/<key>; otherwise it is a control name (with spaces).
       const subMatch = ctrlPart.match(/^(.+?)\/meta(?:\/(.+))?$/)
       if (subMatch) {
         const ctrlName = subMatch[1]!
@@ -167,7 +167,7 @@ export function registerDeviceTools(server: McpServer, ctx: Ctx) {
     for (const d of arr) {
       d.controls.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name))
     }
-    // Сводка ошибок — что с проблемами (по WB convention: r/w/p или их комбинации)
+    // Error summary — what's broken (per WB convention: r/w/p or combinations)
     const errors: Array<{ device: string; control?: string; flags: ErrorFlags }> = []
     for (const d of arr) {
       if (d.error) errors.push({ device: d.id, flags: d.error })

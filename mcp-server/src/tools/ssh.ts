@@ -4,32 +4,32 @@ import { type Ctx, resolveController, text, err, SN, LONG_COMMANDS_RE } from '..
 
 export function registerSshTools(server: McpServer, ctx: Ctx) {
   server.registerTool('wb_ssh_exec', {
-    description: 'Выполнить команду на контроллере (синхронно, до 2 мин). Для долгих операций используй wb_ssh_exec_async.',
+    description: 'Run a command on the controller (synchronously, up to 2 min). For long operations use wb_ssh_exec_async.',
     inputSchema: z.object({
       sn: SN,
-      command: z.string().describe('Bash-команда'),
-      timeout: z.number().optional().default(30000).describe('Таймаут в мс (макс 120000)'),
+      command: z.string().describe('Bash command'),
+      timeout: z.number().optional().default(30000).describe('Timeout in ms (max 120000)'),
     }),
   }, async ({ sn, command, timeout }) => {
     if (LONG_COMMANDS_RE.test(command)) {
-      return err(`Команда "${command.slice(0, 60)}..." — долгая операция. Используй wb_ssh_exec_async.`)
+      return err(`Command "${command.slice(0, 60)}..." is a long operation. Use wb_ssh_exec_async.`)
     }
     const c = resolveController(ctx, sn)
     return text(await ctx.ssh.exec(c, command, Math.min(timeout, 120000)))
   })
 
   server.registerTool('wb_ssh_exec_async', {
-    description: 'Запустить фоновую задачу через systemd-run (apt, docker, tar). Возвращает jobId.',
+    description: 'Start a background job via systemd-run (apt, docker, tar). Returns jobId.',
     inputSchema: z.object({
       sn: SN,
-      command: z.string().describe('Bash-команда'),
-      label: z.string().optional().describe('Метка задачи'),
+      command: z.string().describe('Bash command'),
+      label: z.string().optional().describe('Job label'),
     }),
   }, async ({ sn, command, label }) => {
     const c = resolveController(ctx, sn)
-    // DEBIAN_FRONTEND=noninteractive экспортируется отдельной строкой:
-    // префикс `DEBIAN_FRONTEND=... <команда>` ломается на control-словах (`for`, `while`, `if`),
-    // плюс на script-файле (новая архитектура async) такая префиксная форма даёт syntax error.
+    // DEBIAN_FRONTEND=noninteractive is exported on a separate line:
+    // the prefix `DEBIAN_FRONTEND=... <command>` form breaks on control words (`for`, `while`, `if`),
+    // and on a script file (the new async architecture) such a prefix form yields a syntax error.
     const cmd = command.includes('DEBIAN_FRONTEND')
       ? command
       : `export DEBIAN_FRONTEND=noninteractive\n${command}`
@@ -37,10 +37,10 @@ export function registerSshTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_read_file', {
-    description: 'Прочитать файл с контроллера (до 64 КБ)',
+    description: 'Read a file from the controller (up to 64 KB)',
     inputSchema: z.object({
       sn: SN,
-      path: z.string().describe('Абсолютный путь к файлу'),
+      path: z.string().describe('Absolute path to the file'),
       maxBytes: z.number().optional().default(64000),
     }),
   }, async ({ sn, path, maxBytes }) => {
@@ -49,11 +49,11 @@ export function registerSshTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_write_file', {
-    description: 'Записать файл на контроллер (SFTP). Сделай бэкап перед правкой конфигов!',
+    description: 'Write a file to the controller (SFTP). Make a backup before editing configs!',
     inputSchema: z.object({
       sn: SN,
-      path: z.string().describe('Абсолютный путь'),
-      content: z.string().describe('Содержимое файла'),
+      path: z.string().describe('Absolute path'),
+      content: z.string().describe('File contents'),
     }),
   }, async ({ sn, path, content }) => {
     const c = resolveController(ctx, sn)

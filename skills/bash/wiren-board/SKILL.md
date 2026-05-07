@@ -1,110 +1,110 @@
 ---
 name: wiren-board
-description: Управление контроллерами Wiren Board через SSH/MQTT. Подключай при любой работе с контроллерами WB.
+description: Managing Wiren Board controllers via SSH/MQTT. Load this for any work with WB controllers.
 allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 ---
 
 # wiren-board
 
-Мастер-скилл для работы с контроллерами Wiren Board из Claude Code CLI. Все операции выполняются через Bash: SSH, mosquitto_sub, mosquitto_pub, avahi-browse, scp. Подгружай при любом упоминании контроллеров WB, MQTT-топиков, устройств на шине, правил автоматизации, конфигурации оборудования.
+Master skill for working with Wiren Board controllers from the Claude Code CLI. All operations go through Bash: SSH, mosquitto_sub, mosquitto_pub, avahi-browse, scp. Load this on any mention of WB controllers, MQTT topics, devices on the bus, automation rules, hardware configuration.
 
-## Обнаружение контроллеров
+## Discovering controllers
 
 ### mDNS discovery
 
-Контроллеры Wiren Board анонсируются по mDNS, но **не на `_http._tcp`** (распространённое заблуждение — web-сервис на 80 порту они не публикуют). Текущие прошивки публикуют `_workstation._tcp`. Чтобы рецепт пережил смену типа — сканируй все service-types и фильтруй по имени:
+Wiren Board controllers announce via mDNS but **not on `_http._tcp`** (a common misconception — they don't publish a web service on port 80). Current firmwares publish `_workstation._tcp`. To make the recipe survive a service-type change — scan all service types and filter by name:
 
 ```bash
 echo "$(timeout 5 avahi-browse -arp 2>/dev/null)" | awk -F';' '$1=="=" && $3=="IPv4" && $7 ~ /^wirenboard-/ {print $7, $8}' | sort -u
 ```
 
-Флаги: `-a` — все service-types, `-r` — резолвить (имена + адреса), `-p` — parsable. **Без `-t`**, потому что `-t` выходит, как только кеш avahi пуст: на первом холодном запуске демон ещё не получил mDNS-ответы и `-t` отрубит сканирование за миллисекунды до прихода анонсов. `timeout 5` гарантированно даёт avahi 5 секунд на сбор ответов вне зависимости от состояния кеша.
+Flags: `-a` — all service types, `-r` — resolve (names + addresses), `-p` — parsable. **Without `-t`**, because `-t` exits as soon as the avahi cache is empty: on a cold first run the daemon hasn't received mDNS replies yet and `-t` cuts the scan in milliseconds before announcements arrive. `timeout 5` reliably gives avahi 5 seconds to gather replies regardless of cache state.
 
-`echo "$(...)"` (а не прямой пайп `timeout 5 avahi-browse ... | awk ...`) — обязателен. При SIGTERM от `timeout` строки в pipe-буфере между `avahi-browse` и `awk` теряются, и рецепт даёт пустой вывод. Command-substitution `$(...)` ждёт полного завершения процесса и захватывает всё, что было записано в stdout до сигнала.
+`echo "$(...)"` (instead of a direct pipe `timeout 5 avahi-browse ... | awk ...`) is mandatory. On SIGTERM from `timeout`, lines in the pipe buffer between `avahi-browse` and `awk` are lost, and the recipe gives empty output. Command substitution `$(...)` waits for full process completion and captures everything written to stdout before the signal.
 
-Поля avahi: `$1` — `=` для resolved-записей (`+` = найдено, но не разрешено), `$3` — IPv4/IPv6 (фильтр v4 ради читаемости — IPv6 link-local `fe80::*` для SSH с другого хоста бесполезен), `$7` — FQDN `wirenboard-<SN>.local`, `$8` — IP. `sort -u` снимает дубль от параллельных IPv4/IPv6 анонсов одного хоста.
+avahi fields: `$1` — `=` for resolved entries (`+` = found but not resolved), `$3` — IPv4/IPv6 (filter to v4 for readability — IPv6 link-local `fe80::*` is useless for SSH from another host), `$7` — FQDN `wirenboard-<SN>.local`, `$8` — IP. `sort -u` removes duplicates from parallel IPv4/IPv6 announcements of one host.
 
-Вывод: `wirenboard-A25NDEMJ.local 192.168.1.100`.
+Output: `wirenboard-A25NDEMJ.local 192.168.1.100`.
 
-Если первый запуск пуст — повтори через 2-3 секунды (avahi мог не успеть получить ответы, особенно если демон только что стартовал или интерфейс недавно поднялся).
+If the first run is empty — retry after 2-3 seconds (avahi may not have received replies yet, especially if the daemon just started or the interface came up recently).
 
-Если `avahi-browse` ничего не возвращает — проверь живость демона и интерфейсы:
+If `avahi-browse` returns nothing — check daemon liveness and interfaces:
 
 ```bash
 systemctl is-active avahi-daemon
-# Какие service-types вообще видны (если только локальные — multicast блокируется в сети):
+# Which service types are visible at all (if only local — multicast is blocked on the network):
 avahi-browse -t -a 2>/dev/null | awk '{print $5}' | sort -u
 ```
 
-Резолв конкретного имени работает в обход browse — глобальный `nsswitch` через `mdns4_minimal`:
+Resolving a specific name works around browse — global `nsswitch` via `mdns4_minimal`:
 
 ```bash
-ping -c1 -W2 wirenboard-A25NDEMJ.local 2>/dev/null     # резолвит и пингует
-getent hosts wirenboard-A25NDEMJ.local                 # NB: NSS не всегда подхватывает .local — если пусто, всё равно ping/ssh могут резолвить через avahi-resolve
+ping -c1 -W2 wirenboard-A25NDEMJ.local 2>/dev/null     # resolves and pings
+getent hosts wirenboard-A25NDEMJ.local                 # NB: NSS doesn't always pick up .local — if empty, ping/ssh may still resolve via avahi-resolve
 ```
 
-Если SN заранее известен, browse не обязателен — иди сразу `ssh root@wirenboard-<SN>.local`.
+If the SN is known in advance, browse isn't required — go straight to `ssh root@wirenboard-<SN>.local`.
 
-### Формат серийного номера
+### Serial number format
 
-- SN — буквенно-цифровой, вида `A25NDEMJ` (длина может отличаться).
-- Hostname: `wirenboard-<sn>.local` (например `wirenboard-A25NDEMJ.local`).
-- Получить SN с контроллера вручную:
+- SN is alphanumeric, like `A25NDEMJ` (length may vary).
+- Hostname: `wirenboard-<sn>.local` (e.g. `wirenboard-A25NDEMJ.local`).
+- Get the SN from the controller manually:
 
 ```bash
 ssh root@<ip> cat /var/lib/wirenboard/short_sn.conf
-# либо через MQTT:
+# or via MQTT:
 ssh root@<ip> "mosquitto_sub -t '/devices/system/controls/Short SN' -C 1 -W 3"
 ```
 
-### Определение версии прошивки
+### Determining firmware version
 
 ```bash
 ssh root@<host> cat /etc/wb-fw-version                                    # timestamp YYYYMMDDHHMM
-ssh root@<host> "grep -E '^(RELEASE_NAME|SUITE|TARGET)=' /usr/lib/wb-release"   # ключевые поля
-ssh root@<host> cat /usr/lib/wb-release                                   # всё целиком
+ssh root@<host> "grep -E '^(RELEASE_NAME|SUITE|TARGET)=' /usr/lib/wb-release"   # key fields
+ssh root@<host> cat /usr/lib/wb-release                                   # all of it
 ```
 
-`/usr/lib/wb-release` — shell-нотация. Можно сорсить: `eval "$(ssh ... cat /usr/lib/wb-release)"; echo $RELEASE_NAME`. Файл может включать дополнительные поля (`REPO_PREFIX`, `FIRMWARE_COMPATIBLE` и др.) в зависимости от платформы и версии — не полагайся на фиксированное количество строк.
+`/usr/lib/wb-release` is shell notation. You can source it: `eval "$(ssh ... cat /usr/lib/wb-release)"; echo $RELEASE_NAME`. The file may contain extra fields (`REPO_PREFIX`, `FIRMWARE_COMPATIBLE`, etc.) depending on platform and version — don't rely on a fixed line count.
 
-## SSH-доступ
+## SSH access
 
-### Базовое подключение
+### Basic connection
 
-По умолчанию: `ssh root@wirenboard-<sn>.local`, пароль `wirenboard`.
+By default: `ssh root@wirenboard-<sn>.local`, password `wirenboard`.
 
-Для избежания интерактивных запросов при первом подключении:
+To avoid interactive prompts on first connect:
 
 ```bash
-ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 root@wirenboard-<sn>.local '<команда>'
+ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 root@wirenboard-<sn>.local '<command>'
 ```
 
-`accept-new` принимает host-key только если хост ещё не известен (а не на каждое подключение, как `StrictHostKeyChecking=no`). После первого раза реальная подмена ключа снова поднимет ошибку — это правильное поведение.
+`accept-new` accepts the host key only if the host isn't yet known (rather than on every connect, like `StrictHostKeyChecking=no`). After the first time, a real key change still raises an error — that's the right behavior.
 
-### Неинтерактивная аутентификация (Linux)
+### Non-interactive authentication (Linux)
 
-Чтобы пакетные операции не упирались в `Permission denied (publickey,password)`, есть два пути:
+So that batch operations don't get stuck on `Permission denied (publickey,password)`, there are two paths:
 
-1. **Разложить публичный ключ один раз** (рекомендуется для постоянной работы):
+1. **Deploy the public key once** (recommended for ongoing work):
    ```bash
    ssh-copy-id -o StrictHostKeyChecking=accept-new root@wirenboard-<sn>.local
    ```
-   После этого все `ssh root@wirenboard-<sn>.local` идут без пароля.
+   After this, all `ssh root@wirenboard-<sn>.local` go without a password.
 
-2. **`sshpass` для разовых сессий** (если ключ разложить нельзя — например, диагностика на чужом контроллере):
+2. **`sshpass` for one-off sessions** (if you can't deploy a key — e.g. diagnosing on someone else's controller):
    ```bash
-   sudo apt install -y sshpass     # один раз
-   sshpass -p wirenboard ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 root@<host> '<команда>'
+   sudo apt install -y sshpass     # one-time
+   sshpass -p wirenboard ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 root@<host> '<command>'
    ```
-   Пароль на стандартной прошивке — `wirenboard`. Не записывай в скрипты, передавай через env (`SSHPASS=wirenboard sshpass -e ssh ...`) если нужно.
+   Password on stock firmware is `wirenboard`. Don't put it in scripts; pass via env (`SSHPASS=wirenboard sshpass -e ssh ...`) if needed.
 
-### mDNS-кеш истекает per-name
+### mDNS cache expires per-name
 
-Avahi кеширует резолв `wirenboard-<sn>.local` на ограниченное время. После паузы между сессиями `ssh root@wirenboard-A25NDEMJ.local` может упасть с `Could not resolve hostname`, хотя при том же `ping wirenboard-A25NDEMJ.local` всё резолвится. Лекарство — разовый прогон discovery-команды (см. выше) перед серией SSH-операций; она перерезолвит **все** контроллеры в кеше. Альтернатива — обращаться по IP.
+Avahi caches `wirenboard-<sn>.local` resolution for a limited time. After a pause between sessions, `ssh root@wirenboard-A25NDEMJ.local` may fail with `Could not resolve hostname`, even though `ping wirenboard-A25NDEMJ.local` resolves. Cure — a one-time discovery run (see above) before a series of SSH ops; it re-resolves **all** controllers in the cache. Alternative — use IPs.
 
-### Короткие команды
+### Short commands
 
-Выполняются напрямую:
+Run directly:
 
 ```bash
 ssh root@<host> 'systemctl is-active wb-mqtt-serial'
@@ -112,19 +112,19 @@ ssh root@<host> 'cat /etc/wb-mqtt-serial.conf'
 ssh root@<host> 'df -h / /mnt/data'
 ```
 
-### Длинные команды (apt, tar, сборка)
+### Long commands (apt, tar, builds)
 
-Для команд, которые могут выполняться дольше SSH-таймаута, используй nohup:
+For commands that may run longer than the SSH timeout, use nohup:
 
 ```bash
-ssh root@<host> 'nohup bash -c "apt-get update && apt-get -y install <пакет>" > /tmp/wb-job.log 2>&1 &'
-# Через некоторое время проверь результат:
+ssh root@<host> 'nohup bash -c "apt-get update && apt-get -y install <pkg>" > /tmp/wb-job.log 2>&1 &'
+# After some time check the result:
 ssh root@<host> cat /tmp/wb-job.log
 ```
 
-### Фоновые задачи через systemd
+### Background tasks via systemd
 
-Для задач, которые должны пережить разрыв SSH-сессии. **Лучший паттерн — script-file + systemd `StandardOutput=append:`**: команда уезжает в скрипт-файл, systemd сам пишет stdout/stderr в лог. Никаких трюков с `bash -c '{ …; } > LOG 2>&1'` (где `;` редиректил только последнюю команду из цепочки).
+For tasks that must survive an SSH disconnect. **The best pattern is script-file + systemd `StandardOutput=append:`**: the command goes into a script file, systemd writes stdout/stderr to the log itself. No tricks with `bash -c '{ …; } > LOG 2>&1'` (where `;` redirected only the last command of the chain).
 
 ```bash
 ID=$(head -c4 /dev/urandom | od -An -tx1 | tr -d ' ')
@@ -148,63 +148,63 @@ EOF
 echo "jobId=$ID"
 ```
 
-Проверка статуса:
+Status check:
 
 ```bash
 ssh root@<host> 'systemctl is-active wb-ai-job-<id>; systemctl show wb-ai-job-<id> -p Result,ExecMainStatus --no-pager; tail -30 /mnt/data/ai/wb-ai-integration/jobs/<id>.log'
 ```
 
-Отмена:
+Cancel:
 
 ```bash
 ssh root@<host> 'systemctl stop wb-ai-job-<id>'
 ```
 
-## MQTT-операции (через SSH)
+## MQTT operations (via SSH)
 
-Все MQTT-операции выполняются через SSH на контроллере, где работает локальный Mosquitto.
+All MQTT operations are done via SSH on the controller, where the local Mosquitto runs.
 
-### Чтение retained-значения
+### Reading a retained value
 
 ```bash
 ssh root@<host> "mosquitto_sub -t '/devices/wb-mr6c_7/controls/K1' -C 1 -W 5"
 ```
 
-Флаги: `-C 1` — получить одно сообщение и выйти, `-W 5` — таймаут 5 секунд (если нет retained — не зависнет).
+Flags: `-C 1` — receive one message and exit, `-W 5` — 5-second timeout (won't hang if there's no retained value).
 
-### Запись значения
+### Writing a value
 
 ```bash
 ssh root@<host> "mosquitto_pub -t '/devices/wb-mr6c_7/controls/K1/on' -m '1'"
 ```
 
-**Важно:** для управления контролами публикуй в `<topic>/on`, не в сам `<topic>` — иначе значение затрётся драйвером.
+**Important:** to control a control, publish to `<topic>/on`, not to `<topic>` itself — otherwise the value is overwritten by the driver.
 
-### Список устройств и топиков
+### Listing devices and topics
 
 ```bash
-# Имена всех устройств
+# Names of all devices
 ssh root@<host> "mosquitto_sub -t '/devices/+/meta/name' -C 100 -W 3"
 
-# Все контролы конкретного устройства
+# All controls of a specific device
 ssh root@<host> "mosquitto_sub -t '/devices/wb-mr6c_7/controls/+' -C 100 -W 3"
 
-# Тип контрола
+# Control type
 ssh root@<host> "mosquitto_sub -t '/devices/wb-mr6c_7/controls/K1/meta/type' -C 1 -W 5"
 
-# Все retained-топики с разделителем TAB между topic и payload (надёжный парсинг)
+# All retained topics with TAB separator between topic and payload (reliable parsing)
 ssh root@<host> "mosquitto_sub -F '%t\\t%p' -t '/devices/#' -C 500 -W 5"
 ```
 
-**Имена с пробелами.** Имена устройств и контролов могут содержать пробелы (`CPU Temperature`, `Board Temperature`, `Input 0`, `Input 0 counter` у WB-MR6C). Поэтому:
+**Names with spaces.** Device and control names may contain spaces (`CPU Temperature`, `Board Temperature`, `Input 0`, `Input 0 counter` on WB-MR6C). Therefore:
 
-- При парсинге вывода `mosquitto_sub` **не используй `-v`** (разделитель — пробел) и **не режь по `[/ ]`**. Используй `mosquitto_sub -F '%t\t%p'` и `awk -F'\t'`.
-- Топик в кавычках: `mosquitto_sub -t '/devices/wb-mr6c_2/controls/Input 0' -C 1` — single quotes защищают пробел.
-- В RPC и JSON — имена ставь дословно: `["wb-mr6c_2", "Input 0 counter"]`, без кавычек/escape.
+- When parsing `mosquitto_sub` output, **don't use `-v`** (separator is space) and **don't split by `[/ ]`**. Use `mosquitto_sub -F '%t\t%p'` and `awk -F'\t'`.
+- Topic in quotes: `mosquitto_sub -t '/devices/wb-mr6c_2/controls/Input 0' -C 1` — single quotes protect the space.
+- In RPC and JSON — use names verbatim: `["wb-mr6c_2", "Input 0 counter"]`, no quotes/escape.
 
-### MQTT RPC — вызов сервисов контроллера
+### MQTT RPC — calling controller services
 
-RPC через MQTT — основной способ управления сервисами Wiren Board (конфигурация Modbus, правила, редактор конфигов). Паттерн:
+RPC over MQTT is the main way to manage Wiren Board services (Modbus configuration, rules, config editor). Pattern:
 
 ```bash
 ssh root@<host> bash -c '
@@ -217,40 +217,40 @@ ssh root@<host> bash -c '
 '
 ```
 
-**Как это работает:**
+**How it works:**
 
-1. Генерируется уникальный ID запроса
-2. Подписка на топик ответа `/rpc/v1/<service>/<method>/<ID>/reply` запускается в фоне
-3. Пауза 0.3 с, чтобы подписка успела установиться
-4. Публикация запроса в `/rpc/v1/<service>/<method>/<ID>` с JSON-телом `{"id":"<ID>","params":...}`
-5. `wait` ожидает ответ (таймаут задаётся `-W`)
+1. A unique request ID is generated
+2. Subscription to the reply topic `/rpc/v1/<service>/<method>/<ID>/reply` starts in the background
+3. 0.3 s pause so the subscription has time to establish
+4. Publishing the request to `/rpc/v1/<service>/<method>/<ID>` with JSON body `{"id":"<ID>","params":...}`
+5. `wait` waits for the reply (timeout set by `-W`)
 
-**Экранирование кавычек:** Обрати внимание на `'"'"'` — это способ вставить одинарную кавычку внутри строки в одинарных кавычках bash. Конструкция `'"'"'` означает: закрыть одинарную кавычку, открыть двойную кавычку, вставить одинарную кавычку, закрыть двойную кавычку, открыть одинарную кавычку снова.
+**Quote escaping:** Note `'"'"'` — that's the way to insert a single quote inside a single-quoted bash string. The construct `'"'"'` means: close single quote, open double quote, insert single quote, close double quote, open single quote again.
 
-### Доступные RPC-сервисы
+### Available RPC services
 
-#### wb-mqtt-serial — драйвер Modbus/RS-485
+#### wb-mqtt-serial — Modbus/RS-485 driver
 
-| Метод | Назначение | Пример params |
+| Method | Purpose | Example params |
 |---|---|---|
-| `config/Load` | Текущий конфиг драйвера + полный список **types** (шаблонов с `hw[].signature`) | `{}` |
-| `device/LoadConfig` | **Параметры прошивки** устройства (`fw`, `model`, `parameters`). **НЕ** возвращает список каналов | `{"device_id":"wb-mr6c_138"}` или `{"path":"/dev/ttyRS485-1","baud_rate":9600,"parity":"N","data_bits":8,"stop_bits":2,"slave_id":138,"device_type":"WB-MR6C"}` |
-| `device/Probe` | Проверка присутствия устройства на шине | `{"path":"/dev/ttyRS485-1","baud_rate":9600,"slave_id":138}` |
-| `ports/Load` | Список доступных портов | `{}` |
+| `config/Load` | Current driver config + full **types** list (templates with `hw[].signature`) | `{}` |
+| `device/LoadConfig` | **Firmware parameters** of a device (`fw`, `model`, `parameters`). Does **NOT** return channel list | `{"device_id":"wb-mr6c_138"}` or `{"path":"/dev/ttyRS485-1","baud_rate":9600,"parity":"N","data_bits":8,"stop_bits":2,"slave_id":138,"device_type":"WB-MR6C"}` |
+| `device/Probe` | Check device presence on the bus | `{"path":"/dev/ttyRS485-1","baud_rate":9600,"slave_id":138}` |
+| `ports/Load` | List of available ports | `{}` |
 
-**Сканирование шины — через `wb-device-manager`, не `wb-mqtt-serial/port/Scan`.** Старый `port/Scan` молча пропускает живые WB-устройства (наблюдалось на WB-MAP6S). Новый интерфейс асинхронный, с retained-state:
+**Bus scanning — via `wb-device-manager`, not `wb-mqtt-serial/port/Scan`.** The old `port/Scan` silently misses live WB devices (observed on WB-MAP6S). The new interface is async with retained state:
 
-| Метод | Назначение | params |
+| Method | Purpose | params |
 |---|---|---|
-| `wb-device-manager / bus-scan / Start` | Запустить сканирование | `{"scan_type":"extended","preserve_old_results":false,"port":{"path":"/dev/ttyRS485-1","baud_rate":115200,"parity":"N","data_bits":8,"stop_bits":2}}` |
-| `wb-device-manager / bus-scan / Stop` | Прервать | `{}` |
-| Прогресс/результат | retained `/wb-device-manager/state` | `{"scanning":bool,"progress":0..100,"devices":[...]}` |
+| `wb-device-manager / bus-scan / Start` | Start scanning | `{"scan_type":"extended","preserve_old_results":false,"port":{"path":"/dev/ttyRS485-1","baud_rate":115200,"parity":"N","data_bits":8,"stop_bits":2}}` |
+| `wb-device-manager / bus-scan / Stop` | Interrupt | `{}` |
+| Progress/result | retained `/wb-device-manager/state` | `{"scanning":bool,"progress":0..100,"devices":[...]}` |
 
-`scan_type:"extended"` = Fast Modbus (WB+Onokom, секунды). `scan_type:"standard"` = обычный Modbus (медленнее, видит сторонние).
+`scan_type:"extended"` = Fast Modbus (WB+Onokom, seconds). `scan_type:"standard"` = regular Modbus (slower, sees third-party).
 
-> Список **каналов** устройства (с `enabled:false`-каналами) на текущих прошивках **не возвращается** ни одним RPC-методом. Читай напрямую файл-шаблон: `cat /usr/share/wb-mqtt-serial/templates/config-<device.id>.json`. Метод `templates/GetTemplate` объявлен, но в wb-2602/wb-2507 даёт таймаут — не использовать.
+> The list of **channels** of a device (with `enabled:false` channels) on current firmwares is **not returned** by any RPC method. Read the template file directly: `cat /usr/share/wb-mqtt-serial/templates/config-<device.id>.json`. The `templates/GetTemplate` method is declared but in wb-2602/wb-2507 times out — don't use.
 
-Пример — загрузить конфиг wb-mqtt-serial:
+Example — load wb-mqtt-serial config:
 
 ```bash
 ssh root@<host> bash -c '
@@ -263,10 +263,10 @@ ssh root@<host> bash -c '
 '
 ```
 
-Пример — сканирование порта (через wb-device-manager, асинхронно):
+Example — port scan (via wb-device-manager, async):
 
 ```bash
-# 1. Запустить скан (Start не ждёт окончания, прогресс через retained-state)
+# 1. Start the scan (Start doesn't wait for completion, progress is via retained state)
 ssh root@<host> bash -c '
   ID=$(cat /dev/urandom | tr -dc a-z0-9 | head -c8)
   mosquitto_sub -t "/rpc/v1/wb-device-manager/bus-scan/Start/${ID}/reply" -C 1 -W 10 &
@@ -276,7 +276,7 @@ ssh root@<host> bash -c '
   wait $SUB_PID
 '
 
-# 2. Дождаться scanning:false (polling retained-state)
+# 2. Wait for scanning:false (polling retained state)
 ssh root@<host> 'for i in $(seq 1 60); do
   s=$(mosquitto_sub -t /wb-device-manager/state -C 1 -W 2)
   echo "$s" | jq -r ".scanning, .progress" | xargs echo
@@ -284,33 +284,33 @@ ssh root@<host> 'for i in $(seq 1 60); do
   sleep 2
 done'
 
-# 3. Забрать devices из state
+# 3. Pull devices from state
 ssh root@<host> 'mosquitto_sub -t /wb-device-manager/state -C 1 -W 3 | jq ".devices"'
 ```
 
-**Не использовать `wb-mqtt-serial/port/Scan`** — он молча пропускает живые WB-устройства (наблюдалось на WB-MAP6S). Только `wb-device-manager/bus-scan/Start` (см. выше).
+**Don't use `wb-mqtt-serial/port/Scan`** — it silently misses live WB devices (observed on WB-MAP6S). Only `wb-device-manager/bus-scan/Start` (see above).
 
-#### confed — редактор конфигов
+#### confed — config editor
 
-| Метод | Назначение | Пример params |
+| Method | Purpose | Example params |
 |---|---|---|
-| `Editor/Load` | Загрузить конфиг | `{"path":"/etc/wb-mqtt-serial.conf"}` |
-| `Editor/Save` | Сохранить конфиг (с валидацией и рестартом сервиса) | `{"path":"/etc/wb-mqtt-serial.conf","content":"<полный JSON>"}` |
+| `Editor/Load` | Load a config | `{"path":"/etc/wb-mqtt-serial.conf"}` |
+| `Editor/Save` | Save a config (with validation and service restart) | `{"path":"/etc/wb-mqtt-serial.conf","content":"<full JSON>"}` |
 
-**Используй `confed/Editor/Save` вместо прямой записи в файлы конфигов** — он валидирует JSON и атомарно перезапускает зависимый сервис. Прямая запись битого JSON может остановить опрос шины.
+**Use `confed/Editor/Save` instead of writing config files directly** — it validates JSON and atomically restarts the dependent service. Direct write of broken JSON can stop bus polling.
 
-#### wbrules — движок правил
+#### wbrules — rules engine
 
-| Метод | Назначение | Пример params |
+| Method | Purpose | Example params |
 |---|---|---|
-| `Editor/List` | Список файлов правил с `{enabled, virtualPath, rules, devices, timers}` | `{}` |
-| `Editor/Load` | Прочитать файл правила | `{"path":"wb-la-climate.js"}` |
-| `Editor/Save` | Сохранить правило (валидация JS + reload) | `{"path":"wb-la-climate.js","content":"<JS-код>"}` |
-| `Editor/Remove` | Удалить файл правила | `{"path":"wb-la-climate.js"}` → `{"result":true}` |
-| `Editor/ChangeState` | Выключить (`<name>.js` → `<name>.js.disabled`) или включить файл целиком | `{"path":"wb-la-climate.js","enabled":false}` (включение обратно через `enabled:true` ненадёжно — см. скилл `wb-rules`) |
-| `Editor/Rename` | Переименовать файл (не тестировался) | `{...}` |
+| `Editor/List` | List of rule files with `{enabled, virtualPath, rules, devices, timers}` | `{}` |
+| `Editor/Load` | Read a rule file | `{"path":"wb-la-climate.js"}` |
+| `Editor/Save` | Save a rule (JS validation + reload) | `{"path":"wb-la-climate.js","content":"<JS code>"}` |
+| `Editor/Remove` | Delete a rule file | `{"path":"wb-la-climate.js"}` → `{"result":true}` |
+| `Editor/ChangeState` | Disable (`<name>.js` → `<name>.js.disabled`) or enable a whole file | `{"path":"wb-la-climate.js","enabled":false}` (re-enable via `enabled:true` is unreliable — see the `wb-rules` skill) |
+| `Editor/Rename` | Rename a file (untested) | `{...}` |
 
-Пример — список правил:
+Example — list rules:
 
 ```bash
 ssh root@<host> bash -c '
@@ -323,21 +323,21 @@ ssh root@<host> bash -c '
 '
 ```
 
-## Файловые операции
+## File operations
 
-### Чтение файла с контроллера
+### Read a file from the controller
 
 ```bash
 ssh root@<host> cat /etc/wb-mqtt-serial.conf
 ```
 
-### Запись файла на контроллер
+### Write a file to the controller
 
 ```bash
-echo 'содержимое файла' | ssh root@<host> 'cat > /path/to/file'
+echo 'file content' | ssh root@<host> 'cat > /path/to/file'
 ```
 
-Для многострочного содержимого:
+For multi-line content:
 
 ```bash
 ssh root@<host> 'cat > /etc/wb-rules/my-rule.js' << 'REMOTEFILE'
@@ -350,152 +350,152 @@ defineRule("my-rule", {
 REMOTEFILE
 ```
 
-### Скачивание файла с контроллера на локальную машину
+### Download a file from the controller to the local machine
 
 ```bash
 scp root@<host>:/path/to/file ./local-file
 ```
 
-### Загрузка файла на контроллер
+### Upload a file to the controller
 
 ```bash
 scp ./local-file root@<host>:/path/to/file
 ```
 
-### Работа с каталогами
+### Working with directories
 
 ```bash
-# Скачать каталог рекурсивно
+# Download a directory recursively
 scp -r root@<host>:/etc/wb-rules ./wb-rules-backup
 
-# Загрузить каталог
+# Upload a directory
 scp -r ./configs root@<host>:/mnt/data/
 ```
 
-## Правила безопасности
+## Safety rules
 
-### ЗАПРЕЩЕНО
+### FORBIDDEN
 
-- **НЕ запускать FIT-прошивку** (`wb-fw-update`, `swupdate`, `wb-run-update`, `fit-update`) — прошивка только через web UI контроллера. FIT перезаписывает rootfs целиком, ошибка может окирпичить контроллер.
-- **`wb-factoryreset` — только с явным подтверждением пользователя и обязательным бэкапом перед.** Стирает все пользовательские данные (конфиги, правила, шаблоны, Docker-образы), пароль root возвращается к `wirenboard`, кастомные SSH-ключи пропадают. Полный сценарий — в `/controller-update` (Сценарий D). Не запускай по неоднозначной формулировке («очисти», «сброс»).
+- **Don't run a FIT firmware flash** (`wb-fw-update`, `swupdate`, `wb-run-update`, `fit-update`) — flashing only via the controller's web UI. FIT overwrites rootfs entirely; an error can brick the controller.
+- **`wb-factoryreset` — only with explicit user confirmation and a mandatory backup before.** Wipes all user data (configs, rules, templates, Docker images), root password reverts to `wirenboard`, custom SSH keys disappear. Full scenario — in `/controller-update` (Scenario D). Don't run on ambiguous wording ("clean up", "reset").
 
-### Бэкап перед правкой конфигов — ОБЯЗАТЕЛЬНО
+### Backup before editing configs — MANDATORY
 
-Перед изменением любого конфигурационного файла:
+Before changing any configuration file:
 
 ```bash
 ssh root@<host> 'cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date +%s)'
 ```
 
-Примеры конфигов, которые требуют бэкапа: `wb-mqtt-serial.conf`, `wb-hardware.conf`, файлы в `/etc/network/`, `/etc/mosquitto/`, `/etc/wb-rules/`.
+Examples of configs requiring a backup: `wb-mqtt-serial.conf`, `wb-hardware.conf`, files in `/etc/network/`, `/etc/mosquitto/`, `/etc/wb-rules/`.
 
-### RPC вместо прямой правки файлов
+### RPC instead of direct file editing
 
-Для следующих конфигов используй RPC, а не прямую запись:
+For the following configs use RPC, not direct write:
 
-| Конфиг | RPC-сервис | Почему |
+| Config | RPC service | Why |
 |---|---|---|
-| `/etc/wb-mqtt-serial.conf` | `confed/Editor/Save` | Валидация JSON + атомарный рестарт драйвера |
-| Правила `/etc/wb-rules/*.js` | `wbrules/Editor/Save` | Валидация JS + горячая перезагрузка |
-| `/etc/wb-hardware.conf` | `confed/Editor/Save` | Валидация + применение без reboot |
+| `/etc/wb-mqtt-serial.conf` | `confed/Editor/Save` | JSON validation + atomic driver restart |
+| Rules `/etc/wb-rules/*.js` | `wbrules/Editor/Save` | JS validation + hot reload |
+| `/etc/wb-hardware.conf` | `confed/Editor/Save` | Validation + apply without reboot |
 
-### Подтверждение пользователя
+### User confirmation
 
-**Спрашивай подтверждение перед:**
-- Деструктивными операциями: `rm`, `reboot`, `dpkg --remove`, `apt-get purge`
-- Перезапуском критичных сервисов: `systemctl restart wb-mqtt-serial`, `systemctl restart mosquitto`
-- Изменением сетевой конфигурации (можно потерять доступ)
-- Остановкой Docker-контейнеров
+**Ask for confirmation before:**
+- Destructive operations: `rm`, `reboot`, `dpkg --remove`, `apt-get purge`
+- Restarting critical services: `systemctl restart wb-mqtt-serial`, `systemctl restart mosquitto`
+- Changing network configuration (you can lose access)
+- Stopping Docker containers
 
-**БЕЗ подтверждения (выполняй сразу):**
-- Диагностика и чтение: `cat`, `journalctl`, `systemctl status`, `mosquitto_sub`, `df`, `ip addr`
-- Чтение MQTT-топиков
-- Сканирование шины
-- Просмотр логов
+**WITHOUT confirmation (do immediately):**
+- Diagnostics and reading: `cat`, `journalctl`, `systemctl status`, `mosquitto_sub`, `df`, `ip addr`
+- Reading MQTT topics
+- Bus scanning
+- Viewing logs
 
-### Логи — только свежие
+### Logs — only fresh
 
-После рестарта сервиса смотри только свежие логи, а не весь журнал:
+After restarting a service, look only at fresh logs, not the whole journal:
 
 ```bash
 ssh root@<host> 'journalctl -u wb-mqtt-serial --since "1 min ago" --no-pager'
 ```
 
-Для длинных журналов:
+For long journals:
 
 ```bash
-ssh root@<host> 'journalctl -u <сервис> -n 50 --no-pager'
+ssh root@<host> 'journalctl -u <service> -n 50 --no-pager'
 ```
 
-## Типовые диагностические команды
+## Typical diagnostic commands
 
 ```bash
-# Упавшие сервисы
+# Failed services
 ssh root@<host> 'systemctl --failed --no-pager'
 
-# Место на диске
+# Disk space
 ssh root@<host> 'df -h / /mnt/data'
 
-# Нагрузка и память
+# Load and memory
 ssh root@<host> 'uptime; free -h'
 
-# Ошибки в журнале
+# Errors in the journal
 ssh root@<host> 'journalctl -p err -n 50 --no-pager'
 
-# Kernel mismatch (частая причина проблем после обновления)
+# Kernel mismatch (a frequent cause of issues after upgrade)
 ssh root@<host> 'echo "running: $(uname -r)"; dpkg -l linux-image-wb* 2>/dev/null | grep ^ii | awk "{print \"installed:\", \$3}"'
 
-# Список serial-портов
+# List of serial ports
 ssh root@<host> 'ls /dev/ttyRS485-* /dev/ttyMOD* 2>/dev/null'
 
-# Проверка MQTT-брокера
+# Check the MQTT broker
 ssh root@<host> 'systemctl is-active mosquitto && mosquitto_sub -t "/devices/+/meta/name" -C 5 -W 3'
 ```
 
-## Скиллы
+## Skills
 
-Доступные скиллы для специфических задач — вызывай `/skill-name` когда задача попадает в их область:
+Available skills for specific tasks — invoke `/skill-name` when the task falls into their area:
 
-| Скилл | Область |
+| Skill | Area |
 |---|---|
-| `/wb-mqtt-serial` | Конфигурация Modbus-устройств через RPC, включение/отключение каналов, добавление устройств |
-| `/serial-templates` | Создание собственных Modbus-шаблонов (когда родного нет) |
-| `/wb-rules` | JavaScript-правила автоматизации (defineRule, виртуальные устройства, таймеры, cron) |
-| `/scenarios` | Декларативные сценарии Web UI (devicesControl, lightControl, thermostat, schedule) |
-| `/notifications` | Telegram/Email/SMS из правил (`Notify.*`), `alarms.conf` |
-| `/troubleshooting` | Общая диагностика: упавшие сервисы, место на диске, kernel mismatch, Docker |
-| `/troubleshooting-serial` | RS-485/Modbus: CRC-ошибки, таймауты, проблемы сигнала, OWON |
+| `/wb-mqtt-serial` | Configuring Modbus devices via RPC, enabling/disabling channels, adding devices |
+| `/serial-templates` | Creating custom Modbus templates (when there's no built-in one) |
+| `/wb-rules` | JavaScript automation rules (defineRule, virtual devices, timers, cron) |
+| `/scenarios` | Declarative web UI scenarios (devicesControl, lightControl, thermostat, schedule) |
+| `/notifications` | Telegram/Email/SMS from rules (`Notify.*`), `alarms.conf` |
+| `/troubleshooting` | General diagnostics: failed services, disk space, kernel mismatch, Docker |
+| `/troubleshooting-serial` | RS-485/Modbus: CRC errors, timeouts, signal issues, OWON |
 | `/services` | systemd: override-conf, drop-ins, custom units/timers, mask/unmask |
 | `/network` | NetworkManager + wb-connection-manager: ethernet/wifi/4G/OpenVPN, failover |
-| `/wb-cloud` | Wiren Board Cloud agent: активация, статус, отвязка |
-| `/mqtt-broker` | mosquitto admin: пользователи, ACL, мосты, TLS |
-| `/controller-backup` | Полный бэкап контроллера: конфиги, пакеты, данные, Docker volumes |
-| `/controller-update` | Обновление прошивки и пакетов |
-| `/hardware-modules` | Модули расширения (MOD1-MOD4): Zigbee, CAN, RS-485, релейные |
-| `/software-install` | Установка ПО: Docker, Zigbee2MQTT, Home Assistant, Node-RED, Grafana |
-| `/zigbee` | Zigbee-устройства: сопряжение, управление, группы, OTA |
-| `/history` | История данных, графики, экспорт |
-| `/diagrams` | Mermaid-диаграммы для визуализации логики |
-| `/documentation-search` | Поиск по вики Wiren Board и GitHub-репозиториям |
-| `/bugreport` | Составление багрепорта с диагностическим архивом |
+| `/wb-cloud` | Wiren Board Cloud agent: activation, status, unbinding |
+| `/mqtt-broker` | mosquitto admin: users, ACLs, bridges, TLS |
+| `/controller-backup` | Full controller backup: configs, packages, data, Docker volumes |
+| `/controller-update` | Firmware and package updates |
+| `/hardware-modules` | Expansion modules (MOD1-MOD4): Zigbee, CAN, RS-485, relay |
+| `/software-install` | Software installation: Docker, Zigbee2MQTT, Home Assistant, Node-RED, Grafana |
+| `/zigbee` | Zigbee devices: pairing, control, groups, OTA |
+| `/history` | Historical data, charts, export |
+| `/diagrams` | Mermaid diagrams to visualize logic |
+| `/documentation-search` | Searching the Wiren Board wiki and GitHub repos |
+| `/bugreport` | Composing a bug report with a diagnostic archive |
 
-## Принципы работы
+## Working principles
 
-1. **Сначала диагностика, потом действия.** Прежде чем что-то менять — разберись в текущем состоянии. Прочитай конфиг, проверь логи, посмотри MQTT-топики.
+1. **Diagnose first, act second.** Before changing anything — understand the current state. Read the config, check the logs, look at MQTT topics.
 
-2. **Не угадывай имена топиков — проверь через mosquitto_sub.** Имена устройств и контролов зависят от конфигурации конкретного контроллера. Всегда сначала (формат `topic\tpayload` — TAB-разделитель надёжнее `-v`, имена бывают с пробелами):
+2. **Don't guess topic names — verify via mosquitto_sub.** Device and control names depend on the specific controller's configuration. Always first (format `topic\tpayload` — TAB separator is more reliable than `-v`, names may have spaces):
    ```bash
    ssh root@<host> "mosquitto_sub -F '%t\\t%p' -t '/devices/+/meta/name' -C 50 -W 3"
    ```
 
-3. **Не спрашивай «хотите ли вы» — делай.** Пользователь остановит если что. Исключение — деструктивные операции (см. правила безопасности выше).
+3. **Don't ask "do you want to" — do it.** The user will stop you if needed. Exception — destructive operations (see safety rules above).
 
-4. **Действуй автономно.** Проверяй факты через SSH, не спрашивай «установлен ли X?» или «какой у вас IP?» — выясни сам:
+4. **Act autonomously.** Verify facts via SSH, don't ask "is X installed?" or "what's your IP?" — find out yourself:
    ```bash
    ssh root@<host> 'dpkg -l | grep docker'
    ssh root@<host> 'ip addr show'
    ```
 
-5. **Шаблоны и конфиги — с контроллера, не из интернета.** На железке актуальная версия под установленную прошивку. Не скачивай шаблоны с GitHub — используй RPC `device/LoadConfig` или `templates/GetTemplate`.
+5. **Templates and configs — from the controller, not from the internet.** On the hardware is the current version matching the installed firmware. Don't download templates from GitHub — use RPC `device/LoadConfig` or `templates/GetTemplate`.
 
-6. **Документация — перед починкой.** Для типовых задач (Docker, Zigbee, Home Assistant) сначала прочитай соответствующую страницу вики через WebFetch: `https://wiki.wirenboard.com/wiki/<Тема>`.
+6. **Documentation — before fixing.** For typical tasks (Docker, Zigbee, Home Assistant) first read the corresponding wiki page via WebFetch: `https://wiki.wirenboard.com/wiki/<topic>`.

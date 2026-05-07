@@ -1,32 +1,32 @@
 ---
 name: scenarios
-description: Сценарии Web UI Wiren Board (`wb-scenarios`) через MCP — devicesControl, lightControl, thermostat, schedule. /etc/wb-scenarios.conf через confed.
+description: Wiren Board Web UI scenarios (`wb-scenarios`) via MCP — devicesControl, lightControl, thermostat, schedule. /etc/wb-scenarios.conf via confed.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # scenarios (MCP)
 
-Декларативные сценарии Web UI (`wb-scenarios`) через `wb_confed_*`. 4 типа: `devicesControl`, `lightControl`, `thermostat`, `schedule`. Под капотом превращаются в wb-rules JS.
+Declarative Web UI scenarios (`wb-scenarios`) via `wb_confed_*`. 4 types: `devicesControl`, `lightControl`, `thermostat`, `schedule`. Under the hood they compile into wb-rules JS.
 
-Подгружай при: «сделай сценарий», «настрой термостат», «свет по датчику движения», «по расписанию», `wb-scenarios.conf`, «сценарии в Web UI».
+Load this when: "make a scenario", "configure a thermostat", "light by motion sensor", "by schedule", `wb-scenarios.conf`, "scenarios in Web UI".
 
-**Не путай с `/wb-rules`** (полноценный JS). Сценарии — упрощённая надстройка для типового.
+**Don't confuse with `/wb-rules`** (full JS). Scenarios are a simplified add-on for typical cases.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Текущий конфиг сценариев | `wb_confed_load path=/etc/wb-scenarios.conf` |
-| Записать новый конфиг (валидация + reload) | `wb_confed_save path=/etc/wb-scenarios.conf content=<JSON-объект>` |
-| Статус генератора | `wb_systemd_unit unit=wb-scenarios-reloader` |
-| Логи генератора | `wb_logs unit=wb-scenarios-reloader since="10m ago"` |
-| Сгенерированные .js под капотом | `wb_ssh_exec` `ls /etc/wb-rules/wb-scenario-*.js` |
+| Intent | Tool |
+|--------|------|
+| Current scenarios config | `wb_confed_load path=/etc/wb-scenarios.conf` |
+| Save new config (validation + reload) | `wb_confed_save path=/etc/wb-scenarios.conf content=<JSON object>` |
+| Generator status | `wb_systemd_unit unit=wb-scenarios-reloader` |
+| Generator logs | `wb_logs unit=wb-scenarios-reloader since="10m ago"` |
+| Generated .js under the hood | `wb_ssh_exec` `ls /etc/wb-rules/wb-scenario-*.js` |
 
-## Четыре типа сценариев
+## Four scenario types
 
-### `devicesControl` — групповое управление
+### `devicesControl` — group control
 
-«Контрол A изменился → выставить контролы B и C».
+"Control A changed → set controls B and C".
 
 ```json
 {"scenarioType":"devicesControl","name":"...","id_prefix":"...","enable":true,
@@ -34,9 +34,9 @@ allowed-tools: Bash Read Write WebFetch
  "outControls":[{"deviceId":"wb-mr6c_2","controlId":"K1","value":true}]}
 ```
 
-### `lightControl` — освещение
+### `lightControl` — lighting
 
-Датчик движения + выход + delayOff. Опционально: датчик освещённости + порог.
+Motion sensor + output + delayOff. Optionally: light sensor + threshold.
 
 ```json
 {"scenarioType":"lightControl","name":"...","id_prefix":"...","enable":true,
@@ -47,9 +47,9 @@ allowed-tools: Bash Read Write WebFetch
  "darkThreshold":100}
 ```
 
-### `thermostat` — термостат
+### `thermostat` — thermostat
 
-Setpoint + гистерезис + датчик + выход.
+Setpoint + hysteresis + sensor + output.
 
 ```json
 {"scenarioType":"thermostat","name":"...","id_prefix":"...","enable":true,
@@ -58,9 +58,9 @@ Setpoint + гистерезис + датчик + выход.
  "setpoint":22.0,"hysteresis":0.5}
 ```
 
-### `schedule` — расписание
+### `schedule` — schedule
 
-«В HH:MM по дням недели — сделать действия».
+"At HH:MM on weekdays — perform actions".
 
 ```json
 {"scenarioType":"schedule","name":"...","id_prefix":"...","enable":true,
@@ -71,41 +71,41 @@ Setpoint + гистерезис + датчик + выход.
  ]}
 ```
 
-`days`: `[1..7]` (1=пн). `delay`: после предыдущего action (сек).
+`days`: `[1..7]` (1=Mon). `delay`: after the previous action (sec).
 
-## Сценарий: добавить новый
+## Scenario: add a new one
 
-1. `wb_confed_load path=/etc/wb-scenarios.conf` — текущий объект.
-2. Добавь объект в массив `scenarios`.
-3. `wb_confed_save path=/etc/wb-scenarios.conf content=<полный объект>`.
-4. `wb_systemd_unit unit=wb-scenarios-reloader` — статус (`active`).
-5. `wb_logs unit=wb-scenarios-reloader since="1m ago"` — без ошибок?
-6. Проверка работы — поменяй `inControls` через `wb_mqtt_write` или дождись расписания.
+1. `wb_confed_load path=/etc/wb-scenarios.conf` — current object.
+2. Add an object to the `scenarios` array.
+3. `wb_confed_save path=/etc/wb-scenarios.conf content=<full object>`.
+4. `wb_systemd_unit unit=wb-scenarios-reloader` — status (`active`).
+5. `wb_logs unit=wb-scenarios-reloader since="1m ago"` — no errors?
+6. Verify operation — change `inControls` via `wb_mqtt_write` or wait for the schedule.
 
-## Когда сценария мало — `/wb-rules`
+## When a scenario isn't enough — `/wb-rules`
 
-- Условие на нескольких контролах одновременно с логикой.
-- Вычислимая величина (среднее, асимметричный гистерезис, PID).
-- Состояние (счётчики, «N раз подряд»).
-- Кастомные таймеры (interval, экспоненциальная задержка).
-- Виртуальные устройства.
+- Condition over multiple controls simultaneously with logic.
+- A computed quantity (average, asymmetric hysteresis, PID).
+- State (counters, "N times in a row").
+- Custom timers (interval, exponential backoff).
+- Virtual devices.
 
-## Грабли
+## Gotchas
 
-- **`wb-scenarios.service` не существует** — `wb-scenarios-reloader`.
-- **`id_prefix` дубликат** — пересечение имён сгенерированных правил.
-- **Прямая правка `/etc/wb-rules/wb-scenario-*.js`** — затрётся при reload.
-- **Кириллица в `id_prefix`** — schema запрещает.
-- **Конфликт сценария и wb-rules** — оба пишут в один контрол.
-- **`schedule` использует системный timezone** — `timedatectl` должен быть правильный.
+- **`wb-scenarios.service` doesn't exist** — it's `wb-scenarios-reloader`.
+- **Duplicate `id_prefix`** — generated rule name collisions.
+- **Direct edits to `/etc/wb-rules/wb-scenario-*.js`** — overwritten on reload.
+- **Cyrillic in `id_prefix`** — schema forbids it.
+- **Scenario and wb-rules conflict** — both writing to the same control.
+- **`schedule` uses system timezone** — `timedatectl` must be correct.
 
-## Связанные скиллы
+## Related skills
 
-- `/wb-rules` — когда сценарий не покрывает.
-- `/wb-mqtt-serial` — добавление новых устройств для inControls/outControls.
+- `/wb-rules` — when a scenario doesn't cover.
+- `/wb-mqtt-serial` — adding new devices for inControls/outControls.
 
-Подробности (формат, schema-ограничения) — bash-двойник `/scenarios`.
+Details (format, schema constraints) — bash-flavor twin `/scenarios`.
 
-## Документация
+## Documentation
 
 - WB wiki: <https://wirenboard.com/wiki/Wb-scenarios>

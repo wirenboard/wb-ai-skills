@@ -1,154 +1,154 @@
 ---
 name: wb-rules
-description: "Движок правил Wiren Board через MCP. Скрипты в /etc/wb-rules/*.js на ES5. defineRule (whenChanged, asSoonAs, when, cron), defineVirtualDevice, PersistentStorage. Создание, редактирование и отладка правил автоматизации."
+description: "Wiren Board rules engine via MCP. Scripts in /etc/wb-rules/*.js on ES5. defineRule (whenChanged, asSoonAs, when, cron), defineVirtualDevice, PersistentStorage. Authoring, editing, and debugging automation rules."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
 # wb-rules (MCP)
 
-Движок правил Wiren Board. Скрипты в `/etc/wb-rules/*.js`, переиспользуемые модули в `/etc/wb-rules-modules/*.js`. Язык — **ES5** (без `let`/`const`/arrow-функций) плюс WB-специфичный синтаксический сахар. Файлы правил редактируй через MCP-tools `wb_rules_*` (валидация JS + reload движка). Файлы модулей — через `wb_write_file` (RPC для модулей нет, движок подхватит сам).
+Wiren Board rules engine. Scripts in `/etc/wb-rules/*.js`, reusable modules in `/etc/wb-rules-modules/*.js`. Language — **ES5** (no `let`/`const`/arrow functions) plus WB-specific syntactic sugar. Edit rule files via `wb_rules_*` MCP tools (JS validation + engine reload). Module files — via `wb_write_file` (no RPC for modules, the engine picks them up itself).
 
-Подгружай на «сделай чтобы...», «когда X — делай Y», по таймеру/событию/кнопке/движению, при правках в `/etc/wb-rules/`, упоминании `defineRule`, виртуальных устройств.
+Load this on "make it so that...", "when X — do Y", on a timer/event/button/motion, when editing in `/etc/wb-rules/`, mention of `defineRule`, virtual devices.
 
-Каноничная документация — README репозитория <https://github.com/wirenboard/wb-rules>. Если есть сомнения в синтаксисе — `WebFetch` на README, не угадывай.
+The canonical documentation is the README of the repository <https://github.com/wirenboard/wb-rules>. If unsure about syntax — `WebFetch` the README, don't guess.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Список правил (включая выключенные) | `wb_rules_list` |
-| Прочитать правило | `wb_rules_load` |
-| Создать или обновить правило | `wb_rules_save` (валидация JS + reload) |
-| Удалить правило | `wb_rules_delete` (RPC `Editor/Remove`, только с явным OK пользователя) |
-| Выключить правило, не удаляя | `wb_rules_disable` (RPC `Editor/ChangeState`, `<name>.js` → `<name>.js.disabled`) |
-| Прочитать тип/значение/meta контрола | `wb_mqtt_read` |
-| Список устройств / контролов | `wb_mqtt_devices`, `wb_mqtt_controls` |
-| Логи движка после Save | `wb_logs` `unit=wb-rules` |
-| Записать модуль `/etc/wb-rules-modules/*.js` | `wb_write_file` (RPC для модулей нет) |
-| История значения для диагностики правила | `wb_history` |
+| Intent | Tool |
+|--------|------|
+| List rules (including disabled) | `wb_rules_list` |
+| Read a rule | `wb_rules_load` |
+| Create or update a rule | `wb_rules_save` (JS validation + reload) |
+| Delete a rule | `wb_rules_delete` (RPC `Editor/Remove`, only with explicit user OK) |
+| Disable a rule without deleting | `wb_rules_disable` (RPC `Editor/ChangeState`, `<name>.js` → `<name>.js.disabled`) |
+| Read a control's type/value/meta | `wb_mqtt_read` |
+| List devices / controls | `wb_mqtt_devices`, `wb_mqtt_controls` |
+| Engine logs after Save | `wb_logs` `unit=wb-rules` |
+| Write a module `/etc/wb-rules-modules/*.js` | `wb_write_file` (no RPC for modules) |
+| Value history for rule diagnostics | `wb_history` |
 
-Имена правил в params tools — **с расширением `.js`** и без префикса пути: `my-rule.js`, не `/etc/wb-rules/my-rule.js`.
+Rule names in tool params — **with the `.js` extension** and without a path prefix: `my-rule.js`, not `/etc/wb-rules/my-rule.js`.
 
-## Workflow: написать правило
+## Workflow: writing a rule
 
-1. **Узнай тип канала** перед записью — `wb_mqtt_read` для `/devices/<d>/controls/<c>/meta/type`. От типа зависит, что записывать в `dev[...]` (см. таблицу типов ниже).
+1. **Find the channel type** before writing — `wb_mqtt_read` for `/devices/<d>/controls/<c>/meta/type`. The type determines what to write into `dev[...]` (see types table below).
 
-2. **Проверь конфликты с существующими правилами** — обязательный шаг перед написанием кода:
-   - `wb_rules_list` — посмотри, нет ли уже похожего правила.
-   - `wb_rules_load` для подозрительных файлов.
-   - **Объясни пользователю словами и таблицами**, как новое правило будет взаимодействовать с существующими. Инженеры не боятся кода — предложи показать если нужно, но сначала таблица состояний или диаграмма:
+2. **Check conflicts with existing rules** — mandatory step before writing code:
+   - `wb_rules_list` — see if a similar rule already exists.
+   - `wb_rules_load` for suspicious files.
+   - **Explain to the user in words and tables** how the new rule will interact with existing ones. Engineers don't fear code — offer to show it if needed, but first a state table or diagram:
 
    ```
-   Вход A (кнопка) | Датчик B (протечка) | Ожидание  | Факт        | Статус
-   ----------------+---------------------+-----------+-------------+-----------
-   OFF -> ON       | inactive            | реле вкл  | реле вкл    | OK
-   OFF -> ON       | active              | реле выкл | реле вкл    | КОНФЛИКТ
-   ON -> OFF       | active              | реле выкл | реле выкл   | OK
+   Input A (button) | Sensor B (leak) | Expected | Actual      | Status
+   -----------------+-----------------+----------+-------------+-----------
+   OFF -> ON        | inactive        | relay on | relay on    | OK
+   OFF -> ON        | active          | relay off| relay on    | CONFLICT
+   ON -> OFF        | active          | relay off| relay off   | OK
    ```
 
-   Если конфликтов нет — кратко опиши, как два правила работают вместе и в каких случаях какое из них «главнее». Получи подтверждение перед сохранением, если есть конфликты или нетривиальное взаимодействие.
+   If no conflicts — briefly describe how the two rules work together and in which cases which one "takes priority". Get confirmation before saving if there are conflicts or non-trivial interaction.
 
-3. **Покажи логику нового правила** — перед кодом:
-   - Для простой логики — таблица «вход → выход».
-   - Для ветвлений, состояний, цепочек — Mermaid-диаграмма (`flowchart TD`, `stateDiagram-v2`, `sequenceDiagram`).
-   - Спроси «такое поведение?» и дождись подтверждения.
+3. **Show the new rule's logic** — before code:
+   - For simple logic — an "input → output" table.
+   - For branches, states, chains — a Mermaid diagram (`flowchart TD`, `stateDiagram-v2`, `sequenceDiagram`).
+   - Ask "is this the desired behavior?" and wait for confirmation.
 
-   Пример:
+   Example:
    ````
    ```mermaid
    flowchart TD
-       A[IN1 изменился] --> B{Протечка active?}
-       B -- да --> C[Кран закрыт, уведомление]
-       B -- нет --> D{Кнопка включена?}
-       D -- да --> E[Открыть кран]
-       D -- нет --> F[Закрыть кран]
+       A[IN1 changed] --> B{Leak active?}
+       B -- yes --> C[Valve closed, notify]
+       B -- no --> D{Button on?}
+       D -- yes --> E[Open valve]
+       D -- no --> F[Close valve]
    ```
    ````
 
-4. **Напиши правило** с правильными типами значений (см. ниже).
+4. **Write the rule** with correct value types (see below).
 
-5. **Сохрани через `wb_rules_save`** с params `{path: "<имя>.js", content: "<JS-код>"}`. Tool сам валидирует синтаксис и делает reload движка — `systemctl restart wb-rules` не нужен. Если в ответе ошибка валидации — читай её, правь, пересохраняй.
+5. **Save via `wb_rules_save`** with params `{path: "<name>.js", content: "<JS code>"}`. The tool itself validates syntax and reloads the engine — `systemctl restart wb-rules` is not needed. If the response has a validation error — read it, fix, re-save.
 
-6. **Проверь логи сразу после Save** — `wb_logs` `unit=wb-rules` `since=10s`. Ищи `can't convert`, `SyntaxError`, `TypeError`, `ReferenceError`. Если есть — исправь и пересохрани. Не жди жалобы пользователя.
+6. **Check logs right after Save** — `wb_logs` `unit=wb-rules` `since=10s`. Look for `can't convert`, `SyntaxError`, `TypeError`, `ReferenceError`. If present — fix and re-save. Don't wait for the user to complain.
 
-### Отключить правило без удаления
+### Disable a rule without deleting
 
-Загрузи через `wb_rules_load`, добавь `return; // wb-la-disabled` первой строкой внутри каждого `then: function(...) {`, сохрани через `wb_rules_save`. Включить обратно — убрать эту строку, сохранить.
+Load via `wb_rules_load`, add `return; // wb-la-disabled` as the first line inside each `then: function(...) {`, save via `wb_rules_save`. Re-enable — remove that line, save.
 
-**Перед отключением файла с несколькими правилами — предупреди.** Если пользователь попросил отключить одно правило, а в файле их несколько — скажи об этом явно и получи подтверждение. Например: «В файле `wb-la-kran-protect.js` два правила: `wb-la-kran-toggle` и `wb-la-kran-leak`. Отключу весь файл — оба перестанут работать. Продолжать?»
+**Before disabling a file with multiple rules — warn.** If the user asked to disable one rule but the file has several — say so explicitly and get confirmation. For example: "The file `wb-la-kran-protect.js` has two rules: `wb-la-kran-toggle` and `wb-la-kran-leak`. Disabling the entire file — both will stop working. Continue?"
 
-**Удалять правило (`wb_rules_delete`) — только с явным подтверждением пользователя.**
+**Deleting a rule (`wb_rules_delete`) — only with explicit user confirmation.**
 
-## ES5 и ограничения
+## ES5 and constraints
 
-- **var**, обычные `function`. Никаких `let`, `const`, стрелочных функций, шаблонных строк, деструктуризации, `class`, `async/await`.
-- **В JS-коде только ASCII-операторы**: `<=`, `>=`, `!=`, `*`, `/`. Unicode-символы вызовут SyntaxError в Duktape.
-- Side effects в `when` / `asSoonAs` / `whenChanged`-function недопустимы — движок вызывает их непредсказуемо.
-- Рабочий способ шарить состояние между правилами: `PersistentStorage({global: true})` или модуль (`module.static`). Обычные глобалы **не пересекают** файлы.
+- **var**, regular `function`. No `let`, `const`, arrow functions, template strings, destructuring, `class`, `async/await`.
+- **In JS code only ASCII operators**: `<=`, `>=`, `!=`, `*`, `/`. Unicode characters cause SyntaxError in Duktape.
+- Side effects in `when` / `asSoonAs` / `whenChanged`-function are unacceptable — the engine calls them unpredictably.
+- Working way to share state between rules: `PersistentStorage({global: true})` or a module (`module.static`). Plain globals **don't cross** files.
 
-## Типы контролов и значения
+## Control types and values
 
-Значение в `dev[...]` приводится к нативному JS-типу по `meta/type` контрола:
+The value in `dev[...]` is coerced to a native JS type by the control's `meta/type`:
 
-| type | JS-тип значения |
-|---|---|
+| type | JS value type |
+|------|---------------|
 | `switch`, `alarm` | `boolean` (`true`/`false`) |
 | `value`, `range`, `temperature`, `power`, `voltage`, `current`, `pressure` | `number` |
 | `text` | `string` |
-| `pushbutton` | срабатывает как событие (кнопка), значение — `number` (счётчик нажатий) |
-| `rgb` | `string` вида `"R;G;B"` |
-| неизвестный | `string` |
+| `pushbutton` | fires as event (button), value — `number` (press counter) |
+| `rgb` | `string` of form `"R;G;B"` |
+| unknown | `string` |
 
-**Самая частая ошибка — `switch = 1` вместо `true`:**
+**The most common error is `switch = 1` instead of `true`:**
 
 ```js
 dev["wb-mwac_25/K1"] = true;    // switch
 dev["wb-mr6c_7/K1"] = false;    // switch
-dev["wb-mwac_25/K1"] = 1;       // ОШИБКА: can't convert control value '1' (type float64) to datatype '1'
+dev["wb-mwac_25/K1"] = 1;       // ERROR: can't convert control value '1' (type float64) to datatype '1'
 ```
 
-Чтение неинициализированного контрола — `undefined`. Для meta — `null` если контрол/устройство не существует:
+Reading an uninitialized control — `undefined`. For meta — `null` if control/device doesn't exist:
 
 ```js
-if (dev["d/c"] === undefined) return;   // контрол есть, но значение ещё не пришло
-if (dev["d/c#error"] === null) ...      // контрола/устройства нет вообще
+if (dev["d/c"] === undefined) return;   // control exists but no value yet
+if (dev["d/c#error"] === null) ...      // control/device doesn't exist at all
 ```
 
-## Доступ к контролам
+## Accessing controls
 
-Три равноценные формы (из README):
+Three equivalent forms (from the README):
 
 ```js
-dev["device/control"]   // каноничная, работает всегда
+dev["device/control"]   // canonical, always works
 dev["device"]["control"]
 dev.device.control
 ```
 
-Единственное жёсткое правило: **имена с пробелами, кириллицей, дефисами и цифрами в начале — только через bracket-notation**:
+The only hard rule: **names with spaces, Cyrillic, hyphens, and digits at the start — only via bracket notation**:
 
 ```js
 dev["wb-msw-v4_20/Temperature"]             // ok
 dev["wb-msw-v4_20"]["Temperature"]          // ok
-dev.wb-msw-v4_20.Temperature                // SyntaxError (минус)
-dev["hwmon"]["CPU Temperature"]             // ok (пробел)
-dev.hwmon.CPU Temperature                   // SyntaxError (пробел)
+dev.wb-msw-v4_20.Temperature                // SyntaxError (hyphen)
+dev["hwmon"]["CPU Temperature"]             // ok (space)
+dev.hwmon.CPU Temperature                   // SyntaxError (space)
 ```
 
-`dev["d/c"]` — всегда безопасный выбор, используй его по умолчанию.
+`dev["d/c"]` is always the safe choice, use it by default.
 
-### Доступ к meta
+### Accessing meta
 
-После `#` — meta-поле:
+After `#` — meta field:
 
 ```js
-dev["wb-mr3_48/K1#error"]       // чтение /meta/error
+dev["wb-mr3_48/K1#error"]       // read /meta/error
 dev["wb-mr3_48/K1#readonly"]
-dev["virDev/cell#max"] = 255    // запись max для virtual device
+dev["virDev/cell#max"] = 255    // write max for a virtual device
 ```
 
-Можно использовать и как триггер — см. ниже `asSoonAs` и `whenChanged`.
+Can also be used as a trigger — see `asSoonAs` and `whenChanged` below.
 
-## defineRule: четыре типа триггеров
+## defineRule: four trigger types
 
 ```js
 defineRule(name, {
@@ -157,11 +157,11 @@ defineRule(name, {
 });
 ```
 
-`then` всегда получает 3 аргумента, все `undefined` если правило запущено не по изменению контрола.
+`then` always receives 3 arguments, all `undefined` if the rule wasn't fired by a control change.
 
-### 1. `whenChanged` — по изменению контрола (рекомендованный)
+### 1. `whenChanged` — on control change (recommended)
 
-Срабатывает когда перечисленные контролы меняются или при старте движка, если есть retained-значение в MQTT.
+Fires when the listed controls change, or at engine startup if there's a retained value in MQTT.
 
 ```js
 defineRule("light_toggle", {
@@ -171,7 +171,7 @@ defineRule("light_toggle", {
   }
 });
 
-// Несколько каналов:
+// Multiple channels:
 defineRule("any_light", {
   whenChanged: ["wb-gpio/A1_OUT", "wb-gpio/A2_OUT"],
   then: function (newValue, devName, cellName) {
@@ -179,7 +179,7 @@ defineRule("any_light", {
   }
 });
 
-// Вычисляемый триггер: сработает когда выражение изменит результат
+// Computed trigger: fires when the expression's result changes
 defineRule("threshold", {
   whenChanged: [
     "wb-msw-v4_20/Temperature",
@@ -189,11 +189,11 @@ defineRule("threshold", {
 });
 ```
 
-Работает с `pushbutton` — срабатывает по каждому нажатию.
+Works with `pushbutton` — fires on each press.
 
-### 2. `asSoonAs` — по фронту условия (0->1)
+### 2. `asSoonAs` — on condition edge (0->1)
 
-Срабатывает когда функция-условие переходит `false -> true`. Не запускается повторно, пока не вернётся в `false` и снова в `true`.
+Fires when the condition function transitions `false -> true`. Doesn't re-fire until it returns to `false` and then `true` again.
 
 ```js
 defineRule("overheat_start", {
@@ -204,9 +204,9 @@ defineRule("overheat_start", {
 });
 ```
 
-### 3. `when` — по условию (level-triggered)
+### 3. `when` — on condition (level-triggered)
 
-Вызывается каждый раз, когда движок пересматривает правила и условие истинно. Обычно нужен `asSoonAs` или `whenChanged` — `when` редко оптимален.
+Called every time the engine re-evaluates rules and the condition is true. Usually `asSoonAs` or `whenChanged` is what you need — `when` is rarely optimal.
 
 ```js
 defineRule("while_hot", {
@@ -215,26 +215,26 @@ defineRule("while_hot", {
 });
 ```
 
-### 4. `when: cron(...)` — по расписанию
+### 4. `when: cron(...)` — on schedule
 
-**Cron в wb-rules — 6-польный, первое поле — СЕКУНДЫ. Это НЕ стандартный Linux-cron (5 полей).** Самая частая ошибка — написать `"0 * * * 5"` ожидая «по пятницам»; на самом деле это распарсится как `sec=0 min=* hour=* dom=* mon=5` (каждую минуту мая).
+**Cron in wb-rules is 6-field, the first field is SECONDS. This is NOT standard Linux cron (5 fields).** The most frequent error is writing `"0 * * * 5"` expecting "on Fridays"; in fact it's parsed as `sec=0 min=* hour=* dom=* mon=5` (every minute of May).
 
-Синтаксис [robfig/cron/v3](https://pkg.go.dev/github.com/robfig/cron/v3): `<sec> <min> <hour> <dom> <mon> [<dow>]` (последнее опционально). Поддерживаются алиасы `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`, а также `@every <dur>` (напр. `@every 30s`, `@every 5m`).
+Syntax of [robfig/cron/v3](https://pkg.go.dev/github.com/robfig/cron/v3): `<sec> <min> <hour> <dom> <mon> [<dow>]` (last optional). Aliases `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly` are supported, plus `@every <dur>` (e.g. `@every 30s`, `@every 5m`).
 
-Сравнение с системным cron:
+Comparison with system cron:
 
-| Задача | Linux cron (`/etc/cron.d`) | wb-rules `cron(...)` |
-|---|---|---|
-| ежедневно в 20:00 | `0 20 * * *` | `0 0 20 * * *` |
-| каждую пятницу в 08:00 | `0 8 * * 5` | `0 0 8 * * 5` |
-| каждые 30 сек | -- | `@every 30s` |
-| каждую минуту | `* * * * *` | `0 * * * * *` |
+| Task | Linux cron (`/etc/cron.d`) | wb-rules `cron(...)` |
+|------|----------------------------|----------------------|
+| daily at 20:00 | `0 20 * * *` | `0 0 20 * * *` |
+| every Friday at 08:00 | `0 8 * * 5` | `0 0 8 * * 5` |
+| every 30 sec | -- | `@every 30s` |
+| every minute | `* * * * *` | `0 * * * * *` |
 
-Если видишь в коде 5-польную строку — это **почти наверняка баг**: допиши ведущий `0 ` для секунд.
+If you see a 5-field string in code — that's **almost certainly a bug**: prepend `0 ` for seconds.
 
 ```js
 defineRule("night_light_off", {
-  when: cron("0 0 23 * * *"),        // каждый день в 23:00
+  when: cron("0 0 23 * * *"),        // every day at 23:00
   then: function () { dev["wb-mr6c_7/K1"] = false; }
 });
 
@@ -249,16 +249,16 @@ defineRule("heartbeat", {
 });
 
 defineRule("friday_report", {
-  when: cron("0 0 8 * * 5"),         // каждую пятницу в 08:00
+  when: cron("0 0 8 * * 5"),         // every Friday at 08:00
   then: function () { /* ... */ }
 });
 ```
 
-Cron переживает перезагрузку движка.
+Cron survives engine reload.
 
-## Таймеры
+## Timers
 
-### setTimeout / setInterval (обычные JS)
+### setTimeout / setInterval (regular JS)
 
 ```js
 var id = setTimeout(function () { ... }, 2000);
@@ -268,9 +268,9 @@ var tickId = setInterval(function () { ... }, 500);
 clearInterval(tickId);
 ```
 
-**`setInterval` штатно работает** (это обычный ES5). Минимум — 1 мс, но меньше 10 мс не ставь — CPU.
+**`setInterval` works as expected** (it's plain ES5). Minimum — 1 ms, but don't go below 10 ms — CPU.
 
-Пример «мигалка на 10 срабатываний»:
+Example "blink for 10 fires":
 
 ```js
 var test_interval;
@@ -287,9 +287,9 @@ defineRule("blink", {
 });
 ```
 
-### startTimer / startTicker (WB-специфичные, интегрированы с правилами)
+### startTimer / startTicker (WB-specific, integrated with rules)
 
-Таймеры именованные, доступ через `timers.<name>`. Срабатывание таймера — событие, которое может быть триггером `when`.
+Timers are named, accessed via `timers.<name>`. A timer firing is an event that can be a `when` trigger.
 
 ```js
 defineRule("pulse_start", {
@@ -304,16 +304,16 @@ defineRule("pulse_fire", {
   }
 });
 
-// Ticker — то же, но повторяется
+// Ticker — same, but repeating
 startTicker("heartbeat", 5000);
-timers.heartbeat.stop();   // остановить
+timers.heartbeat.stop();   // stop
 ```
 
-`setTimeout/setInterval` — проще; `startTimer/startTicker` — когда нужна интеграция с `when: timers.X.firing`.
+`setTimeout/setInterval` — simpler; `startTimer/startTicker` — when integration with `when: timers.X.firing` is needed.
 
 ## defineVirtualDevice
 
-Создаёт MQTT-топики `/devices/<id>/controls/<cell>`, видимые в UI и доступные через `dev[]`.
+Creates MQTT topics `/devices/<id>/controls/<cell>` visible in the UI and accessible via `dev[]`.
 
 ```js
 defineVirtualDevice("my_vd", {
@@ -349,53 +349,53 @@ defineVirtualDevice("my_vd", {
 });
 ```
 
-**Свойства cell:**
+**Cell properties:**
 
-| Поле | Назначение |
-|---|---|
-| `title` | строка или `{en, ru}` |
-| `type` | см. типы выше |
-| `value` | дефолт при первом старте |
-| `units` | единицы измерения, публикуются в `/meta/units` |
-| `min`, `max` | для `value`/`range` |
-| `precision` | количество знаков после запятой |
-| `readonly` | `true` — только для чтения; по умолчанию true для большинства, false для `switch`/`pushbutton`/`range`/`rgb` |
-| `order` | порядок отображения в UI |
-| `enum` | словарь «значение → {en, ru}» для текстового отображения |
-| `forceDefault` | `true` — сбрасывать в `value` при каждом рестарте (по умолчанию false) |
-| `lazyInit` | `true` — не публиковать до первой записи |
+| Field | Purpose |
+|-------|---------|
+| `title` | string or `{en, ru}` |
+| `type` | see types above |
+| `value` | default on first start |
+| `units` | unit of measurement, published to `/meta/units` |
+| `min`, `max` | for `value`/`range` |
+| `precision` | number of decimal digits |
+| `readonly` | `true` — read-only; default true for most, false for `switch`/`pushbutton`/`range`/`rgb` |
+| `order` | UI display order |
+| `enum` | dictionary "value → {en, ru}" for text display |
+| `forceDefault` | `true` — reset to `value` on every restart (default false) |
+| `lazyInit` | `true` — don't publish until first write |
 
-## Логирование
+## Logging
 
 ```js
 log(fmt, ...)          // info
 log.info(fmt, ...)
-log.debug(fmt, ...)    // виден только при WB_RULES_OPTIONS="-debug"
+log.debug(fmt, ...)    // visible only with WB_RULES_OPTIONS="-debug"
 log.warning(fmt, ...)
 log.error(fmt, ...)
-debug(fmt, ...)        // алиас к log.debug
+debug(fmt, ...)        // alias for log.debug
 ```
 
-Пишется в syslog (читай через `wb_logs` `unit=wb-rules`) и в MQTT-топики `/wbrules/log/<level>` (читай через `wb_mqtt_read`).
+Goes to syslog (read via `wb_logs` `unit=wb-rules`) and to MQTT topics `/wbrules/log/<level>` (read via `wb_mqtt_read`).
 
-Форматирование:
-- `"{}"` — плейсхолдер, `log("a={} b={}", "q", 42)` → `"a=q b=42"`
-- `"{{"` — литеральная `{`
-- `.xformat(...)` — как format, плюс `{{expr}}` для произвольных JS-выражений: `"Value: {{dev['abc/def']}}"`.
+Formatting:
+- `"{}"` — placeholder, `log("a={} b={}", "q", 42)` → `"a=q b=42"`
+- `"{{"` — literal `{`
+- `.xformat(...)` — same as format, plus `{{expr}}` for arbitrary JS expressions: `"Value: {{dev['abc/def']}}"`.
 
-## MQTT-операции
+## MQTT operations
 
-### publish — произвольные топики
+### publish — arbitrary topics
 
 ```js
-publish(topic, payload)                   // QoS 0, не retained
+publish(topic, payload)                   // QoS 0, not retained
 publish(topic, payload, 2)                // QoS 2
 publish(topic, payload, 2, true)          // retained
 ```
 
-Для параметров устройств используй `dev[...] = ...` — он сам публикует с правильным QoS/retained. `publish()` — только для топиков вне device-модели.
+For device parameters use `dev[...] = ...` — it publishes with the right QoS/retained itself. `publish()` — only for topics outside the device model.
 
-### trackMqtt — подписка на любой топик
+### trackMqtt — subscribe to any topic
 
 ```js
 trackMqtt("/devices/wb-adc/controls/Vin", function (msg) {
@@ -404,7 +404,7 @@ trackMqtt("/devices/wb-adc/controls/Vin", function (msg) {
 });
 ```
 
-## Shell-команды
+## Shell commands
 
 ```js
 runShellCommand("uname -a", {
@@ -416,38 +416,38 @@ runShellCommand("uname -a", {
   }
 });
 
-// эквивалент: spawn("/bin/sh", ["-c", cmd], opts)
+// equivalent: spawn("/bin/sh", ["-c", cmd], opts)
 spawn("/usr/bin/ls", ["-la", "/etc/wb-rules"], {
   captureOutput: true,
   exitCallback: function (code, out) { log(out); }
 });
 ```
 
-## Управление правилами
+## Rule management
 
 ```js
 var myRule = defineRule("name", { whenChanged: "...", then: ... });
-disableRule(myRule);    // перестать проверять
-enableRule(myRule);     // снова включить
-runRule(myRule);        // форсированно выполнить then
+disableRule(myRule);    // stop checking
+enableRule(myRule);     // re-enable
+runRule(myRule);        // forcibly run then
 ```
 
 ## Device/Control API
 
 ```js
-getDevice("wb-mr6c_7")                         // объект устройства
-getControl("wb-mr6c_7/K1")                     // объект контрола
+getDevice("wb-mr6c_7")                         // device object
+getControl("wb-mr6c_7/K1")                     // control object
 isControlExists("wb-mr6c_7/K1")                // bool
 
-// Методы device:
+// Device methods:
 getDevice(d).getId()
-getDevice(d).controlsList()                    // массив всех контролов
-getDevice(d).addControl(id, spec)              // только для virtual
+getDevice(d).controlsList()                    // array of all controls
+getDevice(d).addControl(id, spec)              // virtual only
 getDevice(d).removeControl(id)
 getDevice(d).isVirtual()
 getDevice(d).setError(str) / .getError()
 
-// Методы control:
+// Control methods:
 getControl(dc).getValue() / .setValue(v)
 getControl(dc).setTitle(str) / .setDescription(str)
 getControl(dc).setType(str)
@@ -455,14 +455,14 @@ getControl(dc).setUnits(str)
 getControl(dc).setMin(n) / .setMax(n) / .setPrecision(n)
 getControl(dc).setReadonly(b)
 getControl(dc).setError(str) / .getError()
-getControl(dc).setValue({value: v, notify: false})  // запись без публикации
+getControl(dc).setValue({value: v, notify: false})  // write without publishing
 ```
 
-## Конфиги и алиасы
+## Configs and aliases
 
 ```js
-var cfg = readConfig("/etc/myscript.conf");   // JSON c комментариями //, /* */
-// Массивы оборачивай: readConfig("x.conf").config
+var cfg = readConfig("/etc/myscript.conf");   // JSON with comments //, /* */
+// Wrap arrays: readConfig("x.conf").config
 
 defineAlias("heater", "Relays/Relay 1");
 heater = true;    // == dev["Relays/Relay 1"] = true
@@ -470,51 +470,51 @@ heater = true;    // == dev["Relays/Relay 1"] = true
 
 ## PersistentStorage
 
-Переживает рестарт движка и контроллера. `{global: true}` — обязательно.
+Survives engine and controller restart. `{global: true}` — mandatory.
 
 ```js
 var ps = new PersistentStorage("my_state", {global: true});
 ps["count"] = (ps["count"] || 0) + 1;
 ps["last_ts"] = Date.now();
 
-// Объекты — только через StorableObject:
+// Objects — only via StorableObject:
 ps["cfg"] = new StorableObject({temperature: 21, enabled: true});
-ps["cfg"].temperature = 23;   // сохранится
+ps["cfg"].temperature = 23;   // saved
 
-// Удаление:
+// Removal:
 ps["count"] = null;
 ```
 
-## Модули
+## Modules
 
-Файлы модулей живут в `/etc/wb-rules-modules/*.js`. RPC для них **нет** — пиши напрямую через `wb_write_file`. Движок подхватит сам.
+Module files live in `/etc/wb-rules-modules/*.js`. There's **no** RPC for them — write directly via `wb_write_file`. The engine picks them up itself.
 
 ```js
 // /etc/wb-rules-modules/utils.js
 exports.celsiusToF = function (c) { return c * 9 / 5 + 32; };
 exports.const_pi = 3.14159;
-// module.static — shared storage между всеми правилами, которые require'ят модуль
+// module.static — shared storage between all rules that require the module
 
-// В правиле:
+// In a rule:
 var utils = require("utils");
 log("{}", utils.celsiusToF(25));
 ```
 
-Не переопределяй `exports`, только добавляй свойства.
+Don't reassign `exports`, only add properties.
 
-## Alarms и уведомления
+## Alarms and notifications
 
 ```js
 Notify.sendEmail("x@y.ru", "subj", "body");
 Notify.sendSMS("+7...", "body");
 Notify.sendTelegramMessage(token, chatId, "body");
 
-Alarms.load("/etc/wb-rules/alarms.conf");   // или объект со spec'ом
+Alarms.load("/etc/wb-rules/alarms.conf");   // or an object with the spec
 ```
 
-Полная спецификация `alarms.conf` — в README.
+The full `alarms.conf` specification is in the README.
 
-## Полный пример
+## Full example
 
 ```js
 defineVirtualDevice("climate", {
@@ -554,33 +554,33 @@ defineRule("climate_morning", {
 });
 ```
 
-## Соглашения
+## Conventions
 
-- Файл: `wb-la-<slug>.js` (дефисы, латиница), шапка `// wb-la: описание по-русски`.
-- Имя правила в `defineRule`: `wb-la-<slug>` (совпадает с именем файла без `.js`).
-- **В ответах пользователю:** файл скрипта и правила внутри — разные сущности, всегда различай визуально:
-  - Файл: всегда с `.js` (например `wb-la-kran-protect.js`)
-  - Правило из `defineRule`: без `.js` (например `wb-la-kran-toggle`)
-  - При перечислении — вложенная структура: файл сверху, правила внутри с отступом.
+- File: `wb-la-<slug>.js` (hyphens, Latin), header `// wb-la: description in English`.
+- Rule name in `defineRule`: `wb-la-<slug>` (matches the file name without `.js`).
+- **In responses to the user:** the script file and the rules inside it are different entities, always distinguish visually:
+  - File: always with `.js` (e.g. `wb-la-kran-protect.js`)
+  - Rule from `defineRule`: without `.js` (e.g. `wb-la-kran-toggle`)
+  - When listing — nested structure: file on top, rules indented inside.
 
-## Грабли
+## Gotchas
 
-- **switch = true/false, НЕ 0/1.** wb-rules отдаёт нативный boolean — `newValue` уже `true`/`false`, не пиши `=== 1 || === "1" || === true` и т.п., это мусор.
-- **Не проверил логи после Save** — `wb_logs` `unit=wb-rules` `since=10s`. Без этого ошибки молча игнорируются.
-- **`whenChanged` на свой же output** — бесконечный цикл. Ставь флаг или разделяй in/out.
-- **Side effects в `when`/`asSoonAs`/whenChanged-function** — движок вызывает непредсказуемо. Только чистая логика.
-- **`let`/`const`/arrow** — SyntaxError, только ES5.
-- **Имена с пробелами через точку** — SyntaxError, только `dev["d/c"]` или `dev["d"]["c"]`.
-- **`dev` вне правила / вне `then` / `setTimeout`-callback** — присваивание ВСЕГДА публикует MQTT, даже если значение не изменилось. На top-level скрипта это ломает логику.
-- **Публикация > 100 топиков/сек** — высокий CPU, деградация. Оптимизируй частоту.
-- **Глобальные переменные между файлами** не пересекаются. Используй модули или `PersistentStorage({global: true})`.
-- **`ps["obj"].foo = 5`** без `StorableObject` — не сохранится. Оборачивай объекты в `new StorableObject({...})`.
-- **`whenChanged`-управление отменяет `asSoonAs`-защиту** — если правило защиты (`asSoonAs`) закрывает клапан/реле при аварии, а правило управления (`whenChanged` кнопка) открывает его обратно — оно сработает даже когда аварийный датчик ещё активен: `asSoonAs` не повторяется, пока условие не сбросится. В `then` правила управления всегда проверяй датчик-блокировку: `if (dev["sensor/alarm"]) return;`
-- **Конкатенация строк без пробела** — `"journalctl -u" + unit` даёт `"journalctl -uwb-rules"`. Пробел ставь внутри строки: `"journalctl -u " + unit`.
+- **switch = true/false, NOT 0/1.** wb-rules returns native boolean — `newValue` is already `true`/`false`, don't write `=== 1 || === "1" || === true` etc., that's junk.
+- **Didn't check logs after Save** — `wb_logs` `unit=wb-rules` `since=10s`. Without this, errors are silently ignored.
+- **`whenChanged` on your own output** — infinite loop. Set a flag or separate in/out.
+- **Side effects in `when`/`asSoonAs`/whenChanged-function** — engine calls them unpredictably. Pure logic only.
+- **`let`/`const`/arrow** — SyntaxError, ES5 only.
+- **Names with spaces via dot** — SyntaxError, only `dev["d/c"]` or `dev["d"]["c"]`.
+- **`dev` outside a rule / outside `then` / `setTimeout` callback** — assignment ALWAYS publishes MQTT, even if the value didn't change. At the script top-level it breaks logic.
+- **Publishing > 100 topics/sec** — high CPU, degradation. Optimize frequency.
+- **Global variables across files** don't intersect. Use modules or `PersistentStorage({global: true})`.
+- **`ps["obj"].foo = 5`** without `StorableObject` — won't save. Wrap objects in `new StorableObject({...})`.
+- **`whenChanged` control overrides `asSoonAs` protection** — if the protection rule (`asSoonAs`) closes a valve/relay on alarm, while the control rule (`whenChanged` button) opens it back — it will fire even when the alarm sensor is still active: `asSoonAs` doesn't repeat until the condition resets. In the `then` of the control rule always check the blocking sensor: `if (dev["sensor/alarm"]) return;`
+- **String concatenation without space** — `"journalctl -u" + unit` gives `"journalctl -uwb-rules"`. Put the space inside the string: `"journalctl -u " + unit`.
 
-## Документация
+## Documentation
 
-- README (каноничный справочник): <https://github.com/wirenboard/wb-rules>
-- Примеры: <https://github.com/wirenboard/wb-rules/tree/master/examples>
-- Навигация на вики: <https://wirenboard.com/wiki/Wb-rules>
-- Синтаксис cron (`robfig/cron/v3`): <https://pkg.go.dev/github.com/robfig/cron/v3>
+- README (canonical reference): <https://github.com/wirenboard/wb-rules>
+- Examples: <https://github.com/wirenboard/wb-rules/tree/master/examples>
+- Wiki navigation: <https://wirenboard.com/wiki/Wb-rules>
+- Cron syntax (`robfig/cron/v3`): <https://pkg.go.dev/github.com/robfig/cron/v3>

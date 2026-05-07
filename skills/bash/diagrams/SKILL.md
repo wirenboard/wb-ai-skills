@@ -1,107 +1,107 @@
 ---
 name: diagrams
-description: Mermaid-диаграммы для визуализации логики автоматизации перед написанием кода.
+description: Mermaid diagrams to visualize automation logic before writing code.
 allowed-tools: Bash Read Write
 ---
 
-# Диаграммы и визуализация
+# Diagrams and visualization
 
-Используй Mermaid-диаграммы чтобы показать **как работает** автоматизация до написания кода.
+Use Mermaid diagrams to show **how** automation works before writing code.
 
-## Когда использовать
+## When to use
 
-Два режима:
+Two modes:
 
-- **Design** (проектирование нового правила): таблица каналов → диаграмма → таблица конфликтов → вопрос «такое поведение?» → ждать подтверждение → код. Цель — выявить ошибки до написания.
-- **Reverse-engineering** (анализ существующего правила): загрузить через `wbrules/Editor/Load`, разобрать → таблица каналов → диаграмма поведения. Цель — понять, что делает код. Шаг «дождись подтверждения, потом пиши код» здесь не применим.
+- **Design** (designing a new rule): channel table → diagram → conflict table → "is this the desired behavior?" question → wait for confirmation → code. Goal: surface mistakes before writing.
+- **Reverse-engineering** (analyzing an existing rule): load via `wbrules/Editor/Load`, dissect → channel table → behavior diagram. Goal: understand what the code does. The "wait for confirmation, then write code" step does not apply here.
 
-Триггеры:
+Triggers:
 
-- **Перед написанием правила** — покажи логику до кода (design).
-- **При конфликте правил** — покажи, какое правило «победит» (любой режим).
-- **Для объяснения состояний** — переходы между режимами.
-- **Для цепочек событий** — одно правило → MQTT → другое правило.
-- **При вопросе «что делает это правило?»** — reverse-engineering, диаграмма за пользователем не запрашивается, она часть ответа.
+- **Before writing a rule** — show the logic before code (design).
+- **On rule conflict** — show which rule "wins" (either mode).
+- **To explain states** — transitions between modes.
+- **For event chains** — one rule → MQTT → another rule.
+- **When asked "what does this rule do?"** — reverse-engineering, the diagram isn't requested by the user, it's part of the answer.
 
-## Выбор типа
+## Picking the type
 
-| Ситуация | Тип |
+| Situation | Type |
 |---|---|
-| Переходы между состояниями, флаги, режимы | `stateDiagram-v2` |
-| Логика «если X то Y» с ветками (один шаг обработки) | `flowchart TD` |
-| Взаимодействие нескольких правил/устройств | `sequenceDiagram` |
-| Простая таблица состояний (2-4 строки), гистерезис | Markdown-таблица |
-| Гистерезис / sticky-логика (правило с памятью внутри dead zone) | `stateDiagram-v2` + Markdown-таблица: state показывает hold-состояния, таблица — границы |
-| `xychart-beta` / графики данных | см. скилл `/history` (рендер истории) |
+| Transitions between states, flags, modes | `stateDiagram-v2` |
+| "If X then Y" logic with branches (single processing step) | `flowchart TD` |
+| Interaction of multiple rules/devices | `sequenceDiagram` |
+| Simple state table (2-4 rows), hysteresis | Markdown table |
+| Hysteresis / sticky logic (rule with memory inside dead zone) | `stateDiagram-v2` + Markdown table: state shows hold states, table shows boundaries |
+| `xychart-beta` / data charts | see `/history` skill (rendering history) |
 
-Для одного правила **может потребоваться несколько диаграмм** (например, flowchart обработчика + state переходов). Это норма — не пытайся уместить всё в одну.
+For one rule **multiple diagrams may be needed** (e.g. handler flowchart + state transitions). That's fine — don't try to cram everything into one.
 
-## Примеры
+## Examples
 
-### Логика правила (flowchart)
+### Rule logic (flowchart)
 
 ```mermaid
 flowchart TD
-    A[IN1 изменился] --> B{Датчик протечки<br/>active?}
-    B -- да --> C[Кран закрыт, уведомление]
-    B -- нет --> D{Кнопка включена?}
-    D -- да --> E[Открыть кран]
-    D -- нет --> F[Закрыть кран]
+    A[IN1 changed] --> B{Leak sensor<br/>active?}
+    B -- yes --> C[Valve closed, notification]
+    B -- no --> D{Button enabled?}
+    D -- yes --> E[Open valve]
+    D -- no --> F[Close valve]
 ```
 
-В Mermaid перенос строки внутри узла — `<br/>`, **не** `\n` (последний рендерится как литеральный текст).
+In Mermaid, line break inside a node is `<br/>`, **not** `\n` (the latter renders as literal text).
 
-### Переходы состояний (stateDiagram)
+### State transitions (stateDiagram)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Ожидание
-    Ожидание --> Активен : кнопка нажата
-    Активен --> Ожидание : таймер истёк
-    Активен --> Заблокирован : протечка
-    Заблокирован --> Ожидание : сброс вручную
+    [*] --> Idle
+    Idle --> Active : button pressed
+    Active --> Idle : timer expired
+    Active --> Blocked : leak
+    Blocked --> Idle : manual reset
 ```
 
-### Взаимодействие правил (sequenceDiagram)
+### Rule interaction (sequenceDiagram)
 
 ```mermaid
 sequenceDiagram
-    participant Кнопка
+    participant Button
     participant wb-la-light
     participant wb-la-timer
-    participant Реле
+    participant Relay
 
-    Кнопка->>wb-la-light: IN1 изменился
-    wb-la-light->>Реле: включить
+    Button->>wb-la-light: IN1 changed
+    wb-la-light->>Relay: turn on
     wb-la-light->>wb-la-timer: startTimer("off", 300)
-    wb-la-timer-->>Реле: выключить (через 5 мин)
+    wb-la-timer-->>Relay: turn off (after 5 min)
 ```
 
-### Таблица каналов (всегда первой, для design и reverse-engineering)
+### Channel table (always first, for both design and reverse-engineering)
 
 ```
-Канал                       | Тип             | Чтение                     | Запись               | Назначение
+Channel                     | Type            | Read                       | Write                | Purpose
 ────────────────────────────────────────────────────────────────────────────────────────────────────────
-hwmon/CPU Temperature       | float (°C)      | whenChanged + dev[]        | —                    | Температура CPU
-wb-mr3_3/K1                 | switch (bool)   | —                          | dev[] = true/false   | Реле охлаждения
-wb-msw-v4_20/Input 1        | pushbutton      | whenChanged                | —                    | Кнопка пользователя
+hwmon/CPU Temperature       | float (°C)      | whenChanged + dev[]        | —                    | CPU temperature
+wb-mr3_3/K1                 | switch (bool)   | —                          | dev[] = true/false   | Cooling relay
+wb-msw-v4_20/Input 1        | pushbutton      | whenChanged                | —                    | User button
 ```
 
-Чтение/запись — глаголами; для каждого канала указан тип (см. wb-rules SKILL.md), и конкретно — `whenChanged`-триггер ли это, или просто читается через `dev[]` внутри `then`.
+Read/write — as verbs; for each channel specify the type (see wb-rules SKILL.md), and specifically — whether it's a `whenChanged` trigger or just read via `dev[]` inside `then`.
 
-### Таблица конфликтов
+### Conflict table
 
 ```
-Вход A        | Датчик B    | Правило 1   | Правило 2   | Результат
+Input A       | Sensor B    | Rule 1      | Rule 2      | Result
 ──────────────────────────────────────────────────────────────────────
-OFF → ON      | inactive    | реле вкл    | —           | реле вкл ✓
-OFF → ON      | active      | реле вкл    | реле выкл   | КОНФЛИКТ ✗
-ON → OFF      | active      | реле выкл   | реле выкл   | реле выкл ✓
+OFF → ON      | inactive    | relay on    | —           | relay on ✓
+OFF → ON      | active      | relay on    | relay off   | CONFLICT ✗
+ON → OFF      | active      | relay off   | relay off   | relay off ✓
 ```
 
-## Формат ответа при проектировании правила
+## Response format when designing a rule
 
-1. **Таблица каналов** — что читает, что пишет, тип
-2. **Диаграмма или таблица состояний** — логика
-3. **Таблица конфликтов** — если есть существующие правила на тех же каналах
-4. Вопрос «такое поведение?» — дождись подтверждения, потом пиши код
+1. **Channel table** — what is read, what is written, type
+2. **Diagram or state table** — logic
+3. **Conflict table** — if existing rules use the same channels
+4. "Is this the desired behavior?" question — wait for confirmation, then write code

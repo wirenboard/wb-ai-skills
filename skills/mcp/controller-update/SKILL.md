@@ -1,161 +1,161 @@
 ---
 name: controller-update
-description: Обновление пакетов WB (apt upgrade) и переключение релизов (wb-release -t) через MCP. Recon, HITL, verify.
+description: WB package updates (apt upgrade) and release switching (wb-release -t) via MCP. Recon, HITL, verify.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # controller-update (MCP)
 
-Обновление пакетов контроллера WB и переход между релизами через `apt` и `wb-release -t`. Все долгие команды — через `wb_ssh_exec_async`. Синхронный `wb_ssh_exec` упадёт по таймауту, оборвав apt в середине транзакции.
+WB controller package updates and release transitions via `apt` and `wb-release -t`. All long commands — via `wb_ssh_exec_async`. Synchronous `wb_ssh_exec` will timeout, breaking apt mid-transaction.
 
-**FIT-прошивку НЕ запускаем** (wb-fw-update, swupdate) — только через web UI контроллера.
+**Do NOT run FIT firmware** (wb-fw-update, swupdate) — only via the controller's web UI.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Текущий релиз / версия прошивки | `wb_probe` или `wb_ssh_exec` `wb-release` |
-| Свободное место и нагрузка | `wb_metrics` |
-| Список upgradable пакетов | `wb_ssh_exec` `apt list --upgradable` (после `apt-get update`) |
+| Intent | Tool |
+|--------|------|
+| Current release / firmware version | `wb_probe` or `wb_ssh_exec` `wb-release` |
+| Free space and load | `wb_metrics` |
+| List of upgradable packages | `wb_ssh_exec` `apt list --upgradable` (after `apt-get update`) |
 | `apt-get update`, `apt-get upgrade`, `apt-get dist-upgrade` | `wb_ssh_exec_async` |
-| `wb-release -t <release>` (смена релиза) | `wb_ssh_exec_async` |
-| Прогресс задачи | `wb_job_tail` |
-| Статус задачи | `wb_job_status` |
-| Отмена (только до критической фазы установки) | `wb_job_cancel` |
-| Снимок состояния «до» | `wb_state_save` |
-| Diff после обновления | `wb_state_diff` |
-| Упавшие unit'ы после | `wb_failed` |
-| Логи ключевых сервисов после | `wb_logs` |
-| Бэкап перед сменой релиза | скилл `/controller-backup` |
+| `wb-release -t <release>` (release switch) | `wb_ssh_exec_async` |
+| Job progress | `wb_job_tail` |
+| Job status | `wb_job_status` |
+| Cancel (only before the critical install phase) | `wb_job_cancel` |
+| State snapshot "before" | `wb_state_save` |
+| Diff after update | `wb_state_diff` |
+| Failed units after | `wb_failed` |
+| Logs of key services after | `wb_logs` |
+| Backup before release switch | skill `/controller-backup` |
 
-## Recon — всегда первым
+## Recon — always first
 
 ```
 wb_ssh_exec sn=<SN> cmd='echo === RELEASE ===; wb-release 2>&1; echo === KERNEL ===; echo "running: $(uname -r)"; dpkg -l "linux-image-wb*" | grep ^ii | awk "{print \"installed:\", \$3}"'
-wb_metrics sn=<SN>                               # нагрузка, RAM, диск
-wb_ssh_exec sn=<SN> cmd='apt-get update 2>&1 | tail -20'    # синхронно ОК — apt update идёт 2-5 сек
+wb_metrics sn=<SN>                               # load, RAM, disk
+wb_ssh_exec sn=<SN> cmd='apt-get update 2>&1 | tail -20'    # synchronous OK — apt update takes 2-5 sec
 wb_ssh_exec sn=<SN> cmd='apt list --upgradable 2>/dev/null'
 ```
 
-Не обрезай вывод `apt list` — wb-пакеты в конце алфавита.
+Don't truncate `apt list` output — wb packages are at the end of the alphabet.
 
-**Свободное место на `/`:** `>= 1 ГБ` норма; `500 МБ — 1 ГБ` для крупного апгрейда требует `wb_ssh_exec` `apt-get clean; journalctl --vacuum-time=3d`; `< 500 МБ` критично — освобождать.
+**Free space on `/`:** `>= 1 GB` is normal; `500 MB – 1 GB` for a large upgrade requires `wb_ssh_exec` `apt-get clean; journalctl --vacuum-time=3d`; `< 500 MB` is critical — free up.
 
-**Kernel mismatch до апгрейда** = сначала reboot, потом recon заново (см. `/troubleshooting`).
+**Kernel mismatch before upgrade** = reboot first, then redo recon (see `/troubleshooting`).
 
-`wb_state_save sn=<SN>` — снимок состояния «до», чтобы потом сделать `wb_state_diff`.
+`wb_state_save sn=<SN>` — "before" state snapshot, for later `wb_state_diff`.
 
-**Подсчёт «N upgradable, M wb-*»:**
+**Counting "N upgradable, M wb-*":**
 ```
 wb_ssh_exec sn=<SN> cmd='apt list --upgradable 2>/dev/null | tail -n +2 | sort -u | wc -l; apt list --upgradable 2>/dev/null | tail -n +2 | grep -cE "^(wb-|task-wirenboard|task-wb|libwbmqtt|frpc|knxd|telegraf-wb|u-boot-wb|linux-image-wb)"'
 ```
-`sort -u` снимает multiarch-дубли (один пакет в arm64+armhf — это один пакет).
+`sort -u` removes multiarch duplicates (one package in arm64+armhf is one package).
 
-### Major-version риски
+### Major-version risks
 
-После recon найди мажорные апгрейды и подсветь пользователю — они не идут в общий поток:
+After recon, find major upgrades and highlight to the user — they don't go into the general flow:
 
-| Пакет | Когда мажорный | Действие |
-|-------|----------------|----------|
-| `docker-ce`, `containerd.io`, `docker-compose-plugin` | смена major | Отдельным апгрейдом после обычного, после ревью compose-файлов |
-| `u-boot-wb*` | смена major | Прочитать changelog пакета, согласовать |
-| `linux-image-wb*` | любая | Reboot после апгрейда обязателен, заранее предупредить |
-| `wb-rules`, `wb-mqtt-serial` со скачком >5 минорных | большой gap | Прочитать релиз-ноты — могут поменяться форматы конфигов |
+| Package | When major | Action |
+|---------|------------|--------|
+| `docker-ce`, `containerd.io`, `docker-compose-plugin` | major change | Separate upgrade after the regular one, after compose-files review |
+| `u-boot-wb*` | major change | Read package changelog, coordinate |
+| `linux-image-wb*` | any | Reboot after upgrade is mandatory, warn in advance |
+| `wb-rules`, `wb-mqtt-serial` with a jump >5 minor | large gap | Read release notes — config formats may change |
 
-## Сценарий A: обновление пакетов
+## Scenario A: package update
 
-Триггеры: «обнови пакеты», «apt upgrade», «есть обновления?»
+Triggers: "update packages", "apt upgrade", "are there updates?"
 
-1. Покажи пользователю список upgradable. **Жди подтверждения.**
-2. Запусти:
+1. Show the user the upgradable list. **Wait for confirmation.**
+2. Run:
 
    ```
    wb_ssh_exec_async sn=<SN> cmd='DEBIAN_FRONTEND=noninteractive apt-get -y upgrade'
    ```
 
-3. Следи через `wb_job_tail job_id=<id>`.
-4. **Проверь kept-back.** Если часть пакетов осталась — предложи `dist-upgrade` (показав, что будет):
+3. Monitor via `wb_job_tail job_id=<id>`.
+4. **Check kept-back.** If some packages remain — propose `dist-upgrade` (showing what will happen):
 
    ```
    wb_ssh_exec_async sn=<SN> cmd='apt-get -s dist-upgrade | grep -E "^(Inst|Remv)"'
    ```
 
-   **Жди подтверждения.**
+   **Wait for confirmation.**
 
-5. Если обновилось ядро (`linux-image`) — предупреди: «Нужна перезагрузка для нового ядра.» Жди подтверждения, потом:
+5. If the kernel was updated (`linux-image`) — warn: "A reboot is needed for the new kernel." Wait for confirmation, then:
 
    ```
    wb_ssh_exec sn=<SN> cmd='systemctl reboot'
    ```
 
-6. Проверь: `wb_failed`, `wb_logs unit=wb-rules lines=20`, `wb_state_diff` против снимка «до».
+6. Verify: `wb_failed`, `wb_logs unit=wb-rules lines=20`, `wb_state_diff` against the "before" snapshot.
 
-## Сценарий B: смена релиза (stable↔testing)
+## Scenario B: release switch (stable↔testing)
 
-Триггеры: «перейди на testing», «сменить suite».
+Triggers: "switch to testing", "change suite".
 
-**Только для stable↔testing. Обновление на новый stable — через apt upgrade (сценарий A).**
+**Only for stable↔testing. Updating to a new stable — via apt upgrade (scenario A).**
 
-1. Узнай точное имя целевого релиза: `WebFetch https://wirenboard.com/wiki/WB_Software_Releases`.
-2. Сделай бэкап: вызови `/controller-backup`.
-3. **Жди подтверждения** с указанием целевого релиза.
-4. Запусти:
+1. Find the exact target release name: `WebFetch https://wirenboard.com/wiki/WB_Software_Releases`.
+2. Make a backup: invoke `/controller-backup`.
+3. **Wait for confirmation** specifying the target release.
+4. Run:
 
    ```
    wb_ssh_exec_async sn=<SN> cmd='wb-release -y -t <target>'
    ```
 
-5. SSH может временно отвалиться (рестарт сети). Процесс продолжает идти (фоновая задача переживает разрыв). `wb_job_status` будет `running`. Подожди и повтори `wb_probe` / `wb_job_tail`.
-6. После: `wb_ssh_exec` `wb-release; apt list --upgradable`, `wb_failed`, `wb_state_diff`.
+5. SSH may briefly drop (network restart). The process keeps running (background job survives the disconnect). `wb_job_status` will be `running`. Wait and retry `wb_probe` / `wb_job_tail`.
+6. After: `wb_ssh_exec` `wb-release; apt list --upgradable`, `wb_failed`, `wb_state_diff`.
 
-## Сценарий C: просто проверить обновления
+## Scenario C: just check for updates
 
-Recon-команды выше. Никаких upgrade. Отчёт: текущий релиз, N upgradable, из них M — wb-*.
+Recon commands above. No upgrade. Report: current release, N upgradable, of which M are wb-*.
 
-## Сценарий D: factory reset (заводское состояние)
+## Scenario D: factory reset (factory state)
 
-⚠️ **Деструктивно. Стирает ВСЁ:** конфиги, пользовательские данные, кастомные пакеты, Docker-образы, правила, шаблоны. После reset SSH host-key контроллера изменится, пароль root вернётся к заводскому (`wirenboard`). Кастомный SSH-ключ root'а пропадёт — ssh-copy-id заново. (MCP-сервер использует `StrictHostKeyChecking=no`, так что после factory reset продолжит подключаться без `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`.)
+⚠️ **Destructive. Wipes EVERYTHING:** configs, user data, custom packages, Docker images, rules, templates. After reset the controller's SSH host key changes, root password reverts to factory (`wirenboard`). Custom root SSH key is gone — ssh-copy-id again. (The MCP server uses `StrictHostKeyChecking=no`, so after factory reset it will keep connecting without `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`.)
 
-Программный путь — `/usr/bin/wb-factoryreset --force`:
+The programmatic path is `/usr/bin/wb-factoryreset --force`:
 
-1. **Бэкап обязателен** (вызови `/controller-backup` целиком, скачай локально):
+1. **Backup is mandatory** (invoke `/controller-backup` in full, download locally):
    ```
    /controller-backup
    ```
-   После reset восстановиться можно ТОЛЬКО из этого архива. **`/mnt/data/ai/` тоже стирается** — snapshot из `wb_state_save` исчезнет, `wb_state_diff` после reset невозможен. Если нужен diff — скачай snapshot файл локально перед reset (через `wb_read_file` или `scp`).
+   After reset, restoring is possible ONLY from this archive. **`/mnt/data/ai/` is also wiped** — the snapshot from `wb_state_save` will be gone, `wb_state_diff` after reset is impossible. If a diff is needed — download the snapshot file locally before reset (via `wb_read_file` or `scp`).
 
-2. **Явное подтверждение пользователя** — со ссылкой на потерю данных и кастомного SSH-ключа. Не запускай по неоднозначной формулировке.
+2. **Explicit user confirmation** — with reference to data loss and custom SSH key loss. Don't run on ambiguous wording.
 
-3. **Запуск через async** (синхронный wb_ssh_exec упадёт по таймауту, sleep 60 + reboot):
+3. **Run via async** (synchronous wb_ssh_exec will timeout, sleep 60 + reboot):
    ```
    wb_ssh_exec_async sn=<SN> cmd='/usr/bin/wb-factoryreset --force'
    ```
 
-   Скрипт внутри:
-   - проверяет `firmware-compatible: fit-factory-reset`,
-   - создаёт флаг `/mnt/data/.wb-update/wb_use_factory_fit.flag`,
-   - ждёт ~60 сек до инициации FIT-прошивки `wb-watch-update`'ом и reboot.
+   The script internally:
+   - checks `firmware-compatible: fit-factory-reset`,
+   - creates flag `/mnt/data/.wb-update/wb_use_factory_fit.flag`,
+   - waits ~60 sec until `wb-watch-update` initiates FIT firmware and reboot.
 
-4. **Контроллер недоступен 2-5 минут.** SSH-сессия отвалится. После reboot повтори `wb_probe sn=<SN>` — пока не вернёт ОК.
+4. **Controller is unreachable for 2-5 minutes.** SSH session drops. After reboot retry `wb_probe sn=<SN>` — until it returns OK.
 
-5. **После загрузки**: пароль root — `wirenboard`, host-key новый (MCP-сервер примет, см. выше), кастомные ключи пропали — `ssh-copy-id` заново если нужно.
+5. **After boot**: root password is `wirenboard`, host key is new (MCP server accepts, see above), custom keys are gone — `ssh-copy-id` again if needed.
 
-6. **Восстановление** — по `RESTORE.md` из бэкапа.
+6. **Restore** — per `RESTORE.md` from the backup.
 
-**Если прошивка не поддерживает factory reset** — `wb-factoryreset` напишет «not supported by this firmware». Это старая прошивка, factory reset делается только через web UI / Recovery USB.
+**If the firmware doesn't support factory reset** — `wb-factoryreset` will print "not supported by this firmware". This is old firmware, factory reset is done only via web UI / Recovery USB.
 
-## Грабли
+## Gotchas
 
-- **`apt-get update`** идёт 2-5 секунд (только обновление индексов) — `wb_ssh_exec` синхронно ок. **`apt-get upgrade` / `dist-upgrade` / `wb-release -t`** — длинные, **только** `wb_ssh_exec_async`. Не путай.
-- `wb-release -t` без `-y` — повиснет в ожидании stdin.
-- Не бэкапить перед сменой релиза — кастомные конфиги могут сломаться.
-- Reboot в середине `apt upgrade` — сломает dpkg.
-- После смены релиза не проверить `wb_failed` — пропустишь упавшие сервисы.
-- Проигнорировать мажорный апгрейд (Docker, containerd, u-boot, linux-image) — по ломающим изменениям пользователь должен решать сам.
-- Не учесть multiarch — `apt list --upgradable | wc -l` посчитает arm64 и armhf-варианты одного пакета как два. Используй `sort -u`.
+- **`apt-get update`** takes 2-5 seconds (only refreshes indexes) — `wb_ssh_exec` synchronous is fine. **`apt-get upgrade` / `dist-upgrade` / `wb-release -t`** are long, **only** `wb_ssh_exec_async`. Don't confuse.
+- `wb-release -t` without `-y` — hangs waiting for stdin.
+- Skipping the backup before release switch — custom configs may break.
+- Reboot in the middle of `apt upgrade` — breaks dpkg.
+- Not checking `wb_failed` after release switch — you'll miss failed services.
+- Ignoring a major upgrade (Docker, containerd, u-boot, linux-image) — the user must decide on breaking changes.
+- Not accounting for multiarch — `apt list --upgradable | wc -l` counts arm64 and armhf variants of one package as two. Use `sort -u`.
 
-## Документация
+## Documentation
 
-- Релизы: <https://github.com/wirenboard/wb-releases/blob/master/README.md>
+- Releases: <https://github.com/wirenboard/wb-releases/blob/master/README.md>
 - Wiki: <https://wirenboard.com/wiki/WB_Software_Releases>
 - Update: <https://wirenboard.com/wiki/Wirenboard_Update>

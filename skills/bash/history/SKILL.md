@@ -1,35 +1,35 @@
 ---
 name: history
-description: История данных и статистика с контроллеров WB — запросы к wb-mqtt-db через RPC.
+description: Historical data and statistics from WB controllers — queries to wb-mqtt-db via RPC.
 allowed-tools: Bash Read WebFetch
 ---
 
 # history
 
-История данных с контроллеров Wiren Board. Сервис `wb-mqtt-db` логирует MQTT-каналы в SQLite.
+Historical data from Wiren Board controllers. The `wb-mqtt-db` service logs MQTT channels into SQLite.
 
-Скилл получает данные и считает простую статистику. Рендеринг графиков — отдельная задача (см. раздел «Визуализация» ниже).
+The skill fetches data and computes simple statistics. Chart rendering is a separate task (see "Visualization" below).
 
-## Шаг 1 — найди каналы
+## Step 1 — find channels
 
-**Никогда не угадывай имена.** RPC `get_values` принимает пары `[device_id, control_name]`. Получить и то, и другое:
+**Never guess names.** RPC `get_values` accepts pairs `[device_id, control_name]`. To get both:
 
 ```bash
-# Все retained-каналы за один проход (быстро, всю device-control-таблицу видишь сразу).
-# ВАЖНО: -F '%t\t%p' — TAB как разделитель. Имена контролов часто с пробелами
-# (CPU Temperature, Input 0, Input 0 counter), и -v разделит по первому пробелу,
-# обрезав имя контрола. С TAB этого не происходит.
+# All retained channels in one pass (fast, see the full device-control table at once).
+# IMPORTANT: -F '%t\t%p' — TAB as separator. Control names often contain spaces
+# (CPU Temperature, Input 0, Input 0 counter), and -v would split by the first space,
+# truncating the control name. With TAB this doesn't happen.
 ssh root@<HOST> "mosquitto_sub -F '%t\\t%p' -t '/devices/+/controls/+' -W 3 -C 500" \
   | awk -F'\t' '{ split($1, a, "/"); print a[3] "\t" a[5] }' | sort -u
 ```
 
-Если хочешь только имена устройств без контролов — `mosquitto_sub -t '/devices/+/meta/name' -C 50 -W 3` (быстрее, меньше данных, но **device_id** там не равен `meta/name` — `meta/name` это человеческое описание; реальный device_id берётся из второго поля топика `/devices/<device_id>/...`).
+If you only need device names without controls — `mosquitto_sub -t '/devices/+/meta/name' -C 50 -W 3` (faster, less data, but **device_id** there isn't equal to `meta/name` — `meta/name` is a human description; the actual device_id is taken from the second field of the topic `/devices/<device_id>/...`).
 
-Имена часто с пробелами: `CPU Temperature`, `Board Temperature`, `Input 0`, `Input 0 counter` — используй дословно. Не угадывай — лезь и читай через `mosquitto_sub` с `-F '%t\t%p'`.
+Names often have spaces: `CPU Temperature`, `Board Temperature`, `Input 0`, `Input 0 counter` — use them verbatim. Don't guess — go and read via `mosquitto_sub` with `-F '%t\t%p'`.
 
-## Шаг 2 — запроси данные через RPC
+## Step 2 — query data via RPC
 
-`$(...)` в `ssh ... bash -c '...'` экранируется на хосте, а не на контроллере — типичный источник `Parse error -32700`. Простой и надёжный путь — heredoc на удалённой стороне:
+`$(...)` in `ssh ... bash -c '...'` is escaped on the host, not on the controller — a typical source of `Parse error -32700`. The simple and reliable path is a heredoc on the remote side:
 
 ```bash
 ssh root@<HOST> 'bash -s' <<'EOF'
@@ -55,45 +55,45 @@ wait $SUB_PID
 EOF
 ```
 
-`<<'EOF'` (с одинарными кавычками) — обязательно, чтобы `$ID`, `$SINCE`, `$(...)` раскрылись на контроллере, а не локально. Список `channels` — **массив пар**: запрашивай сразу все интересующие каналы за один RPC-вызов (`limit` применяется per-channel, не суммарно). Это и быстрее (один round-trip), и удобнее для построения сравнительных графиков.
+`<<'EOF'` (with single quotes) — required so that `$ID`, `$SINCE`, `$(...)` are expanded on the controller, not locally. The `channels` list is **an array of pairs**: query all channels of interest in one RPC call (`limit` applies per-channel, not in total). This is both faster (single round-trip) and more convenient for building comparative charts.
 
-Параметры `timestamp.gt` — UNIX-timestamp (секунды):
-- За час: `$(date -d "1 hour ago" +%s)`
-- За сутки: `$(date -d "24 hours ago" +%s)`
-- За неделю: `$(date -d "7 days ago" +%s)`
-- За месяц: `$(date -d "30 days ago" +%s)`
+Parameter `timestamp.gt` — UNIX timestamp (seconds):
+- For an hour: `$(date -d "1 hour ago" +%s)`
+- For a day: `$(date -d "24 hours ago" +%s)`
+- For a week: `$(date -d "7 days ago" +%s)`
+- For a month: `$(date -d "30 days ago" +%s)`
 
-## Прореживание и формат ответа
+## Decimation and response format
 
-| Диапазон | min_interval | limit |
+| Range | min_interval | limit |
 |----------|-------------|-------|
-| ≤ 1 час | 0 | 200 |
-| ≤ 24 часа | 60 | 500 |
-| > 24 часов | 600 | 1000 |
+| ≤ 1 hour | 0 | 200 |
+| ≤ 24 hours | 60 | 500 |
+| > 24 hours | 600 | 1000 |
 
-Каждая точка ответа — **бакет**, не отдельное измерение. Поля: `t` (timestamp начала бакета), `value` (сглаженное среднее), `min`, `max`. Даже при `min_interval=0` сервер группирует точки в собственные внутренние бакеты (~120 с на стандартной конфигурации wb-mqtt-db) — поэтому 30 «точек» на час это нормально.
+Each response point is a **bucket**, not a single measurement. Fields: `t` (bucket start timestamp), `value` (smoothed average), `min`, `max`. Even with `min_interval=0` the server groups points into its own internal buckets (~120 s on the standard wb-mqtt-db config) — so 30 "points" per hour is normal.
 
-Для поиска **скачков и пиков** смотри `max` (или `max - min` внутри бакета), а не `value` соседних точек: `value` сглажен и пропустит транзиентные пики 5-10 °C, которые длятся <1 минуты.
+To find **spikes and peaks**, look at `max` (or `max - min` within a bucket), not at `value` of neighboring points: `value` is smoothed and will miss transient spikes of 5-10 °C lasting <1 minute.
 
-## Проверка wb-mqtt-db
+## Verifying wb-mqtt-db
 
 ```bash
 ssh root@<HOST> 'systemctl is-active wb-mqtt-db'
 ```
-Если `inactive` — **не ставь сам**, отчитайся пользователю и согласуй: пакет нужно установить через `apt install wb-mqtt-db`, но это меняет состояние контроллера и должно идти через скилл `/software-install` (с recon места и фоновой задачей).
+If `inactive` — **don't install it yourself**, report to the user and agree: the package needs to be installed via `apt install wb-mqtt-db`, but this changes controller state and should go through the `/software-install` skill (with disk space recon and a background job).
 
-## Визуализация: разные единицы на одном графике
+## Visualization: different units on one chart
 
-Это **не бессмысленно** — просто нужно правильно нарисовать. Стандартные стратегии:
+It's **not pointless** — just needs to be drawn correctly. Standard strategies:
 
-| Сколько разных единиц | Что делать |
+| How many distinct units | What to do |
 |----------------------|-----------|
-| 1 (например, две температуры в `°C`) | Одна Y-шкала, обе линии на ней |
-| 2 (например `°C` + `%`) | Двойная Y-шкала: левая ось для одной единицы, правая — для другой. В Vega-Lite — `resolve: {scale: {y: 'independent'}}` с `axis.orient` `left`/`right` на двух layer'ах |
-| 3+ | Нормализуй каждый канал в `[0;1]` (по своему `min..max` за период), нарисуй в общих координатах, оригинальные диапазоны — в легенде. Альтернатива: faceted plot (subplot на каждую единицу) |
+| 1 (e.g. two temperatures in `°C`) | One Y axis, both lines on it |
+| 2 (e.g. `°C` + `%`) | Dual Y axis: left axis for one unit, right for the other. In Vega-Lite — `resolve: {scale: {y: 'independent'}}` with `axis.orient` `left`/`right` on two layers |
+| 3+ | Normalize each channel to `[0;1]` (by its `min..max` over the period), draw in shared coordinates, original ranges in the legend. Alternative: faceted plot (subplot per unit) |
 
-Из bash рендерить трудоёмко. Варианты:
-- **Mermaid `xychart-beta`** (с v10) — рендерится прямо в Markdown (Claude Code, Github, любой Markdown-просмотрщик с Mermaid). Бесплатно, без внешних зависимостей. **Только одна Y-шкала** — годится для серий с одинаковой единицей или для одной серии. Bar/line-marks. Для сравнения двух разных единиц **не подойдёт**.
+Rendering from bash is laborious. Options:
+- **Mermaid `xychart-beta`** (since v10) — renders directly in Markdown (Claude Code, GitHub, any Markdown viewer with Mermaid). Free, no external deps. **Single Y axis only** — fits series with the same unit or a single series. Bar/line marks. **Doesn't fit** for comparing two different units.
   ```mermaid
   xychart-beta
       title "CPU Temperature, °C, last hour"
@@ -101,19 +101,19 @@ ssh root@<HOST> 'systemctl is-active wb-mqtt-db'
       y-axis "°C" 65 --> 85
       line [69.9, 71.1, 75.3, 76.0, 70.5]
   ```
-- **Python + matplotlib** на хосте (контроллер не нагружаем): получить JSON через RPC → `json.load` → `ax.twinx()` для второй оси. Полный контроль над двумя осями, нормализацией, faceted-плотами.
-- **Vega-Lite / любой UI с готовым рендером** — если у пользователя есть внешний инструмент, отдай ему JSON-результат RPC, он нарисует с нужной логикой осей.
+- **Python + matplotlib** on the host (don't load the controller): get JSON via RPC → `json.load` → `ax.twinx()` for the second axis. Full control over two axes, normalization, faceted plots.
+- **Vega-Lite / any UI with built-in rendering** — if the user has an external tool, hand it the RPC JSON result, it'll draw with the desired axis logic.
 
-Для сводки в bash-сессии без графического вывода обычно достаточно min/max/avg + ASCII sparkline:
+For a summary in a bash session without graphic output, min/max/avg + ASCII sparkline is usually enough:
 
 ```bash
-# unicode-sparkline для серии value (ввод — список чисел через пробел):
+# unicode sparkline for the value series (input — list of numbers separated by spaces):
 echo "$values" | python3 -c 'import sys; v=[float(x) for x in sys.stdin.read().split()]; lo,hi=min(v),max(v); s=" ▁▂▃▄▅▆▇█"; print("".join(s[1+int((x-lo)/(hi-lo)*(len(s)-2))] if hi>lo else s[1] for x in v))'
 ```
 
-## Грабли
+## Pitfalls
 
-- Имена каналов обрезать нельзя: `"CPU"` ≠ `"CPU Temperature"`.
-- Если `wb-mqtt-db` недавно установлен — данных за прошлое нет.
-- `value` сглажен по бакету, `min`/`max` показывают реальные пики — для поиска скачков обязательно смотри `max`.
-- `limit` применяется per-channel — при 5 каналах и `limit:200` вернётся до 1000 точек (200×5).
+- Don't truncate channel names: `"CPU"` ≠ `"CPU Temperature"`.
+- If `wb-mqtt-db` was just installed — there's no past data.
+- `value` is bucket-smoothed, `min`/`max` show real peaks — to find spikes, always look at `max`.
+- `limit` applies per-channel — with 5 channels and `limit:200` you get up to 1000 points (200×5).

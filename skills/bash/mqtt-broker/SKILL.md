@@ -1,51 +1,51 @@
 ---
 name: mqtt-broker
-description: Администрирование mosquitto на контроллере Wiren Board — listeners, пользователи, ACL, мосты к внешним брокерам, TLS. /etc/mosquitto/conf.d/.
+description: Administering mosquitto on a Wiren Board controller — listeners, users, ACLs, bridges to external brokers, TLS. /etc/mosquitto/conf.d/.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # mqtt-broker
 
-`mosquitto` на контроллере WB — основной MQTT-брокер, через который ходят все WB-сервисы и пользовательские приложения. Управление через `/etc/mosquitto/conf.d/*.conf` (НЕ редактируй `mosquitto.conf` напрямую).
+`mosquitto` on a WB controller is the main MQTT broker through which all WB services and user applications communicate. Managed via `/etc/mosquitto/conf.d/*.conf` (DON'T edit `mosquitto.conf` directly).
 
-Подгружай при: «открой MQTT наружу», «нужны пароли в MQTT», «настрой TLS», «бридж в облако», «бридж в HA», «не подключается к MQTT с ноута», «mosquitto», «ACL для MQTT», «пароли на брокер», «зашифровать MQTT».
+Load this on: "open MQTT externally", "MQTT needs passwords", "set up TLS", "bridge to cloud", "bridge to HA", "can't connect to MQTT from laptop", "mosquitto", "ACL for MQTT", "passwords on the broker", "encrypt MQTT".
 
-## Структура конфигов
+## Config structure
 
 ```
-/etc/mosquitto/mosquitto.conf            # включает 3 директории по порядку:
-  /usr/share/wb-configs/mosquitto/        # WB-defaults (НЕ трогай)
-  /etc/mosquitto/conf.d/                  # пользовательское — сюда писать
-  /usr/share/wb-configs/mosquitto-post/   # WB-post (НЕ трогай)
+/etc/mosquitto/mosquitto.conf            # includes 3 directories in order:
+  /usr/share/wb-configs/mosquitto/        # WB defaults (DON'T touch)
+  /etc/mosquitto/conf.d/                  # user — write here
+  /usr/share/wb-configs/mosquitto-post/   # WB post (DON'T touch)
 
 /etc/mosquitto/conf.d/
-├── 00default_listener.conf   # Unix-сокет для wb-сервисов (НЕ трогай)
-├── 10listeners.conf          # внешние listener'ы (порт 1883, 8883) — твоё
-├── 20bridges.conf            # мосты к другим брокерам — твоё
-└── 21bridge.conf.example     # шаблон моста
+├── 00default_listener.conf   # Unix socket for wb services (DON'T touch)
+├── 10listeners.conf          # external listeners (port 1883, 8883) — yours
+├── 20bridges.conf            # bridges to other brokers — yours
+└── 21bridge.conf.example     # bridge template
 
 /etc/mosquitto/passwd/        # password files (mosquitto_passwd -c)
-/etc/mosquitto/acl/           # ACL files (топики per-user)
-/etc/mosquitto/certs/         # TLS-сертификаты (создашь)
+/etc/mosquitto/acl/           # ACL files (topics per-user)
+/etc/mosquitto/certs/         # TLS certificates (you'll create)
 ```
 
-**Принцип**: WB-сервисы общаются через Unix-сокет `/var/run/mosquitto/mosquitto.sock` (анонимно — 00default_listener). Внешние клиенты — через 1883/8883, и **там** делай аутентификацию.
+**Principle**: WB services talk via the Unix socket `/var/run/mosquitto/mosquitto.sock` (anonymously — 00default_listener). External clients — via 1883/8883, and that's where you do authentication.
 
-По умолчанию (заводские настройки): listener 1883 anonymous = брокер открыт всему миру. **Для production это надо закрыть**.
+By default (factory): listener 1883 anonymous = broker open to the world. **For production this needs to be closed.**
 
-## Базовые команды
+## Basic commands
 
 ```bash
 ssh root@<HOST> 'systemctl is-active mosquitto'
-ssh root@<HOST> 'mosquitto -c /etc/mosquitto/mosquitto.conf -t'      # проверка конфига без запуска
+ssh root@<HOST> 'mosquitto -c /etc/mosquitto/mosquitto.conf -t'      # config check without starting
 ssh root@<HOST> 'journalctl -u mosquitto -n 50 --no-pager'
-ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/#' -C 5"        # системная статистика брокера
+ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/#' -C 5"        # broker system stats
 ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/broker/clients/connected' -C 1"
 ```
 
-## Аутентификация: пароли
+## Authentication: passwords
 
-### Создать password-файл
+### Create password file
 
 ```bash
 ssh root@<HOST> 'mkdir -p /etc/mosquitto/passwd; chown mosquitto:mosquitto /etc/mosquitto/passwd'
@@ -54,11 +54,11 @@ ssh root@<HOST> 'mosquitto_passwd -c /etc/mosquitto/passwd/default.conf <usernam
 ssh root@<HOST> 'chown mosquitto:mosquitto /etc/mosquitto/passwd/default.conf; chmod 0640 /etc/mosquitto/passwd/default.conf'
 ```
 
-`-c` — создать файл (затрёт существующий!). Без `-c` — добавить юзера к существующему. Удалить юзера: `mosquitto_passwd -D /etc/mosquitto/passwd/default.conf <username>`.
+`-c` — create file (overwrites existing!). Without `-c` — add a user to an existing file. Delete user: `mosquitto_passwd -D /etc/mosquitto/passwd/default.conf <username>`.
 
-### Настроить listener использовать пароли
+### Configure listener to use passwords
 
-В `/etc/mosquitto/conf.d/10listeners.conf` уже есть пример. Поправь чтобы запретить anonymous:
+In `/etc/mosquitto/conf.d/10listeners.conf` there's already an example. Edit to disable anonymous:
 
 ```bash
 ssh root@<HOST> 'cat > /etc/mosquitto/conf.d/10listeners.conf' <<'EOF'
@@ -70,51 +70,51 @@ EOF
 ssh root@<HOST> 'systemctl restart mosquitto'
 ```
 
-`per_listener_settings true` (в `00default_listener.conf`) — ключевой: позволяет разные `allow_anonymous` для разных listener'ов. Внутренний сокет остаётся anonymous, внешний — с паролем.
+`per_listener_settings true` (in `00default_listener.conf`) is key: allows different `allow_anonymous` for different listeners. The internal socket stays anonymous, the external one requires a password.
 
-### Тест
+### Test
 
 ```bash
 ssh root@<HOST> "mosquitto_sub -h localhost -p 1883 -u <user> -P <pwd> -t '/devices/+/meta/name' -C 3 -W 3"
 ```
 
-Без -u/-P должно отказать (`Connection error: Connection Refused: not authorised.`).
+Without -u/-P should refuse (`Connection error: Connection Refused: not authorised.`).
 
-## ACL — права per-user
+## ACL — per-user permissions
 
-ACL-файл — права user'а на топики:
+ACL file — user permissions on topics:
 
 ```bash
 ssh root@<HOST> 'cat > /etc/mosquitto/acl/default.conf' <<'EOF'
 # Default — anonymous deny
 topic deny #
 
-# user "admin" — полный доступ
+# user "admin" — full access
 user admin
 topic readwrite #
 
-# user "frontend" — только чтение /devices/, запись в /devices/+/controls/+/on
+# user "frontend" — read /devices/ only, write /devices/+/controls/+/on
 user frontend
 topic read /devices/#
 topic write /devices/+/controls/+/on
 
-# user "external_app" — только своё пространство
+# user "external_app" — only its own namespace
 user external_app
 topic readwrite app/external_app/#
 EOF
-ssh root@<HOST> 'systemctl reload mosquitto'   # ACL подхватываются по reload (не requires restart)
+ssh root@<HOST> 'systemctl reload mosquitto'   # ACLs reload (no restart required)
 ```
 
-Перед публикацией каждое сообщение проверяется по ACL. **Внутренние WB-сервисы через Unix-сокет ACL не задевает** — у них своя секция в `00default_listener.conf` (`allow_anonymous true`, без acl_file).
+Each message is checked against the ACL before publishing. **Internal WB services via the Unix socket are not affected by the ACL** — they have their own section in `00default_listener.conf` (`allow_anonymous true`, no acl_file).
 
-## TLS на порту 8883
+## TLS on port 8883
 
-### Сертификаты
+### Certificates
 
-Свой self-signed CA + сертификат сервера — для домашних задач. Для production лучше Let's Encrypt (через certbot/acme.sh) с публичным доменом.
+A self-signed CA + server certificate for home tasks. For production prefer Let's Encrypt (via certbot/acme.sh) with a public domain.
 
 ```bash
-# self-signed CA + server cert (один раз)
+# self-signed CA + server cert (one-time)
 ssh root@<HOST> 'mkdir -p /etc/mosquitto/certs && cd /etc/mosquitto/certs && \
   openssl genrsa -out ca.key 2048 && \
   openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.crt -subj "/CN=WB-MQTT-CA" && \
@@ -124,7 +124,7 @@ ssh root@<HOST> 'mkdir -p /etc/mosquitto/certs && cd /etc/mosquitto/certs && \
   chown mosquitto:mosquitto *.key *.crt && chmod 0640 *.key'
 ```
 
-### Listener TLS
+### TLS listener
 
 ```bash
 ssh root@<HOST> 'cat >> /etc/mosquitto/conf.d/10listeners.conf' <<'EOF'
@@ -140,21 +140,21 @@ EOF
 ssh root@<HOST> 'systemctl restart mosquitto'
 ```
 
-### Тест TLS
+### TLS test
 
 ```bash
 ssh root@<HOST> "mosquitto_sub -h localhost -p 8883 --cafile /etc/mosquitto/certs/ca.crt -u <u> -P <p> -t test -C 1 -W 5"
 ```
 
-С внешнего хоста — раздай `ca.crt` клиенту, подключайся к `wirenboard-<SN>.local:8883`. Self-signed без `--cafile` — `tls_version mismatch`/`certificate verify failed`.
+From an external host — distribute `ca.crt` to the client, connect to `wirenboard-<SN>.local:8883`. Self-signed without `--cafile` — `tls_version mismatch`/`certificate verify failed`.
 
-Для Let's Encrypt — только `cafile` не нужен (системный CA), `certfile`/`keyfile` указывай на пути от certbot.
+For Let's Encrypt — `cafile` not needed (system CA), `certfile`/`keyfile` point to the certbot paths.
 
-## Bridges — мосты к другим брокерам
+## Bridges — bridges to other brokers
 
-Bridge — это режим, когда mosquitto сам подключается к другому брокеру и копирует выбранные топики туда-сюда. Типичные кейсы: репликация в Home Assistant, копия в облако, бэкап-брокер.
+A bridge is a mode where mosquitto itself connects to another broker and copies selected topics back and forth. Typical cases: replication to Home Assistant, copy to cloud, backup broker.
 
-### Пример: bridge в Home Assistant
+### Example: bridge to Home Assistant
 
 `/etc/mosquitto/conf.d/20bridges.conf`:
 
@@ -176,17 +176,17 @@ EOF
 ssh root@<HOST> 'systemctl restart mosquitto'
 ```
 
-Topic-параметр: `<pattern> <direction> <qos> <local-prefix> <remote-prefix>`.
-- `out` — публикуем туда (наружу), `in` — забираем сюда, `both` — оба направления.
-- `wb/A25NDEMJ/` — префикс на удалённой стороне (там будут видны топики `wb/A25NDEMJ/devices/...`).
+Topic parameter: `<pattern> <direction> <qos> <local-prefix> <remote-prefix>`.
+- `out` — publish there (outbound), `in` — pull here, `both` — both directions.
+- `wb/A25NDEMJ/` — prefix on the remote side (the topics `wb/A25NDEMJ/devices/...` will be visible there).
 
-`notifications` создаёт `wb/A25NDEMJ/bridge/state` с `online`/`offline` — удобно для мониторинга связи.
+`notifications` creates `wb/A25NDEMJ/bridge/state` with `online`/`offline` — convenient for monitoring connectivity.
 
-`cleansession false` важно: при разрыве сообщения копятся с QoS≥1 и доставляются после восстановления.
+`cleansession false` is important: on disconnect, messages with QoS≥1 accumulate and are delivered after recovery.
 
-### Bridge с TLS
+### Bridge with TLS
 
-Добавь в connection-блок:
+Add to the connection block:
 
 ```
 bridge_cafile /etc/mosquitto/certs/ha-ca.crt
@@ -195,39 +195,39 @@ bridge_keyfile /etc/mosquitto/certs/wb-client.key
 bridge_insecure false
 ```
 
-`bridge_insecure true` отключает hostname verification — только для отладки.
+`bridge_insecure true` disables hostname verification — only for debugging.
 
-## Изменения без рестарта
+## Changes without restart
 
-`systemctl reload mosquitto` — перечитывает только `password_file` и `acl_file`. Listener'ы, bridges, TLS — требуют `restart` (≈1 секунда даунтайма; WB-сервисы через Unix-сокет переживают).
+`systemctl reload mosquitto` — only re-reads `password_file` and `acl_file`. Listeners, bridges, TLS — require `restart` (~1 second downtime; WB services on the Unix socket survive it).
 
-## Проверка состояния и активных клиентов
+## Checking state and active clients
 
 ```bash
 ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/broker/+' -C 20 -W 2"
-# /devices/+/meta/name плюс $SYS/broker/clients/connected, $SYS/broker/messages/received/1min и т.д.
+# /devices/+/meta/name plus $SYS/broker/clients/connected, $SYS/broker/messages/received/1min etc.
 ```
 
-`mosquitto_sub` без `-u` к закрытому листенеру → 1883 откажет, 1883 на Unix-сокете (mosquitto_sub автоматически выбирает hostname=localhost:1883 по умолчанию). Чтобы попасть в Unix-сокет: `mosquitto_sub -L mqtt://localhost:1883/<topic>` или подключайся `mosquitto_sub -h /var/run/mosquitto/mosquitto.sock` — в ряде версий не работает, проще через 1883.
+`mosquitto_sub` without `-u` against a closed listener → 1883 will refuse, 1883 on the Unix socket (mosquitto_sub auto-picks hostname=localhost:1883 by default). To hit the Unix socket: `mosquitto_sub -L mqtt://localhost:1883/<topic>` or connect with `mosquitto_sub -h /var/run/mosquitto/mosquitto.sock` — doesn't work in some versions, easier via 1883.
 
-## Бэкап и FIT
+## Backup and FIT
 
-`/etc/mosquitto/conf.d/`, `/etc/mosquitto/passwd/`, `/etc/mosquitto/acl/`, `/etc/mosquitto/certs/` — все НЕ переживают FIT. Через `/controller-backup` они уже подбираются (часть `dpkg --verify` отметит изменения, и core-tar их захватит как изменённые конфиги).
+`/etc/mosquitto/conf.d/`, `/etc/mosquitto/passwd/`, `/etc/mosquitto/acl/`, `/etc/mosquitto/certs/` — all do NOT survive FIT. Via `/controller-backup` they get picked up (some `dpkg --verify` will flag changes, and core-tar will capture them as modified configs).
 
-## Грабли
+## Pitfalls
 
-- **`per_listener_settings false`** (default в Debian-пакете) — `allow_anonymous` применяется глобально, отдельный режим для Unix-сокета не получится. WB-конфиг включает `per_listener_settings true` — не сбрасывай.
-- **Правка `/etc/mosquitto/mosquitto.conf` напрямую** — всё что нужно в `/etc/mosquitto/conf.d/`. Базовый файл может перезаписаться апдейтом.
-- **Закрыл 1883 anonymous, забыл про wb-сервисы** — wb-сервисы используют Unix-сокет (`00default_listener.conf`, отдельный режим), их это не задевает. Но если переключил `per_listener_settings false` — WB-сервисы отвалятся.
-- **mosquitto_passwd без `-c` для нового файла** — пароль не сохранится (нет файла). С `-c` — затрёт всех существующих юзеров. После первого юзера — без `-c`.
-- **password_file без перезагрузки** — пароли изменяются по `systemctl reload mosquitto`. Полный restart не нужен.
-- **ACL без явного deny `topic deny #`** — anonymous user (если allow_anonymous true) получает full readwrite по умолчанию.
-- **Bridge без `cleansession false`** — потеряешь сообщения при разрыве.
-- **Bridge с `try_private true`** mosquitto.conf-only feature — для брокеров != mosquitto оставь `false`.
-- **TLS-сертификат истёк** — `journalctl -u mosquitto` покажет, и клиенты получат `tls handshake failure`. Renew через certbot или регенерируй self-signed.
-- **Right на `/etc/mosquitto/passwd/default.conf`** — должен быть `mosquitto:mosquitto 0640`, иначе mosquitto не прочитает (видно в логах: `Unable to open password file ... Permission denied`).
+- **`per_listener_settings false`** (default in the Debian package) — `allow_anonymous` applies globally, separate mode for the Unix socket is impossible. The WB config has `per_listener_settings true` — don't reset it.
+- **Editing `/etc/mosquitto/mosquitto.conf` directly** — everything you need belongs in `/etc/mosquitto/conf.d/`. The base file may be overwritten by an update.
+- **Closed 1883 anonymous, forgot about wb services** — wb services use the Unix socket (`00default_listener.conf`, separate mode), they aren't affected. But if you switch `per_listener_settings false` — WB services break.
+- **mosquitto_passwd without `-c` for a new file** — the password isn't saved (no file). With `-c` — overwrites all existing users. After the first user — without `-c`.
+- **password_file without reload** — passwords change on `systemctl reload mosquitto`. A full restart isn't needed.
+- **ACL without an explicit deny `topic deny #`** — anonymous user (if allow_anonymous true) gets full readwrite by default.
+- **Bridge without `cleansession false`** — you'll lose messages on disconnect.
+- **Bridge with `try_private true`** is a mosquitto.conf-only feature — for non-mosquitto brokers leave it `false`.
+- **TLS certificate expired** — `journalctl -u mosquitto` will show it, and clients get `tls handshake failure`. Renew via certbot or regenerate self-signed.
+- **Permissions on `/etc/mosquitto/passwd/default.conf`** — must be `mosquitto:mosquitto 0640`, otherwise mosquitto can't read it (visible in logs: `Unable to open password file ... Permission denied`).
 
-## Документация
+## Documentation
 
 - mosquitto.conf: `man mosquitto.conf`, <https://mosquitto.org/man/mosquitto-conf-5.html>
 - ACL: <https://mosquitto.org/documentation/dynamic-security/>

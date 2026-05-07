@@ -57,7 +57,7 @@ export class SshPool {
     const t = shellQuote(topic)
     const r = await this.exec(c, `mosquitto_sub -t ${t} -C 1 -W ${timeoutSec}`, (timeoutSec + 5) * 1000)
     if (r.stderr.includes('Invalid subscription topic')) {
-      throw new Error(`mqtt read: invalid topic "${topic}". В MQTT '+' и '#' — wildcards уровней целиком, между '/'.`)
+      throw new Error(`mqtt read: invalid topic "${topic}". In MQTT, '+' and '#' are whole-level wildcards between '/'.`)
     }
     const v = r.stdout.replace(/\n$/, '')
     return v === '' ? null : v
@@ -70,13 +70,13 @@ export class SshPool {
    *
    *  Limitation: line-based parsing. If payload contains `\n`, the message will split
    *  across lines and lose its topic — known case for WB is `meta`-JSON payloads,
-   *  but mosquitto_sub renders them as single-line JSON, so это не задевает. */
+   *  but mosquitto_sub renders them as single-line JSON, so this isn't an issue. */
   async mqttListTopics(c: Controller, prefix: string, timeoutSec: number = 3): Promise<{ topic: string; payload: string }[]> {
     const t = shellQuote(prefix)
     const cmd = `mosquitto_sub -F '%t\\t%p' -t ${t} -W ${timeoutSec}`
     const r = await this.exec(c, cmd, (timeoutSec + 5) * 1000)
     if (r.stderr.includes('Invalid subscription topic')) {
-      throw new Error(`mqtt list: invalid topic "${prefix}". В MQTT '+' и '#' — wildcards уровней целиком, между '/'. Например '/devices/+/meta/name' OK, а '/devices/foo__+/bar' — нельзя.`)
+      throw new Error(`mqtt list: invalid topic "${prefix}". In MQTT, '+' and '#' are whole-level wildcards between '/'. For example '/devices/+/meta/name' is OK, but '/devices/foo__+/bar' is not.`)
     }
     const out: { topic: string; payload: string }[] = []
     for (const line of r.stdout.split('\n')) {
@@ -89,8 +89,8 @@ export class SshPool {
   }
 
   /** RPC over MQTT: subscribe to reply, publish request, parse JSON response.
-   *  Все user-controlled куски топика и payload проходят через shellQuote — даже
-   *  для «доверенных» драйверов это страховка от случайных `'`/`$()` в имени. */
+   *  All user-controlled topic and payload fragments go through shellQuote — even
+   *  for "trusted" drivers, this guards against stray `'`/`$()` in names. */
   async mqttRpc(c: Controller, driver: string, service: string, method: string, params: unknown, timeoutSec: number = 10): Promise<unknown> {
     const id = randomId()
     const req = { id: 1, params }
@@ -168,13 +168,13 @@ export class SshPool {
   }
 
   /** Start a background command via systemd-run.
-   *  Подход: команда → /mnt/data/ai/wb-ai-integration/jobs/<id>.sh, лог через
-   *  systemd `StandardOutput=append:` (не shell-redirect). Никакого shell-quoting,
-   *  никакого риска со слипанием `;` в `bash -c '… > LOG'`. Скрипт сохранён —
-   *  jobStatus может его показать. Старые .sh/.log gc-ятся по TTL. */
+   *  Approach: command → /mnt/data/ai/wb-ai-integration/jobs/<id>.sh, log via
+   *  systemd `StandardOutput=append:` (not shell-redirect). No shell-quoting,
+   *  no risk of `;` collapsing inside `bash -c '… > LOG'`. The script is saved —
+   *  jobStatus can display it. Old .sh/.log files are GC'd by TTL. */
   async jobStart(c: Controller, command: string, label?: string): Promise<{ jobId: string; startedAt: string }> {
     if (!command.trim()) throw new Error('jobStart: empty command')
-    // GC старых job-файлов (best effort)
+    // GC old job files (best effort)
     void this.exec(c, `find ${JOB_DIR} -maxdepth 1 -type f -mmin +${Math.floor(JOB_TTL_SEC / 60)} -delete 2>/dev/null || true`, SHORT_TIMEOUT).catch(() => {})
     const id = randomId()
     const unit = `${JOB_UNIT_PREFIX}${id}`
@@ -270,11 +270,11 @@ function pickTarget(c: Controller): string {
 }
 
 function sshArgs(auth: SshAuth, target: string): string[] {
-  // StrictHostKeyChecking=no + UserKnownHostsFile=/dev/null — host-key контроллера МЕНЯЕТСЯ
-  // после factoryreset/FIT-прошивки. С `accept-new` или строгой проверкой ssh упал бы
-  // на «REMOTE HOST IDENTIFICATION HAS CHANGED!», и MCP застрял бы. WB-контроллер
-  // в локальной сети — доверенная среда; проверка hostkey бесполезна и мешает.
-  // LogLevel=ERROR глушит «Warning: Permanently added ... to the list of known hosts.»
+  // StrictHostKeyChecking=no + UserKnownHostsFile=/dev/null — the controller's host key CHANGES
+  // after factory reset / FIT firmware. With `accept-new` or strict checking ssh would fail
+  // with "REMOTE HOST IDENTIFICATION HAS CHANGED!", and MCP would get stuck. A WB controller
+  // on the local network is a trusted environment; hostkey verification is useless and gets in the way.
+  // LogLevel=ERROR silences "Warning: Permanently added ... to the list of known hosts."
   const args = [
     '-o', 'StrictHostKeyChecking=no',
     '-o', 'UserKnownHostsFile=/dev/null',

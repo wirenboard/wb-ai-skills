@@ -1,114 +1,114 @@
 # wb-ai-integration
 
-Интеграция [Claude Code](https://claude.ai/code) и [opencode](https://opencode.ai) с контроллерами [Wiren Board](https://wirenboard.com) — управление, диагностика, автоматизация по голосу и текстом.
+Integration of [Claude Code](https://claude.ai/code) and [opencode](https://opencode.ai) with [Wiren Board](https://wirenboard.com) controllers — control, diagnostics, automation by voice and text.
 
-Три компонента:
+Three components:
 
-- **`mcp-server/`** — MCP-сервер на Bun с **43 типизированными инструментами** (`wb_*`): SSH, MQTT, MQTT-RPC, Modbus, mDNS-discovery, фоновые задачи через systemd, history+SVG-чарты, аудит, factoryreset-friendly хост-keys, сеть, облако, systemd-юниты. Подробности — [`mcp-server/README.md`](mcp-server/README.md).
-- **`skills/bash/`** — **21 скилл** с Bash-рецептами (SSH + `mosquitto_*` + `avahi-browse` + `jq`). **Работают без MCP-сервера** — нужны только SSH-доступ и mDNS.
-- **`skills/mcp/`** — **19 тонких скиллов**, маршрутизирующих интенты на `wb_*` tools MCP-сервера. Требуют запущенный `mcp-server`.
+- **`mcp-server/`** — MCP server on Bun with **43 typed tools** (`wb_*`): SSH, MQTT, MQTT-RPC, Modbus, mDNS discovery, background tasks via systemd, history + SVG charts, audit, factoryreset-friendly host keys, network, cloud, systemd units. Details — [`mcp-server/README.md`](mcp-server/README.md).
+- **`skills/bash/`** — **21 skills** with Bash recipes (SSH + `mosquitto_*` + `avahi-browse` + `jq`). **Work without the MCP server** — only SSH access and mDNS required.
+- **`skills/mcp/`** — **19 thin skills** routing intents to `wb_*` tools of the MCP server. Require a running `mcp-server`.
 
-## Что выбрать
+## What to choose
 
-| Сценарий | Ставь |
+| Scenario | Install |
 |---------|-------|
-| Хочется простой setup, MCP не готов / нет Bun | `skills/bash` |
-| Уже есть Bun/Claude Code, хочется типизированные tools | `skills/mcp` + `mcp-server` |
-| И то, и другое одновременно | **только один** — у `bash` и `mcp` совпадают `name:` во frontmatter |
+| Want a simple setup, MCP not ready / no Bun | `skills/bash` |
+| Already have Bun/Claude Code, want typed tools | `skills/mcp` + `mcp-server` |
+| Both at once | **only one** — `bash` and `mcp` share the same `name:` in frontmatter |
 
-`skills/bash` — источник доменных знаний (синтаксис wb-rules, формат RPC, шаблоны Modbus, разводка `meta/error` по WB Conventions). MCP-варианты ссылаются на bash для глубоких деталей и не дублируют их.
+`skills/bash` is the source of domain knowledge (wb-rules syntax, RPC format, Modbus templates, `meta/error` layout per WB Conventions). MCP variants reference bash for deep details and don't duplicate them.
 
-## Быстрый старт
+## Quick start
 
-См. [INSTALL.md](INSTALL.md) — отдельные пути для bash-only и mcp-flavor + типовые проблемы (mDNS, SSH-ключ, bun, opencode).
+See [INSTALL.md](INSTALL.md) — separate paths for bash-only and mcp-flavor + common issues (mDNS, SSH key, bun, opencode).
 
-Минимальный путь для нетерпеливых:
+Minimal path for the impatient:
 
 ```bash
 git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration && cd wb-ai-integration
 
-# Bash-flavor для Claude Code (без MCP-сервера, только SSH)
+# Bash-flavor for Claude Code (no MCP server, SSH only)
 ./install-skills.sh bash claude --global
 
-# Или MCP-flavor (требует Bun + конфиг .mcp.json)
+# Or MCP-flavor (requires Bun + .mcp.json config)
 cd mcp-server && bun install && cd ..
 ./install-skills.sh mcp claude --global
 ```
 
-Использование:
+Usage:
 
 ```
 > /wiren-board
-> найди контроллеры в сети, покажи их прошивки и метрики
+> find controllers on the network, show their firmware and metrics
 > /wb-mqtt-serial
-> просканируй шину на A25NDEMJ и добавь найденное в конфиг
+> scan the bus on A25NDEMJ and add what's found to the config
 ```
 
-## Скиллы
+## Skills
 
-| Skill | Bash | MCP | Назначение |
+| Skill | Bash | MCP | Purpose |
 |-------|:---:|:---:|------------|
-| `wiren-board` | ✓ | ✓ | **Мастер**: SSH, MQTT, mDNS, безопасность, перекрёстные ссылки |
-| `wb-mqtt-serial` | ✓ | ✓ | Modbus/RS-485, конфиг wb-mqtt-serial, включение каналов |
-| `serial-templates` | ✓ | ✓ | Кастомные Modbus-шаблоны в `/etc/wb-mqtt-serial.conf.d/templates/` |
-| `wb-rules` | ✓ | ✓ | JS-правила (ES5), виртуальные устройства, cron, alarms |
-| `scenarios` | ✓ | ✓ | Декларативные Web UI сценарии (devicesControl/lightControl/thermostat/schedule) |
-| `notifications` | ✓ | ✓ | Telegram bot setup, email через msmtp, SMS через mmcli, alarms.conf |
-| `troubleshooting` | ✓ | ✓ | Общая диагностика (kernel mismatch, упавшие сервисы, диск, Docker) |
-| `troubleshooting-serial` | ✓ | ✓ | RS-485 debug: CRC-ошибки, таймауты, raw-пакеты |
+| `wiren-board` | ✓ | ✓ | **Master**: SSH, MQTT, mDNS, security, cross-references |
+| `wb-mqtt-serial` | ✓ | ✓ | Modbus/RS-485, wb-mqtt-serial config, enabling channels |
+| `serial-templates` | ✓ | ✓ | Custom Modbus templates in `/etc/wb-mqtt-serial.conf.d/templates/` |
+| `wb-rules` | ✓ | ✓ | JS rules (ES5), virtual devices, cron, alarms |
+| `scenarios` | ✓ | ✓ | Declarative Web UI scenarios (devicesControl/lightControl/thermostat/schedule) |
+| `notifications` | ✓ | ✓ | Telegram bot setup, email via msmtp, SMS via mmcli, alarms.conf |
+| `troubleshooting` | ✓ | ✓ | General diagnostics (kernel mismatch, failed services, disk, Docker) |
+| `troubleshooting-serial` | ✓ | ✓ | RS-485 debug: CRC errors, timeouts, raw packets |
 | `services` | ✓ | ✓ | systemd: override-conf, drop-ins, custom units/timers, mask/unmask |
 | `network` | ✓ | ✓ | NetworkManager + wb-connection-manager: ethernet/wifi/4G/OpenVPN |
-| `wb-cloud` | ✓ | ✓ | Wiren Board Cloud agent: активация, отвязка, свой backend |
-| `mqtt-broker` | ✓ | ✓ | mosquitto admin: пользователи, ACL, мосты, TLS |
-| `controller-backup` | ✓ | ✓ | tar-бэкап (конфиги + Docker volumes) + RESTORE.md |
-| `controller-update` | ✓ | ✓ | `apt upgrade`, `wb-release -t`, factoryreset (Сценарий D) |
+| `wb-cloud` | ✓ | ✓ | Wiren Board Cloud agent: activation, unbinding, custom backend |
+| `mqtt-broker` | ✓ | ✓ | mosquitto admin: users, ACL, bridges, TLS |
+| `controller-backup` | ✓ | ✓ | tar backup (configs + Docker volumes) + RESTORE.md |
+| `controller-update` | ✓ | ✓ | `apt upgrade`, `wb-release -t`, factoryreset (Scenario D) |
 | `hardware-modules` | ✓ | ✓ | MOD1-4, WBIO, RS-485, Zigbee, CAN, 1-Wire |
-| `software-install` | ✓ | ✓ | Docker-by-default, Z2M-нативно, Node-RED, HA, Grafana |
-| `zigbee` | ✓ | ✓ | Поиск, спаривание через zigbee2mqtt; wb-mqtt-zigbee/wb-zigbee2mqtt |
-| `history` | ✓ | ✓ | wb-mqtt-db: точки + агрегаты + SVG-чарты Vega-Lite |
-| `bugreport` | ✓ | ✓ | Сбор данных для поддержки + diag-архив |
-| `diagrams` | ✓ | — | Mermaid-диаграммы автоматизации |
-| `documentation-search` | ✓ | — | Поиск по wiki/GitHub Wiren Board |
+| `software-install` | ✓ | ✓ | Docker-by-default, Z2M-native, Node-RED, HA, Grafana |
+| `zigbee` | ✓ | ✓ | Discovery, pairing via zigbee2mqtt; wb-mqtt-zigbee/wb-zigbee2mqtt |
+| `history` | ✓ | ✓ | wb-mqtt-db: points + aggregates + Vega-Lite SVG charts |
+| `bugreport` | ✓ | ✓ | Collecting data for support + diag archive |
+| `diagrams` | ✓ | — | Mermaid automation diagrams |
+| `documentation-search` | ✓ | — | Search across Wiren Board wiki/GitHub |
 
-`diagrams` и `documentation-search` не зависят от контроллера — MCP-варианты избыточны. `install-skills.sh` для mcp-flavor подтягивает их автоматически из `skills/bash/`, отдельно ставить не нужно.
+`diagrams` and `documentation-search` don't depend on the controller — MCP variants are redundant. `install-skills.sh` for mcp-flavor pulls them automatically from `skills/bash/`, no need to install separately.
 
-## MCP Tools (краткая карта)
+## MCP Tools (brief map)
 
-43 tool в 11 группах. Полная таблица — в [`mcp-server/README.md`](mcp-server/README.md).
+43 tools in 11 groups. Full table — in [`mcp-server/README.md`](mcp-server/README.md).
 
 - **Discovery (3):** `wb_discover`, `wb_probe`, `wb_add_controller`
-- **SSH+файлы (4):** `wb_ssh_exec`, `wb_ssh_exec_async`, `wb_read_file`, `wb_write_file`
-- **Async jobs (3):** `wb_job_status`, `wb_job_tail`, `wb_job_cancel` (через systemd-run + script-file + `StandardOutput=append:`)
-- **MQTT (4):** `wb_mqtt_read`, `wb_mqtt_write` (с `retain`/`qos`), `wb_mqtt_list`, `wb_mqtt_rpc`
-- **MQTT-устройства (3):** `wb_mqtt_devices`, `wb_mqtt_controls`, **`wb_mqtt_inventory`** (сводно: id+driver+error+controls с распакованным meta и error-флагами по [WB Conventions](https://github.com/wirenboard/conventions))
-- **Confed (2):** `wb_confed_load`, `wb_confed_save` (валидация JSON + атомарный рестарт сервиса)
+- **SSH+files (4):** `wb_ssh_exec`, `wb_ssh_exec_async`, `wb_read_file`, `wb_write_file`
+- **Async jobs (3):** `wb_job_status`, `wb_job_tail`, `wb_job_cancel` (via systemd-run + script-file + `StandardOutput=append:`)
+- **MQTT (4):** `wb_mqtt_read`, `wb_mqtt_write` (with `retain`/`qos`), `wb_mqtt_list`, `wb_mqtt_rpc`
+- **MQTT devices (3):** `wb_mqtt_devices`, `wb_mqtt_controls`, **`wb_mqtt_inventory`** (combined: id+driver+error+controls with unpacked meta and error flags per [WB Conventions](https://github.com/wirenboard/conventions))
+- **Confed (2):** `wb_confed_load`, `wb_confed_save` (JSON validation + atomic service restart)
 - **wb-rules (5):** `wb_rules_list`, `wb_rules_load`, `wb_rules_save`, `wb_rules_disable`, `wb_rules_delete`
-- **History (2):** `wb_history`, `wb_history_chart` (Vega-Lite SVG: line/bar/area/heatmap, 1/2/3+ unit-стратегии)
+- **History (2):** `wb_history`, `wb_history_chart` (Vega-Lite SVG: line/bar/area/heatmap, 1/2/3+ unit strategies)
 - **Audit/state (3):** `wb_audit`, `wb_state_save`, `wb_state_diff`
-- **Modbus/serial (6):** `wb_modbus_template`, `wb_modbus_templates_list`, `wb_modbus_device_info`, `wb_modbus_probe`, `wb_modbus_ports`, **`wb_modbus_scan`** (через `wb-device-manager/bus-scan/Start`, async, extended Fast Modbus), **`wb_modbus_add_devices`** (auto-add найденного в конфиг с `dryRun`)
-- **Diagnostics (7):** `wb_metrics`, `wb_logs` (с `since`/`grep`/`grepInvert`), `wb_failed`, `wb_serial_debug`, `wb_systemd_unit`, `wb_network_status`, `wb_cloud_status`
+- **Modbus/serial (6):** `wb_modbus_template`, `wb_modbus_templates_list`, `wb_modbus_device_info`, `wb_modbus_probe`, `wb_modbus_ports`, **`wb_modbus_scan`** (via `wb-device-manager/bus-scan/Start`, async, extended Fast Modbus), **`wb_modbus_add_devices`** (auto-add discovered devices to config with `dryRun`)
+- **Diagnostics (7):** `wb_metrics`, `wb_logs` (with `since`/`grep`/`grepInvert`), `wb_failed`, `wb_serial_debug`, `wb_systemd_unit`, `wb_network_status`, `wb_cloud_status`
 
-## Архитектурные моменты
+## Architectural notes
 
-- **SSH host-key:** MCP-сервер использует `StrictHostKeyChecking=no` + `UserKnownHostsFile=/dev/null`. Это переживает factory reset / FIT-прошивку без ручного `ssh-keygen -R`. Контроллер в локальной сети — доверенная среда.
-- **Async-задачи:** через `systemd-run --collect` + script-file (`/mnt/data/ai/wb-ai-integration/jobs/<id>.sh`) + `StandardOutput=append:`. Никаких трюков с shell-redirect, переживает разрыв SSH, gc по 24-часовому TTL.
-- **MQTT-error по WB Conventions:** `wb_mqtt_inventory` парсит `<...>/meta/error` в флаги `{read, write, periodMiss}`. При `read=true` value-топик содержит **last-known-good** значение (см. [WB Conventions](https://github.com/wirenboard/conventions)).
-- **Имена с пробелами:** WB-MR6C и подобные имеют контролы `Input 0`, `Input 0 counter` — пробелы являются частью имени. Использован `mosquitto_sub -F '%t\t%p'` (TAB-разделитель), чтобы не резать суффикс при парсинге.
+- **SSH host-key:** the MCP server uses `StrictHostKeyChecking=no` + `UserKnownHostsFile=/dev/null`. This survives factory reset / FIT firmware reflash without manual `ssh-keygen -R`. A controller in the local network is a trusted environment.
+- **Async tasks:** via `systemd-run --collect` + script-file (`/mnt/data/ai/wb-ai-integration/jobs/<id>.sh`) + `StandardOutput=append:`. No shell-redirect tricks, survives SSH disconnect, gc by 24-hour TTL.
+- **MQTT error per WB Conventions:** `wb_mqtt_inventory` parses `<...>/meta/error` into flags `{read, write, periodMiss}`. When `read=true`, the value topic contains the **last-known-good** value (see [WB Conventions](https://github.com/wirenboard/conventions)).
+- **Names with spaces:** WB-MR6C and similar have controls `Input 0`, `Input 0 counter` — spaces are part of the name. Used `mosquitto_sub -F '%t\t%p'` (TAB separator) to avoid clipping the suffix during parsing.
 
-## Требования
+## Requirements
 
-- **Хост-машина:** Linux. MacOS — не тестировался, потребует доустановки `avahi-utils`-эквивалентов (на macOS mDNS делает системный mDNSResponder, отдельной утилиты `avahi-browse` нет — нужен порт через `dns-sd`). Windows — не поддерживается.
-- **Bun 1.3+** — для MCP-flavor.
-- **avahi (`avahi-browse`, mDNS)** — для discovery контроллеров.
-- **`mosquitto-clients`** — `mosquitto_sub`/`mosquitto_pub` нужны на хосте, если используешь bash-flavor извне; на контроллерах WB они есть по умолчанию.
-- **`sshpass`** — если SSH через пароль (по умолчанию `wirenboard`); если через ключ — не нужен.
-- **`jq`** — для bash-скиллов с парсингом JSON.
-- **Claude Code CLI** или **opencode**.
+- **Host machine:** Linux. macOS — not tested, will require installing `avahi-utils` equivalents (on macOS mDNS is handled by the system mDNSResponder, no separate `avahi-browse` utility — needs a port via `dns-sd`). Windows — not supported.
+- **Bun 1.3+** — for MCP-flavor.
+- **avahi (`avahi-browse`, mDNS)** — for controller discovery.
+- **`mosquitto-clients`** — `mosquitto_sub`/`mosquitto_pub` are needed on the host if you use bash-flavor externally; on WB controllers they are present by default.
+- **`sshpass`** — if using SSH via password (default `wirenboard`); not needed if using a key.
+- **`jq`** — for bash skills with JSON parsing.
+- **Claude Code CLI** or **opencode**.
 
-## Лицензия
+## License
 
-MIT (см. [LICENSE](LICENSE)).
+MIT (see [LICENSE](LICENSE)).
 
-## Связанные проекты
+## Related projects
 
-- [`wb-ai-helper-desktop`](https://github.com/wirenboard/wb-ai-helper-desktop) — standalone desktop-приложение Wiren Board для общения с контроллерами через LLM (своя БД, UI, инкапсулирует Anthropic/OpenAI/AITunnel API).
+- [`wb-ai-helper-desktop`](https://github.com/wirenboard/wb-ai-helper-desktop) — standalone Wiren Board desktop application for talking to controllers via LLM (own DB, UI, encapsulates Anthropic/OpenAI/AITunnel API).

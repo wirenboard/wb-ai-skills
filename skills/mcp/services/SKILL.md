@@ -1,41 +1,41 @@
 ---
 name: services
-description: Управление systemd-сервисами и таймерами на контроллере Wiren Board через MCP. Override-conf, drop-ins, кастомные юниты и таймеры, enable/disable/mask. НЕ для диагностики (для диагностики `/troubleshooting`).
+description: Managing systemd services and timers on a Wiren Board controller via MCP. Override-conf, drop-ins, custom units and timers, enable/disable/mask. NOT for diagnostics (for diagnostics see `/troubleshooting`).
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # services (MCP)
 
-systemd на контроллере WB через MCP-tool `wb_systemd_unit` + `wb_write_file` для override-conf и кастомных юнитов.
+systemd on a WB controller via the MCP tool `wb_systemd_unit` + `wb_write_file` for override-conf and custom units.
 
-Подгружай при: «сделай сервис из моего скрипта», «добавь таймер на бэкап», «отмаскировать `<unit>`», «сделать override на ExecStart», «после рестарта пакета мой override пропадает», «таймер не срабатывает».
+Load this when: "make a service from my script", "add a backup timer", "unmask `<unit>`", "make an override on ExecStart", "after package restart my override is gone", "timer doesn't fire".
 
-**Не путай с `/troubleshooting`** (упавшие сервисы, kernel mismatch, журнал) и `/controller-update` (apt upgrade).
+**Don't confuse with `/troubleshooting`** (failed services, kernel mismatch, journal) and `/controller-update` (apt upgrade).
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Статус юнита (parsed) | `wb_systemd_unit unit=<u>` (action=status по умолчанию) |
-| Содержимое юнита со всеми drop-ins | `wb_systemd_unit unit=<u> action=cat` |
-| Зависимости юнита | `wb_systemd_unit unit=<u> action=list-deps` |
-| Старт / стоп / рестарт / reload | `wb_systemd_unit unit=<u> action=start|stop|restart|reload` |
-| Включить / выключить автозагрузку | `wb_systemd_unit unit=<u> action=enable|disable` |
-| Маска (запрет запуска) | `wb_systemd_unit unit=<u> action=mask|unmask` |
-| Логи юнита | `wb_logs unit=<u>` (с `since`/`grep` если нужно) |
-| Записать override.conf или кастомный юнит | `wb_write_file path=/etc/systemd/system/<unit>.service.d/override.conf` или `/etc/systemd/system/<unit>.service` |
-| `daemon-reload` после правки .service/.timer | `wb_ssh_exec` `systemctl daemon-reload` |
-| Список таймеров и следующих срабатываний | `wb_ssh_exec` `systemctl list-timers --no-pager` |
+| Intent | Tool |
+|--------|------|
+| Unit status (parsed) | `wb_systemd_unit unit=<u>` (action=status by default) |
+| Unit contents with all drop-ins | `wb_systemd_unit unit=<u> action=cat` |
+| Unit dependencies | `wb_systemd_unit unit=<u> action=list-deps` |
+| Start / stop / restart / reload | `wb_systemd_unit unit=<u> action=start|stop|restart|reload` |
+| Enable / disable autostart | `wb_systemd_unit unit=<u> action=enable|disable` |
+| Mask (forbid start) | `wb_systemd_unit unit=<u> action=mask|unmask` |
+| Unit logs | `wb_logs unit=<u>` (with `since`/`grep` if needed) |
+| Write override.conf or custom unit | `wb_write_file path=/etc/systemd/system/<unit>.service.d/override.conf` or `/etc/systemd/system/<unit>.service` |
+| `daemon-reload` after editing .service/.timer | `wb_ssh_exec` `systemctl daemon-reload` |
+| List of timers and next firings | `wb_ssh_exec` `systemctl list-timers --no-pager` |
 
-## Сценарий: override на пакетный юнит
+## Scenario: override on a packaged unit
 
-1. `wb_systemd_unit unit=<u> action=cat` — посмотреть текущий .service и существующие drop-ins.
+1. `wb_systemd_unit unit=<u> action=cat` — see current .service and existing drop-ins.
 2. `wb_write_file path=/etc/systemd/system/<u>.service.d/override.conf` — drop-in.
 3. `wb_ssh_exec` `systemctl daemon-reload`.
 4. `wb_systemd_unit unit=<u> action=restart`.
-5. `wb_systemd_unit unit=<u>` — статус, проверить что ExecStart/Restart применились.
+5. `wb_systemd_unit unit=<u>` — status, verify ExecStart/Restart applied.
 
-**Сброс директивы из основного файла** — повторное объявление пустой строкой:
+**Resetting a directive from the main file** — re-declaring with an empty line:
 
 ```ini
 [Service]
@@ -43,17 +43,17 @@ ExecStart=
 ExecStart=/usr/local/bin/my-wrapped-service
 ```
 
-Без `ExecStart=` (пустая) systemd добавит новую к старой.
+Without `ExecStart=` (empty) systemd appends a new one to the old.
 
-## Сценарий: создать сервис из скрипта
+## Scenario: create a service from a script
 
 1. `wb_write_file path=/usr/local/bin/<name>.sh content=<bash>` + `wb_ssh_exec chmod 0755 ...`.
 2. `wb_write_file path=/etc/systemd/system/<name>.service content=<unit>`.
 3. `wb_ssh_exec` `systemctl daemon-reload`.
-4. `wb_systemd_unit unit=<name> action=start` — проверить.
-5. `wb_systemd_unit unit=<name>` — статус.
+4. `wb_systemd_unit unit=<name> action=start` — verify.
+5. `wb_systemd_unit unit=<name>` — status.
 
-**Минимальный шаблон oneshot-сервиса под таймер:**
+**Minimal oneshot service template under a timer:**
 
 ```ini
 [Unit]
@@ -68,14 +68,14 @@ StandardOutput=journal
 StandardError=journal
 ```
 
-## Сценарий: таймер
+## Scenario: timer
 
 1. `wb_write_file path=/etc/systemd/system/<name>.timer content=<timer>`.
 2. `wb_ssh_exec` `systemctl daemon-reload`.
-3. `wb_systemd_unit unit=<name>.timer action=enable` (затем `action=start` или сразу через `wb_ssh_exec` `systemctl enable --now <name>.timer`).
-4. `wb_ssh_exec` `systemctl list-timers <name>.timer --no-pager` — увидеть `NEXT`.
+3. `wb_systemd_unit unit=<name>.timer action=enable` (then `action=start` or directly via `wb_ssh_exec` `systemctl enable --now <name>.timer`).
+4. `wb_ssh_exec` `systemctl list-timers <name>.timer --no-pager` — see `NEXT`.
 
-**Шаблон таймера:**
+**Timer template:**
 
 ```ini
 [Unit]
@@ -90,37 +90,37 @@ RandomizedDelaySec=2min
 WantedBy=timers.target
 ```
 
-`Persistent=true` — догонит запуск, если контроллер был выключен.
+`Persistent=true` — catches up the run if the controller was off.
 
 ## wb-rules cron vs systemd timer
 
-| Случай | Выбирать |
-|--------|---------|
-| Условие зависит от MQTT-состояния, dev[], других правил | `/wb-rules` cron(...) или setInterval |
-| Простой shell-скрипт по расписанию | systemd timer (этот скилл) |
-| Бэкап / синхронизация / мониторинг (не привязано к шине) | systemd timer |
-| Реакция на изменение контрола или события шины | `/wb-rules` whenChanged |
+| Case | Choose |
+|------|--------|
+| Condition depends on MQTT state, dev[], other rules | `/wb-rules` cron(...) or setInterval |
+| Plain shell script on a schedule | systemd timer (this skill) |
+| Backup / sync / monitoring (not bound to the bus) | systemd timer |
+| Reaction to control change or bus event | `/wb-rules` whenChanged |
 
-## Грабли
+## Gotchas
 
-- **Правка `/lib/systemd/system/<u>.service` напрямую** — затрут apt'ом. Только drop-in в `/etc/systemd/system/<u>.service.d/`.
-- **`ExecStart=` в drop-in без сброса** — пустая строка перед новой обязательна.
-- **Забыл `systemctl daemon-reload`** — systemd не видит изменений.
-- **`enable` без `--now`** — юнит активируется только после reboot. Делай `wb_systemd_unit action=enable` + `action=start` отдельно, или `wb_ssh_exec` `systemctl enable --now <u>`.
-- **Type=oneshot без `RemainAfterExit=yes`** — после успешного выполнения «inactive (dead)». Нормально для таймера, но не для постоянно-запущенного.
-- **Кастомный юнит без `[Install]`** — `enable` упадёт «No installation information found».
-- **mask забыл `unmask`** — потом не запускается.
-- **Кастомные юниты в `/etc/systemd/system/`** не переживают FIT-прошивку. Для бэкапа — `/controller-backup` (секция «Кастомные systemd-юниты»).
+- **Editing `/lib/systemd/system/<u>.service` directly** — overwritten by apt. Only drop-in in `/etc/systemd/system/<u>.service.d/`.
+- **`ExecStart=` in drop-in without reset** — empty line before the new one is mandatory.
+- **Forgot `systemctl daemon-reload`** — systemd doesn't see changes.
+- **`enable` without `--now`** — unit activates only after reboot. Do `wb_systemd_unit action=enable` + `action=start` separately, or `wb_ssh_exec` `systemctl enable --now <u>`.
+- **Type=oneshot without `RemainAfterExit=yes`** — after successful run "inactive (dead)". Fine for a timer, not for a long-running unit.
+- **Custom unit without `[Install]`** — `enable` fails with "No installation information found".
+- **mask, forgot `unmask`** — won't start later.
+- **Custom units in `/etc/systemd/system/`** don't survive FIT firmware. For backup — `/controller-backup` (the "Custom systemd units" section).
 
-## Связанные скиллы
+## Related skills
 
-- `/troubleshooting` — диагностика упавших юнитов, kernel mismatch.
-- `/wb-rules` — автоматизация, реагирующая на MQTT.
-- `/controller-backup` — сохранение кастомных юнитов перед FIT.
+- `/troubleshooting` — diagnostics of failed units, kernel mismatch.
+- `/wb-rules` — automation reacting to MQTT.
+- `/controller-backup` — saving custom units before FIT.
 
-Подробности (override-синтаксис, full примеры, OnCalendar) — bash-двойник `/services` (одноимённый skill, bash-flavor).
+Details (override syntax, full examples, OnCalendar) — bash-flavor twin `/services` (same skill name, bash flavor).
 
-## Документация
+## Documentation
 
 - systemd unit: <https://www.freedesktop.org/software/systemd/man/systemd.unit.html>
 - systemd timer: <https://www.freedesktop.org/software/systemd/man/systemd.timer.html>

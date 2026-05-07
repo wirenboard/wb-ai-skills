@@ -41,7 +41,7 @@ export type AuditResult = {
 
 function parseRelease(s: string): ReleaseInfo {
   const out: ReleaseInfo = { raw: s }
-  // Снимаем кавычки если они есть: RELEASE_NAME="bullseye" → bullseye.
+  // Strip quotes if present: RELEASE_NAME="bullseye" → bullseye.
   const unquote = (v: string): string => v.replace(/^["']|["']$/g, '')
   for (const line of s.split('\n')) {
     const eq = line.indexOf('=')
@@ -142,7 +142,7 @@ export async function runDiffSnapshot(ssh: SshPool, c: Controller, beforePath: s
   try {
     before = JSON.parse(raw)
   } catch (e) {
-    throw new Error(`runDiffSnapshot: snapshot ${beforePath} повреждён (невалидный JSON): ${(e as Error).message}`)
+    throw new Error(`runDiffSnapshot: snapshot ${beforePath} is corrupted (invalid JSON): ${(e as Error).message}`)
   }
   const a = await runAudit(ssh, c)
   const pkgs = diff(before.manualPackages ?? [], a.manualPackages)

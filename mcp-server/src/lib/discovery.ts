@@ -50,7 +50,7 @@ export class Discovery {
   }
 
   /** Find by SN (registry) or by hostname/IP among known controllers.
-   *  Не создаёт новых записей — для добавления используй `addManual`. */
+   *  Does not create new entries — use `addManual` to add. */
   findByKey(snOrHost: string): Controller | undefined {
     const upper = snOrHost.toUpperCase()
     const byKey = this.controllers.get(upper)

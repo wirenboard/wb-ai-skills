@@ -1,89 +1,89 @@
 ---
 name: history
-description: История данных и статистика с контроллеров WB через MCP — wb_history (точки + min/max/avg из wb-mqtt-db).
+description: Data history and statistics from WB controllers via MCP — wb_history (points + min/max/avg from wb-mqtt-db).
 allowed-tools: Bash Read WebFetch
 ---
 
 # history (MCP)
 
-История данных с контроллеров Wiren Board. Сервис `wb-mqtt-db` логирует MQTT-каналы в SQLite. MCP-tool `wb_history` инкапсулирует RPC `db_logger/history/get_values`.
+Data history from Wiren Board controllers. The `wb-mqtt-db` service logs MQTT channels into SQLite. The `wb_history` MCP tool encapsulates the `db_logger/history/get_values` RPC.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Точки по каналам за период | `wb_history` (sn, channels — массив пар, time-range, min_interval, limit) |
-| **Готовый SVG-чарт** | `wb_history_chart` (line/bar/area/point/histogram/heatmap/boxplot, 1/2/3+ единиц с двойной осью или нормализацией) |
-| min/max/avg за период | агрегируй полученные `min`/`max`/`value` бакетов локально |
-| Список устройств | `wb_mqtt_devices` |
-| Список контролов устройства | `wb_mqtt_controls` |
-| Жив ли wb-mqtt-db | `wb_failed` (упал?), `wb_logs unit=wb-mqtt-db` |
-| Проверка пакета | `wb_ssh_exec` `dpkg -l wb-mqtt-db; systemctl is-active wb-mqtt-db` |
+| Intent | Tool |
+|--------|------|
+| Points per channel for a period | `wb_history` (sn, channels — array of pairs, time-range, min_interval, limit) |
+| **Ready-made SVG chart** | `wb_history_chart` (line/bar/area/point/histogram/heatmap/boxplot, 1/2/3+ units with dual axis or normalization) |
+| min/max/avg for a period | aggregate received `min`/`max`/`value` of buckets locally |
+| List of devices | `wb_mqtt_devices` |
+| List of device controls | `wb_mqtt_controls` |
+| Is wb-mqtt-db alive | `wb_failed` (failed?), `wb_logs unit=wb-mqtt-db` |
+| Package check | `wb_ssh_exec` `dpkg -l wb-mqtt-db; systemctl is-active wb-mqtt-db` |
 
-## Шаг 1 — найди каналы
+## Step 1 — find channels
 
-**Никогда не угадывай имена.** RPC принимает пары `[device_id, control_name]`:
+**Never guess names.** RPC accepts `[device_id, control_name]` pairs:
 
-- `wb_mqtt_devices sn=<SN>` — все устройства.
-- `wb_mqtt_controls sn=<SN> device=<device_id>` — каналы устройства.
+- `wb_mqtt_devices sn=<SN>` — all devices.
+- `wb_mqtt_controls sn=<SN> device=<device_id>` — channels of a device.
 
-Имена часто с пробелами: `CPU Temperature`, `Board Temperature` — используй дословно.
+Names often contain spaces: `CPU Temperature`, `Board Temperature` — use verbatim.
 
-## Шаг 2 — запроси данные (multi-channel за один вызов)
+## Step 2 — request data (multi-channel in one call)
 
 ```
 wb_history sn=<SN> channels=[["hwmon","CPU Temperature"],["hwmon","Board Temperature"],["wb-mr6c_2","K1"]] from=<unix_ts> to=<unix_ts> min_interval=0 limit=200
 ```
 
-`channels` — **массив пар**: запрашивай сразу все интересующие каналы за один RPC. `limit` применяется per-channel (не суммарно). Это и быстрее, и удобнее для построения сравнительных графиков.
+`channels` is an **array of pairs**: request all channels of interest in one RPC at once. `limit` is applied per-channel (not total). It's both faster and more convenient for building comparison charts.
 
-Параметры периода (timestamp, секунды):
+Period parameters (timestamp, seconds):
 
-| Период | from |
+| Period | from |
 |--------|------|
-| За час | `now - 3600` |
-| За сутки | `now - 86400` |
-| За неделю | `now - 604800` |
-| За месяц | `now - 2592000` |
+| Last hour | `now - 3600` |
+| Last day | `now - 86400` |
+| Last week | `now - 604800` |
+| Last month | `now - 2592000` |
 
-## Прореживание и формат ответа
+## Decimation and response format
 
-| Диапазон | min_interval | limit |
-|----------|--------------|-------|
-| ≤ 1 час | 0 | 200 |
-| ≤ 24 часа | 60 | 500 |
-| > 24 часов | 600 | 1000 |
+| Range | min_interval | limit |
+|-------|--------------|-------|
+| ≤ 1 hour | 0 | 200 |
+| ≤ 24 hours | 60 | 500 |
+| > 24 hours | 600 | 1000 |
 
-Каждая точка — **бакет**, не отдельное измерение. Поля: `t` (timestamp начала бакета), `value` (сглаженное среднее), `min`, `max`. Даже при `min_interval=0` сервер агрегирует ~120 с — поэтому 30 точек на час норма.
+Each point is a **bucket**, not a single measurement. Fields: `t` (bucket start timestamp), `value` (smoothed average), `min`, `max`. Even with `min_interval=0` the server aggregates ~120 sec — so 30 points per hour is normal.
 
-Для поиска **скачков и пиков** смотри `max` (или `max - min` внутри бакета), не `value` соседних бакетов: `value` сглажен и пропустит транзиентные пики 5-10 единиц, длящиеся <1 минуты.
+To find **spikes and peaks**, look at `max` (or `max - min` within the bucket), not at `value` of neighboring buckets: `value` is smoothed and will miss transient peaks of 5-10 units lasting <1 minute.
 
-## Визуализация: разные единицы на одном графике
+## Visualization: different units on one chart
 
-Это **не бессмысленно** — нужно правильно нарисовать. Стандартные стратегии:
+This is **not pointless** — it just needs to be drawn correctly. Standard strategies:
 
-| Сколько разных единиц | Что делать |
-|----------------------|-----------|
-| 1 (например, две температуры в `°C`) | Одна Y-шкала, обе линии на ней |
-| 2 (`°C` + `%`) | Двойная Y-шкала: левая ось для одной единицы, правая для другой |
-| 3+ | Нормализуй каждый канал в `[0;1]` (по своему `min..max`), оригинальные диапазоны — в легенде. Альтернатива: faceted (subplot на единицу) |
+| Number of different units | What to do |
+|---------------------------|-----------|
+| 1 (e.g. two temperatures in `°C`) | One Y scale, both lines on it |
+| 2 (`°C` + `%`) | Dual Y scale: left axis for one unit, right for the other |
+| 3+ | Normalize each channel into `[0;1]` (by its own `min..max`), with original ranges in the legend. Alternative: faceted (subplot per unit) |
 
-Варианты рендера:
-- **`wb_history_chart` (рекомендуемый)** — встроен в MCP-сервер на Vega-Lite. Один вызов: получает данные через `db_logger/history/get_values`, строит SVG. Поддерживает: `line` (default), `bar`, `area`, `point`, `histogram`, `heatmap`, `boxplot`. Логика осей:
-   - 1 unit → одна Y-шкала.
-   - 2 units → двойная ось (`resolve.scale.y: independent`, левая+правая).
-   - 3+ units → нормализация в [0;1], оригинальные диапазоны в легенде.
+Render options:
+- **`wb_history_chart` (recommended)** — built into the MCP server using Vega-Lite. One call: fetches data via `db_logger/history/get_values`, builds SVG. Supports: `line` (default), `bar`, `area`, `point`, `histogram`, `heatmap`, `boxplot`. Axis logic:
+   - 1 unit → one Y scale.
+   - 2 units → dual axis (`resolve.scale.y: independent`, left+right).
+   - 3+ units → normalization to [0;1], original ranges in legend.
 
   ```
   wb_history_chart sn=<SN> channels=[["hwmon","CPU Temperature"],["hwmon","Board Temperature"]] period=1h chartType=line title="Temps last hour"
-  # → возвращает {svg, svgBytes, totalPoints, channels, from, to}; SVG inline (если <200КБ)
+  # → returns {svg, svgBytes, totalPoints, channels, from, to}; SVG inline (if <200 KB)
   wb_history_chart sn=<SN> channels=[...] period=24h chartType=heatmap outputPath=/tmp/cpu.svg
-  # → записывает в файл, в ответе только {ok, outputPath, ...}
+  # → writes to file, response only contains {ok, outputPath, ...}
   ```
 
-  **Когда отдавать `outputPath`:** если прошёл день/неделя на 3+ каналах, SVG может быть >200 КБ — inline-ответ MCP-сервер откажется отдавать. Сохраняй в файл и пользователю отдай путь.
+  **When to use `outputPath`:** if a day/week passed across 3+ channels, the SVG can be >200 KB — the MCP server will refuse inline response. Save to file and give the user the path.
 
-- **Mermaid `xychart-beta`** (с v10) — рендерится в Markdown (Claude Code, Github, Mermaid-совместимые просмотрщики). **Только одна Y-шкала** — для одной серии или серий с одинаковой единицей. Подходит, когда не хочется генерить SVG-файл.
+- **Mermaid `xychart-beta`** (since v10) — renders in Markdown (Claude Code, GitHub, Mermaid-compatible viewers). **Single Y scale only** — for one series or series with the same unit. Suitable when you don't want to generate an SVG file.
   ```mermaid
   xychart-beta
       title "CPU Temperature, °C"
@@ -92,27 +92,27 @@ wb_history sn=<SN> channels=[["hwmon","CPU Temperature"],["hwmon","Board Tempera
       line [69.9, 71.1, 75.3, 76.0, 70.5]
   ```
 
-- **Python + matplotlib** или внешний UI — если нужен другой стиль/формат. Отдай JSON-результат `wb_history`, обработай локально.
+- **Python + matplotlib** or external UI — if a different style/format is needed. Pass the JSON result of `wb_history`, process locally.
 
-Для bash-сводки достаточно min/max/avg + ASCII sparkline.
+For a bash summary, min/max/avg + ASCII sparkline is enough.
 
-## Проверка wb-mqtt-db
+## Checking wb-mqtt-db
 
 ```
 wb_ssh_exec sn=<SN> cmd='systemctl is-active wb-mqtt-db'
 ```
 
-Если `inactive` — **не ставь сам**, отчитайся пользователю и согласуй: установка идёт через `/software-install` (рекомендуем не нативно через apt, а оставить wb-mqtt-db как stock-пакет — он есть в WB-репо).
+If `inactive` — **don't install yourself**, report to the user and coordinate: installation goes through `/software-install` (we recommend not native via apt, but leaving wb-mqtt-db as a stock package — it's in the WB repo).
 
-Если `wb_history` возвращает пусто — проверь, что:
-- `wb-mqtt-db` живой (`wb_failed`, `wb_logs unit=wb-mqtt-db`).
-- Канал не в исключениях `/etc/wb-mqtt-db.conf` (читай через `wb_read_file`).
-- `wb-mqtt-db` не установлен недавно — данных за прошлое нет.
+If `wb_history` returns empty — verify that:
+- `wb-mqtt-db` is alive (`wb_failed`, `wb_logs unit=wb-mqtt-db`).
+- The channel isn't excluded in `/etc/wb-mqtt-db.conf` (read via `wb_read_file`).
+- `wb-mqtt-db` wasn't installed recently — no past data.
 
-## Грабли
+## Gotchas
 
-- Имена каналов обрезать нельзя: `"CPU"` ≠ `"CPU Temperature"`.
-- Если `wb-mqtt-db` недавно установлен — данных за прошлое нет.
-- `value` сглажен по бакету, `min`/`max` показывают реальные пики — для поиска скачков смотри `max`.
-- `limit` per-channel — при 5 каналах и `limit:200` вернётся до 1000 точек.
-- Большие диапазоны без `min_interval` забивают ответ — указывай прореживание.
+- Don't truncate channel names: `"CPU"` ≠ `"CPU Temperature"`.
+- If `wb-mqtt-db` was installed recently — no past data.
+- `value` is bucket-smoothed, `min`/`max` show real peaks — for spike search look at `max`.
+- `limit` is per-channel — with 5 channels and `limit:200` up to 1000 points returned.
+- Large ranges without `min_interval` flood the response — specify decimation.

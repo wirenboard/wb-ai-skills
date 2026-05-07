@@ -1,101 +1,101 @@
 ---
 name: software-install
-description: Установка стороннего ПО на контроллер WB через MCP. По умолчанию — Docker; нативно — только Zigbee2MQTT и редкие исключения.
+description: Installing third-party software on a WB controller via MCP. By default — Docker; native — only Zigbee2MQTT and rare exceptions.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # software-install (MCP)
 
-Установка стороннего ПО на контроллер Wiren Board через MCP-tools.
+Installing third-party software on a Wiren Board controller via MCP tools.
 
-## Политика установки
+## Installation policy
 
-**По умолчанию ставим всё в Docker.** Причины:
-- rootfs всего ~1.2 ГБ свободно (при физических 2 ГБ) — нативные `apt`/`npm` быстро забьют.
-- Контейнер изолирован, обновления и откат через `docker compose pull/down/up`.
-- compose-файл версионируется, миграция между контроллерами тривиальна.
-- `wb_audit` и `/controller-backup` сами подбирают compose-файлы и named volumes.
+**By default install everything in Docker.** Reasons:
+- rootfs has only ~1.2 GB free (out of physical 2 GB) — native `apt`/`npm` quickly fills it.
+- The container is isolated, updates and rollback via `docker compose pull/down/up`.
+- The compose file is versioned, migration between controllers is trivial.
+- `wb_audit` and `/controller-backup` pick up compose files and named volumes themselves.
 
-**Исключения** — нативно:
+**Exceptions** — native:
 
-| ПО | Почему | Канал |
-|----|--------|-------|
-| **Zigbee2MQTT** | Привязка к адаптеру через `/dev/ttyMOD<N>` + `wb-mqtt-zigbee` интегрирует устройства в WB-MQTT | apt из WB-репо |
-| Драйверы / hardware-зависимое (трогает `/dev/*`) | Контейнер съедает kernel-абстракции и hot-plug | apt |
+| Software | Why | Channel |
+|----------|-----|---------|
+| **Zigbee2MQTT** | Bound to the adapter via `/dev/ttyMOD<N>` + `wb-mqtt-zigbee` integrates devices into WB-MQTT | apt from WB repo |
+| Drivers / hardware-dependent (touches `/dev/*`) | Container eats kernel abstractions and hot-plug | apt |
 
-Прочее (Node-RED, HA, Grafana, InfluxDB, Telegraf, Dockge) — **в Docker**, через compose в `/mnt/data/<имя>/docker-compose.yml`. Wiki иногда предлагает нативные пути для Node-RED/HA — игнорируй и контейнеризируй.
+Everything else (Node-RED, HA, Grafana, InfluxDB, Telegraf, Dockge) — **in Docker**, via compose in `/mnt/data/<name>/docker-compose.yml`. The wiki sometimes suggests native paths for Node-RED/HA — ignore and containerize.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Свободное место и память | `wb_metrics` |
-| Уже установлено? | `wb_ssh_exec` `docker ps -a \| grep <имя>` или `dpkg -l \| grep <pkg>` или `which <бин>` |
-| Доступ к интернету | `wb_ssh_exec` `curl -s -m5 https://deb.wirenboard.com >/dev/null && echo ok` |
-| Установка пакетов | `wb_ssh_exec_async` `apt install -y ...` |
-| Скачивание скриптов установки (`wb-docker-manager.sh`) | `wb_ssh_exec_async` `wget ...` |
+| Intent | Tool |
+|--------|------|
+| Free space and memory | `wb_metrics` |
+| Already installed? | `wb_ssh_exec` `docker ps -a \| grep <name>` or `dpkg -l \| grep <pkg>` or `which <bin>` |
+| Internet access | `wb_ssh_exec` `curl -s -m5 https://deb.wirenboard.com >/dev/null && echo ok` |
+| Install packages | `wb_ssh_exec_async` `apt install -y ...` |
+| Download install scripts (`wb-docker-manager.sh`) | `wb_ssh_exec_async` `wget ...` |
 | `docker run/pull/compose pull/up` | `wb_ssh_exec_async` |
-| Прогресс долгой задачи | `wb_job_tail` |
-| Записать compose / .env / configuration.yaml | `wb_write_file` |
-| Запустить unit / автостарт | `wb_ssh_exec` `systemctl enable --now <unit>` |
-| Логи нативного сервиса | `wb_logs unit=<unit>` |
-| Логи контейнера | `wb_ssh_exec` `docker logs --tail 50 <container>` |
-| Состояние Z2M-моста / других MQTT-сервисов | `wb_mqtt_read` |
-| Дрейф пакетов после установки | `wb_audit` |
+| Long job progress | `wb_job_tail` |
+| Write compose / .env / configuration.yaml | `wb_write_file` |
+| Start unit / autostart | `wb_ssh_exec` `systemctl enable --now <unit>` |
+| Native service logs | `wb_logs unit=<unit>` |
+| Container logs | `wb_ssh_exec` `docker logs --tail 50 <container>` |
+| Z2M bridge / other MQTT services state | `wb_mqtt_read` |
+| Package drift after install | `wb_audit` |
 
-## Перед установкой
+## Before installation
 
-1. **Документация:** `WebFetch https://wiki.wirenboard.com/wiki/<тема>` — проверь WB-специфику. Без неё (как у Node-RED/HA) — ставь в Docker, минуя нативный путь вики.
-2. **Место:** `wb_metrics`. Контейнерные образы в `/mnt/data/.docker/` — не едят rootfs. Нативный софт — ест.
-3. **Уже установлено?** См. таблицу маршрутизации выше.
+1. **Documentation:** `WebFetch https://wiki.wirenboard.com/wiki/<topic>` — check WB specifics. Without it (as for Node-RED/HA) — install in Docker, bypassing the wiki's native path.
+2. **Space:** `wb_metrics`. Container images live in `/mnt/data/.docker/` — they don't eat rootfs. Native software does.
+3. **Already installed?** See routing table above.
 
-## Docker — обязательная база
+## Docker — mandatory base
 
-Не ставь `wb_ssh_exec_async` `apt install docker-ce` напрямую. Используй `wb-docker-manager.sh`:
+Don't run `wb_ssh_exec_async` `apt install docker-ce` directly. Use `wb-docker-manager.sh`:
 
 ```
 wb_ssh_exec_async sn=<SN> cmd='wget -O /tmp/wb-docker-manager.sh https://raw.githubusercontent.com/wirenboard/wb-community/refs/heads/main/scripts/docker-install/wb-docker-manager.sh && bash /tmp/wb-docker-manager.sh --install'
 ```
 
-Скрипт ставит `docker-ce + containerd.io`, переключает iptables на legacy, переносит data-root в `/mnt/data/.docker`. **`docker compose` (плагин) — отдельный пакет**, нужно поставить дополнительно:
+The script installs `docker-ce + containerd.io`, switches iptables to legacy, moves data-root to `/mnt/data/.docker`. **`docker compose` (the plugin) is a separate package**, install it additionally:
 
 ```
 wb_ssh_exec_async sn=<SN> cmd='DEBIAN_FRONTEND=noninteractive apt-get install -y docker-compose-plugin'
 ```
 
-Проверка:
+Verification:
 ```
 wb_ssh_exec sn=<SN> cmd='docker --version && docker compose version && docker info --format "{{.DockerRootDir}}" && df -h /mnt/data'
 ```
 
-`DockerRootDir` должен быть `/mnt/data/.docker`. `docker compose version` отдаёт v2.x.
+`DockerRootDir` should be `/mnt/data/.docker`. `docker compose version` returns v2.x.
 
-### Если Docker не стартует или установка прерывалась
+### If Docker doesn't start or installation was interrupted
 
-См. `/troubleshooting` (раздел Docker и iptables) — kernel mismatch и iptables-legacy.
+See `/troubleshooting` (Docker and iptables section) — kernel mismatch and iptables-legacy.
 
-**Особый случай:** после прерванной первой попытки `wb-docker-manager.sh` повторно может молча выйти ("Docker уже установлен"), потому что `command -v docker` находит cli-пакет, а демон при этом не работает. Лечение:
+**Special case:** after an interrupted first attempt, `wb-docker-manager.sh` may silently exit on retry ("Docker is already installed") because `command -v docker` finds the cli package, while the daemon isn't working. Cure:
 ```
 wb_ssh_exec sn=<SN> cmd='dpkg -l | grep -E "^iU|^iF|^pF|^iHR"'
 wb_ssh_exec_async sn=<SN> cmd='DEBIAN_FRONTEND=noninteractive dpkg --configure -a'
 wb_ssh_exec_async sn=<SN> cmd='DEBIAN_FRONTEND=noninteractive apt-get install --reinstall -y docker-ce'
 ```
 
-## Типовой compose-проект
+## Typical compose project
 
 ```
-/mnt/data/<имя-проекта>/
+/mnt/data/<project-name>/
 ├── docker-compose.yml
 ├── data/
 └── .env
 ```
 
-Команды (`wb_ssh_exec_async` для всех — pull/up/build долгие):
-- `cd /mnt/data/<имя> && docker compose pull`
-- `cd /mnt/data/<имя> && docker compose up -d`
+Commands (`wb_ssh_exec_async` for all — pull/up/build are long):
+- `cd /mnt/data/<name> && docker compose pull`
+- `cd /mnt/data/<name> && docker compose up -d`
 - `wb_ssh_exec` `docker ps; docker compose logs --tail 30`
 
-### Node-RED в Docker (рекомендуемый путь)
+### Node-RED in Docker (recommended path)
 
 ```yaml
 # /mnt/data/nodered/docker-compose.yml
@@ -115,70 +115,70 @@ services:
       - "host.docker.internal:host-gateway"
 ```
 
-Развёртывание:
+Deployment:
 ```
 wb_write_file sn=<SN> path=/mnt/data/nodered/docker-compose.yml content=<...>
 wb_ssh_exec sn=<SN> cmd='mkdir -p /mnt/data/nodered/data && chown -R 1000:1000 /mnt/data/nodered/data'
 wb_ssh_exec_async sn=<SN> cmd='cd /mnt/data/nodered && docker compose up -d'
 ```
 
-**`chown 1000:1000` обязателен** — образ `nodered/node-red` работает под uid 1000, без chown bind-mount `./data` принадлежит root → restart-loop с EACCES.
+**`chown 1000:1000` is mandatory** — the `nodered/node-red` image runs as uid 1000, without chown the bind-mount `./data` is owned by root → restart-loop with EACCES.
 
-UI: `http://wirenboard-<SN>.local:1880/`. **Без auth** — закрой через `adminAuth` в `data/settings.js` или revprox.
+UI: `http://wirenboard-<SN>.local:1880/`. **No auth** — close it via `adminAuth` in `data/settings.js` or revprox.
 
-**Связь с MQTT-брокером контроллера** в Node-RED:
-- `host.docker.internal` — резолвится, потому что в compose есть `extra_hosts: ["host.docker.internal:host-gateway"]`. Без этой строки на Docker Engine под Linux имя НЕ работает.
-- Альтернатива: IP gateway docker-сети (обычно `172.17.0.1` для дефолтного bridge).
+**Connecting to the controller's MQTT broker** in Node-RED:
+- `host.docker.internal` — resolves because the compose has `extra_hosts: ["host.docker.internal:host-gateway"]`. Without that line on Docker Engine under Linux the name does NOT work.
+- Alternative: gateway IP of the docker network (usually `172.17.0.1` for the default bridge).
 
-### Прочее в Docker
+### Other in Docker
 
-- `homeassistant/home-assistant:stable` (нужен `network_mode: host` для discovery).
+- `homeassistant/home-assistant:stable` (needs `network_mode: host` for discovery).
 - `grafana/grafana-oss:latest`.
 - `influxdb:2`.
 - `telegraf:latest`.
-- `louislam/dockge:latest` (UI для compose).
+- `louislam/dockge:latest` (UI for compose).
 
-В каждом — `/mnt/data/<имя>/data:/<config>`, проброс портов, `restart: unless-stopped`.
+For each — `/mnt/data/<name>/data:/<config>`, port forwarding, `restart: unless-stopped`.
 
-## Zigbee2MQTT (нативно — исключение)
+## Zigbee2MQTT (native — exception)
 
-Wiki: <https://wiki.wirenboard.com/wiki/Zigbee2MQTT>. Из WB-репо вместе с `wb-mqtt-zigbee` (интегрирует устройства в `/devices/zigbee_*`).
+Wiki: <https://wiki.wirenboard.com/wiki/Zigbee2MQTT>. From WB repo together with `wb-mqtt-zigbee` (integrates devices into `/devices/zigbee_*`).
 
-1. **Проверь Zigbee-модуль** — `wb_confed_load /etc/wb-hardware.conf`, найди слот с zigbee (см. `/hardware-modules`).
-2. **Установка:**
+1. **Verify Zigbee module** — `wb_confed_load /etc/wb-hardware.conf`, find the slot with zigbee (see `/hardware-modules`).
+2. **Install:**
    ```
    wb_ssh_exec_async sn=<SN> cmd='DEBIAN_FRONTEND=noninteractive apt-get update && apt-get -y --no-install-recommends install zigbee2mqtt && apt-get -y install wb-mqtt-zigbee'
    ```
-3. **Порт.** Прочитай конфиг, отредактируй и запиши:
+3. **Port.** Read the config, edit, write back:
    ```
    wb_read_file sn=<SN> path=/mnt/data/root/zigbee2mqtt/data/configuration.yaml
-   # подставь port: /dev/ttyMOD<N>
-   wb_write_file sn=<SN> path=/mnt/data/root/zigbee2mqtt/data/configuration.yaml content=<обновлённый YAML>
+   # set port: /dev/ttyMOD<N>
+   wb_write_file sn=<SN> path=/mnt/data/root/zigbee2mqtt/data/configuration.yaml content=<updated YAML>
    ```
-4. **Запуск:**
+4. **Start:**
    ```
    wb_ssh_exec sn=<SN> cmd='systemctl enable --now zigbee2mqtt && systemctl is-active zigbee2mqtt'
    ```
-5. **Проверь:** `wb_mqtt_read topic=zigbee2mqtt/bridge/state` (ожидание `online`).
+5. **Verify:** `wb_mqtt_read topic=zigbee2mqtt/bridge/state` (expect `online`).
 
-## Нативная установка как fallback
+## Native installation as fallback
 
-Если Docker недоступен (старая прошивка ≤ wb-2207, kernel mismatch, нет места под образ) — нативно. **Всегда** обсуждай с пользователем, что Docker предпочтительнее.
+If Docker is unavailable (old firmware ≤ wb-2207, kernel mismatch, no space for the image) — native. **Always** discuss with the user that Docker is preferable.
 
-Полный нативный рецепт Node-RED (apt nodejs+git, симлинк `~/.node-red → /mnt/data/`, `npm install -g node-red`, systemd-юнит) — см. в bash-двойнике скилла. Минусы: ест ~310 МБ rootfs, обновления через `npm` руками.
+A full native Node-RED recipe (apt nodejs+git, symlink `~/.node-red → /mnt/data/`, `npm install -g node-red`, systemd unit) — see in the bash-flavor twin of this skill. Downsides: eats ~310 MB of rootfs, updates via `npm` by hand.
 
-## Общие правила
+## General rules
 
-- Все долгие операции (`apt`, `npm install -g`, `docker pull/build`) — `wb_ssh_exec_async`.
-- Данные — в `/mnt/data/<проект>/`, не в rootfs.
-- После запуска: `wb_ssh_exec` `systemctl is-active <unit>` (для нативных) или `docker ps` (для контейнеров) + логи через `wb_logs` или `docker logs`.
-- `apt install` блокируется параллельным `apt upgrade` — проверь активные `wb_job_status` всех `job_id`.
-- `wb_metrics` после `docker pull` — обязательно (на wb6 4 ГБ eMMC `.docker/` быстро ест место).
+- All long operations (`apt`, `npm install -g`, `docker pull/build`) — `wb_ssh_exec_async`.
+- Data — in `/mnt/data/<project>/`, not in rootfs.
+- After start: `wb_ssh_exec` `systemctl is-active <unit>` (for native) or `docker ps` (for containers) + logs via `wb_logs` or `docker logs`.
+- `apt install` is blocked by a parallel `apt upgrade` — check active `wb_job_status` for all `job_id`s.
+- `wb_metrics` after `docker pull` — mandatory (on wb6 4 GB eMMC `.docker/` quickly eats space).
 
-## Документация
+## Documentation
 
 - Docker: <https://wiki.wirenboard.com/wiki/Docker>
 - Zigbee2MQTT: <https://wiki.wirenboard.com/wiki/Zigbee2MQTT>
 - Home Assistant: <https://wiki.wirenboard.com/wiki/Home_Assistant>
-- Node-RED (нативный путь): <https://wiki.wirenboard.com/wiki/Node-RED>
-- Community-скрипты: <https://github.com/wirenboard/wb-community>
+- Node-RED (native path): <https://wiki.wirenboard.com/wiki/Node-RED>
+- Community scripts: <https://github.com/wirenboard/wb-community>

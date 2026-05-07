@@ -1,108 +1,108 @@
 ---
 name: zigbee
-description: Zigbee-устройства на WB через MCP — поиск, спаривание, управление через zigbee2mqtt.
+description: Zigbee devices on WB via MCP — discovery, pairing, control via zigbee2mqtt.
 allowed-tools: Bash Read WebFetch
 ---
 
 # zigbee (MCP)
 
-Zigbee-устройства на контроллере Wiren Board через zigbee2mqtt. Управление и состояние идут через MQTT — используй `wb_mqtt_*` tools.
+Zigbee devices on a Wiren Board controller via zigbee2mqtt. Control and state go through MQTT — use `wb_mqtt_*` tools.
 
-## Архитектура
+## Architecture
 
-**zigbee2mqtt** общается с Zigbee-адаптером через `/dev/ttyMOD<N>` и публикует в `zigbee2mqtt/<friendly_name>`. Запущен может быть **либо нативно** (через systemd), **либо в Docker** — оба случая встречаются. `wb_failed` для Docker-инсталляции ничего не покажет даже когда мост работает.
+**zigbee2mqtt** talks to the Zigbee adapter via `/dev/ttyMOD<N>` and publishes to `zigbee2mqtt/<friendly_name>`. It can be running **either natively** (via systemd) **or in Docker** — both are seen in the wild. `wb_failed` for a Docker installation will show nothing even when the bridge is working.
 
-WB-конвертеры превращают Z2M-устройства в нативные WB-MQTT (`/devices/...`), чтобы их видели wb-rules и Web UI:
+WB converters expose Z2M devices as native WB-MQTT (`/devices/...`) so wb-rules and Web UI can see them:
 
-| Конвертер | Топик-префикс | Особенности |
-|-----------|---------------|-------------|
-| **wb-mqtt-zigbee** (новый) | `/devices/zigbee_*/controls/*` | Двусторонние контролы, поддержка через `/on` |
-| **wb-zigbee2mqtt** (старый, `1.x`) | `/devices/0x<ieee>/controls/*` (имя топика = IEEE-адрес целиком) | Readonly мост, управление через `zigbee2mqtt/<friendly>/set` |
+| Converter | Topic prefix | Notes |
+|-----------|--------------|-------|
+| **wb-mqtt-zigbee** (new) | `/devices/zigbee_*/controls/*` | Two-way controls, support via `/on` |
+| **wb-zigbee2mqtt** (old, `1.x`) | `/devices/0x<ieee>/controls/*` (topic name = full IEEE address) | Read-only bridge, control via `zigbee2mqtt/<friendly>/set` |
 
-Какой стоит — `wb_ssh_exec` `dpkg -l | grep -E "wb-(mqtt-zigbee\|zigbee2mqtt)"` и `wb_mqtt_devices` (посмотри, есть ли там `0x...` или `zigbee_...` имена).
+Which one is installed — `wb_ssh_exec` `dpkg -l | grep -E "wb-(mqtt-zigbee\|zigbee2mqtt)"` and `wb_mqtt_devices` (look for `0x...` or `zigbee_...` names).
 
-## Как опознать
+## How to recognize
 
-- IEEE-адреса `0x00158d...`, `0x00124b...`, `0x04cd15...`, `0xd44867...` в `wb_mqtt_devices` — это Zigbee.
-- В `/devices/...` могут быть оба формата: `0x<ieee>` (старый конвертер) или `zigbee_<id>` (новый) — НЕ предполагай заранее.
-- Топики `zigbee2mqtt/bridge/state`, `bridge/devices`, `bridge/info` — публикует сам Z2M, формат не зависит от конвертера.
+- IEEE addresses `0x00158d...`, `0x00124b...`, `0x04cd15...`, `0xd44867...` in `wb_mqtt_devices` — these are Zigbee.
+- In `/devices/...` both formats can appear: `0x<ieee>` (old converter) or `zigbee_<id>` (new) — DON'T assume in advance.
+- Topics `zigbee2mqtt/bridge/state`, `bridge/devices`, `bridge/info` — published by Z2M itself, format doesn't depend on the converter.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Probe моста (правильный путь) | `wb_mqtt_read topic=zigbee2mqtt/bridge/state` |
-| Z2M в Docker / нативно — где живёт | `wb_ssh_exec` `systemctl is-active zigbee2mqtt 2>&1; docker ps --format "{{.Names}}" 2>/dev/null \| grep -i zigbee` |
-| Информация о мосте (версия, координатор, permit_join) | `wb_mqtt_read topic=zigbee2mqtt/bridge/info` |
-| Спаренные устройства (raw JSON, может быть >20 КБ) | `wb_mqtt_read topic=zigbee2mqtt/bridge/devices` |
-| Включить/выключить permit_join (⚠️ деструктивно) | `wb_mqtt_write topic=zigbee2mqtt/bridge/request/permit_join` |
-| Чтение состояния устройства (raw Z2M) | `wb_mqtt_read topic=zigbee2mqtt/<friendly_name>` |
-| Чтение через WB-конвертер | `wb_mqtt_controls device=zigbee_<id>` или `wb_mqtt_controls device=0x<ieee>` |
-| Управление через WB-конвертер | `wb_mqtt_write topic=/devices/zigbee_<id>/controls/<c>/on` |
-| Управление через Z2M напрямую | `wb_mqtt_write topic=zigbee2mqtt/<friendly_name>/set value='{"state":"ON"}'` |
-| Логи Z2M (нативный) | `wb_logs unit=zigbee2mqtt` |
-| Логи Z2M (контейнер) | `wb_ssh_exec` `docker logs --tail 50 zigbee2mqtt` |
+| Intent | Tool |
+|--------|------|
+| Probe the bridge (correct path) | `wb_mqtt_read topic=zigbee2mqtt/bridge/state` |
+| Z2M in Docker / native — where it lives | `wb_ssh_exec` `systemctl is-active zigbee2mqtt 2>&1; docker ps --format "{{.Names}}" 2>/dev/null \| grep -i zigbee` |
+| Bridge info (version, coordinator, permit_join) | `wb_mqtt_read topic=zigbee2mqtt/bridge/info` |
+| Paired devices (raw JSON, may be >20 KB) | `wb_mqtt_read topic=zigbee2mqtt/bridge/devices` |
+| Enable/disable permit_join (⚠️ destructive) | `wb_mqtt_write topic=zigbee2mqtt/bridge/request/permit_join` |
+| Read device state (raw Z2M) | `wb_mqtt_read topic=zigbee2mqtt/<friendly_name>` |
+| Read via WB converter | `wb_mqtt_controls device=zigbee_<id>` or `wb_mqtt_controls device=0x<ieee>` |
+| Control via WB converter | `wb_mqtt_write topic=/devices/zigbee_<id>/controls/<c>/on` |
+| Control via Z2M directly | `wb_mqtt_write topic=zigbee2mqtt/<friendly_name>/set value='{"state":"ON"}'` |
+| Z2M logs (native) | `wb_logs unit=zigbee2mqtt` |
+| Z2M logs (container) | `wb_ssh_exec` `docker logs --tail 50 zigbee2mqtt` |
 
-## Probe моста — правильный путь
+## Probe the bridge — correct way
 
-**`wb_failed` не подходит для probe Z2M в Docker.** Используй `wb_mqtt_read zigbee2mqtt/bridge/state` — он работает независимо от способа установки.
+**`wb_failed` is not suitable for probing Z2M in Docker.** Use `wb_mqtt_read zigbee2mqtt/bridge/state` — it works regardless of installation method.
 
 ```
 wb_mqtt_read sn=<SN> topic=zigbee2mqtt/bridge/state
 ```
 
-Ожидание: `{"state":"online"}` (или `online` в старых версиях). Пусто/таймаут — мост мёртв или нет MQTT-связи.
+Expected: `{"state":"online"}` (or `online` in older versions). Empty/timeout — the bridge is dead or no MQTT connection.
 
-Если пусто — разбирайся, **где** лежит Z2M:
-- `wb_ssh_exec` `systemctl is-active zigbee2mqtt 2>&1` (`active` → нативный) **или**
-- `wb_ssh_exec` `docker ps --format "{{.Names}} {{.Status}}" \| grep -i zigbee` (`Up ...` → контейнер).
+If empty — figure out **where** Z2M lives:
+- `wb_ssh_exec` `systemctl is-active zigbee2mqtt 2>&1` (`active` → native) **or**
+- `wb_ssh_exec` `docker ps --format "{{.Names}} {{.Status}}" \| grep -i zigbee` (`Up ...` → container).
 
-Логи: `wb_logs unit=zigbee2mqtt` (для нативного) или `wb_ssh_exec` `docker logs --tail 50 zigbee2mqtt` (для контейнера).
+Logs: `wb_logs unit=zigbee2mqtt` (for native) or `wb_ssh_exec` `docker logs --tail 50 zigbee2mqtt` (for container).
 
-## Информация о мосте
+## Bridge info
 
 ```
 wb_mqtt_read sn=<SN> topic=zigbee2mqtt/bridge/info
 ```
 
-Содержит: `version` (Z2M), `coordinator.type` (адаптер: ZStack3x0, EmberZNet и т.п.), `permit_join` (должен быть `false` в спокойном состоянии), `restart_required`, `config.availability.enabled`.
+Contains: `version` (Z2M), `coordinator.type` (adapter: ZStack3x0, EmberZNet, etc.), `permit_join` (must be `false` in steady state), `restart_required`, `config.availability.enabled`.
 
-**`last_seen` per-device** в `bridge/devices` публикуется только если в `configuration.yaml` стоит `availability.enabled: true`. По умолчанию выключено — отсутствие поля **не значит**, что устройство офлайн.
+**Per-device `last_seen`** in `bridge/devices` is published only if `availability.enabled: true` is set in `configuration.yaml`. Disabled by default — absence of the field **does not mean** the device is offline.
 
-## Спаривание
+## Pairing
 
-⚠️ **Деструктивно** — после `permit_join: true` любое Zigbee-устройство в радиусе может присоединиться. Согласуй с пользователем.
+⚠️ **Destructive** — after `permit_join: true` any Zigbee device within range can join. Coordinate with the user.
 
 ```
 wb_mqtt_write sn=<SN> topic=zigbee2mqtt/bridge/request/permit_join value='{"value": true, "time": 240}'
 ```
 
-После спаривания обязательно выключи:
+After pairing, be sure to disable:
 
 ```
 wb_mqtt_write sn=<SN> topic=zigbee2mqtt/bridge/request/permit_join value='{"value": false}'
 ```
 
-Подтверди:
+Confirm:
 ```
 wb_mqtt_read sn=<SN> topic=zigbee2mqtt/bridge/info
-# в ответе permit_join должен быть false
+# in the response permit_join must be false
 ```
 
-После успешного спаривания — `wb_mqtt_devices` покажет новый IEEE/friendly_name.
+After successful pairing — `wb_mqtt_devices` will show the new IEEE/friendly_name.
 
-## Грабли
+## Gotchas
 
-- `wb_failed` ≠ probe моста для Docker-Z2M.
-- `wb_mqtt_list prefix=zigbee2mqtt/` без ограничений может вернуть всю Z2M-историю (десятки топиков). Лучше точечно через `wb_mqtt_read`.
-- `bridge/devices` — большой JSON. Усечение (`head -c 200` и т.п.) не имеет смысла, парсить только целиком.
-- Отсутствие `last_seen` ≠ устройство офлайн. Проверь `bridge/info → config.availability.enabled`.
-- LQI < 80 + voltage < 2900 мВ — батарейка скоро сдохнет, даже если `battery: 100%` (CR2032 даёт 100% до самого конца).
-- Модуль WBE2R-R-ZIGBEE не виден на странице «Устройства» в Web UI — это нормально, он на стороне Z2M.
+- `wb_failed` ≠ bridge probe for Docker-Z2M.
+- `wb_mqtt_list prefix=zigbee2mqtt/` without limits can return the whole Z2M history (dozens of topics). Better to point-target via `wb_mqtt_read`.
+- `bridge/devices` is a large JSON. Truncation (`head -c 200` etc.) is pointless, parse only as a whole.
+- Absence of `last_seen` ≠ device offline. Check `bridge/info → config.availability.enabled`.
+- LQI < 80 + voltage < 2900 mV — battery will die soon, even with `battery: 100%` (CR2032 reports 100% to the very end).
+- The WBE2R-R-ZIGBEE module isn't visible on the "Devices" page in Web UI — that's normal, it's on the Z2M side.
 
-**Установка Z2M** — `/software-install` (нативно из WB-репо, **не** Docker — привязка к адаптеру).
+**Z2M installation** — `/software-install` (native from WB repo, **not** Docker — bound to the adapter).
 
-## Документация
+## Documentation
 
 - <https://wiki.wirenboard.com/wiki/Zigbee>
 - <https://wiki.wirenboard.com/wiki/Zigbee2MQTT>

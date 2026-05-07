@@ -1,80 +1,80 @@
 ---
 name: controller-backup
-description: "Бэкап и восстановление контроллера Wiren Board — сбор архива с конфигами, данными и списками пакетов; восстановление после прошивки или на новом контроллере."
+description: "Backup and restore of a Wiren Board controller — collect an archive with configs, data and package lists; restore after firmware flash or on a new controller."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
 # controller-backup
 
-Бэкап и восстановление контроллера WB — собрать архив с конфигами, данными и списками пакетов; отдать пользователю; восстановить после прошивки или на новом контроллере. Подгружай на «сделай бэкап», «бэкап контроллера», «сохрани контроллер», «пришли мне бэкап», «бэкап перед обновлением», «откатить после прошивки», «восстановить из бэкапа», «перенести настройки».
+Backup and restore of a WB controller — collect an archive with configs, data and package lists; hand it to the user; restore after a firmware flash or on a new controller. Load this on "make a backup", "controller backup", "save the controller", "send me the backup", "backup before update", "roll back after firmware flash", "restore from backup", "transfer settings".
 
-**Это НЕ диагностический архив.** Если пользователь просит «диагностический архив», «логи для поддержки», «wb-diag-collect» — это скилл `troubleshooting`, не бэкап. Бэкап — полный процесс восстановления контроллера (пакеты, конфиги, данные, RESTORE.md), занимает минуты.
+**This is NOT a diagnostic archive.** If the user asks for a "diagnostic archive", "logs for support", "wb-diag-collect" — that's the `troubleshooting` skill, not backup. Backup is the full controller restore process (packages, configs, data, RESTORE.md), takes minutes.
 
-**НА КОНТРОЛЛЕРЕ НЕТ УТИЛИТЫ БЭКАПА.** Не существует `wb-backup`, `wbctl backup`, `backup.sh` — не выдумывай. Бэкап собирается в 3 фазы ниже.
+**THERE IS NO BACKUP UTILITY ON THE CONTROLLER.** There is no `wb-backup`, `wbctl backup`, `backup.sh` — don't make these up. The backup is built in 3 phases below.
 
-**Бэкап = tar.gz архив** с файлами, конфигами, списками пакетов.
+**Backup = tar.gz archive** with files, configs, package lists.
 
-**Все файлы — в `/mnt/data/ai/wb-ai-integration/backups/`.** Не раскидывай по `/tmp`, `/root`, `/mnt/data/backups`.
+**All files go to `/mnt/data/ai/wb-ai-integration/backups/`.** Don't scatter them across `/tmp`, `/root`, `/mnt/data/backups`.
 
-**Переменная HOST:** во всех примерах ниже `<HOST>` означает `wirenboard-<SN>.local`, где `<SN>` — серийный номер контроллера (например `wirenboard-AABBCCDD.local`). Подставляй реальный адрес.
+**HOST variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the controller serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
 
-## Чеклист — выводи после каждого шага
+## Checklist — print after each step
 
-**БЭКАП НЕ ГОТОВ**, пока не пройдены ВСЕ шаги. После завершения каждого шага выведи чеклист и **немедленно переходи к следующему незавершённому шагу**. Не останавливайся, не спрашивай пользователя — иди до конца и пришли архив.
+**THE BACKUP IS NOT READY** until ALL steps are done. After completing each step, print the checklist and **immediately move to the next unfinished step**. Don't stop, don't ask the user — go all the way and send the archive.
 
 ```
-Прогресс бэкапа:
-[done] Фаза 1.0: аудит и отчёт
-[ ] Фаза 1b: state-snapshot (для верификации после восстановления)
-[ ] Фаза 2.1: core-архив (метаданные + конфиги)
-[ ] Фаза 2.2: audit-files (кастомные файлы по аудиту)
-[ ] Фаза 2.3: Docker volumes (если есть)
-[ ] Фаза 3.1: RESTORE.md
-[ ] Фаза 3.2: финальная упаковка
-[ ] Фаза 3.3: доставка пользователю
+Backup progress:
+[done] Phase 1.0: audit and report
+[ ] Phase 1b: state-snapshot (for verification after restore)
+[ ] Phase 2.1: core archive (metadata + configs)
+[ ] Phase 2.2: audit-files (custom files per audit)
+[ ] Phase 2.3: Docker volumes (if any)
+[ ] Phase 3.1: RESTORE.md
+[ ] Phase 3.2: final packaging
+[ ] Phase 3.3: delivery to user
 ```
 
-Пропускай шаги которые не нужны (напр. Docker volumes если нет Docker), но помечай их `[skip]`. **Не выводи «бэкап готов» пока все шаги не завершены или пропущены.**
+Skip steps that aren't needed (e.g. Docker volumes if there's no Docker), but mark them `[skip]`. **Don't say "backup ready" until all steps are done or skipped.**
 
-## Фаза 1 — аудит и план (первый ответ модели)
+## Phase 1 — audit and plan (the model's first response)
 
-### Шаг 1: собери данные — аудит контроллера
+### Step 1: collect data — controller audit
 
-Аудит выполняется одним SSH-скриптом, который собирает все данные о состоянии контроллера:
+The audit is performed by a single SSH script that gathers all controller state data:
 
 ```bash
 ssh root@<HOST> 'echo "===WB-AUDIT===fw"; cat /etc/wb-fw-version 2>/dev/null || true; echo "===WB-AUDIT===release"; cat /usr/lib/wb-release 2>/dev/null || true; echo "===WB-AUDIT===manual"; apt-mark showmanual 2>/dev/null | sort; echo "===WB-AUDIT===installed"; dpkg-query -W -f="\${Package}\n" 2>/dev/null | sort; echo "===WB-AUDIT===enabled"; systemctl list-unit-files --state=enabled --no-legend 2>/dev/null | awk "{print \$1}" | sort; echo "===WB-AUDIT===units"; find /etc/systemd/system -maxdepth 2 -name "*.service" -type f 2>/dev/null | sort; echo "===WB-AUDIT===cron"; for d in /etc/cron.d /etc/cron.hourly /etc/cron.daily /etc/cron.weekly /var/spool/cron/crontabs; do ls -A "$d" 2>/dev/null | grep -v "^\.placeholder$" | sed "s|^|$d/|"; done; echo "===WB-AUDIT===opt"; ls -A /opt 2>/dev/null; echo "===WB-AUDIT===localbin"; ls -A /usr/local/bin 2>/dev/null; echo "===WB-AUDIT===localsbin"; ls -A /usr/local/sbin 2>/dev/null; echo "===WB-AUDIT===symlinks"; for p in /etc/wb-rules /etc/wb-rules-modules /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.d; do echo "$p|$(readlink -f $p 2>/dev/null)"; done; echo "===WB-AUDIT===mntdata"; shopt -s nullglob dotglob; for d in /mnt/data/*/; do case "$(basename "$d")" in etc|var|root|snapshots|backups|uploads|.docker|ai|.wb-restore|.wb-update|lost+found) continue;; *) du -sh "$d" 2>/dev/null;; esac; done; shopt -u dotglob; echo "===WB-AUDIT===dpkg"; dpkg --verify 2>/dev/null | grep -v -E "/usr/share/(doc|locale|man|lintian|gtk-doc|gnome|info|help)"; echo "===WB-AUDIT===end"'
 ```
 
-Разбор секций вывода:
-- `fw` — версия прошивки
-- `release` — релиз (RELEASE_NAME, SUITE, TARGET)
-- `manual` — вручную установленные пакеты
-- `installed` — все установленные пакеты
-- `enabled` — включённые сервисы
-- `units` — кастомные systemd-юниты в `/etc/systemd/system`
-- `cron` — задачи cron
-- `opt` — содержимое `/opt`
-- `localbin` — содержимое `/usr/local/bin`
-- `localsbin` — содержимое `/usr/local/sbin`
-- `symlinks` — симлинки конфигов WB
-- `mntdata` — пользовательские каталоги в `/mnt/data/` с размерами
-- `dpkg` — изменённые пакетные файлы (dpkg --verify)
+Output sections breakdown:
+- `fw` — firmware version
+- `release` — release (RELEASE_NAME, SUITE, TARGET)
+- `manual` — manually installed packages
+- `installed` — all installed packages
+- `enabled` — enabled services
+- `units` — custom systemd units in `/etc/systemd/system`
+- `cron` — cron jobs
+- `opt` — contents of `/opt`
+- `localbin` — contents of `/usr/local/bin`
+- `localsbin` — contents of `/usr/local/sbin`
+- `symlinks` — WB config symlinks
+- `mntdata` — user directories under `/mnt/data/` with sizes
+- `dpkg` — modified package files (dpkg --verify)
 
-### Шаг 1b: слепок для верификации после восстановления
+### Step 1b: snapshot for verification after restore
 
-Сохрани слепок состояния контроллера в JSON на контроллере:
+Save a controller state snapshot as JSON on the controller:
 
 ```bash
 ssh root@<HOST> 'mkdir -p /mnt/data/ai/wb-ai-integration/snapshots'
 ```
 
-Соберите те же данные из аудита и сформируйте JSON-файл:
+Collect the same audit data and produce a JSON file:
 
 ```bash
 ssh root@<HOST> 'cat > /mnt/data/ai/wb-ai-integration/snapshots/snapshot-$(date +%Y-%m-%dT%H-%M-%S).json << SNAPEOF
 {
-  "_comment": "Слепок контроллера для верификации бэкапа",
+  "_comment": "Controller snapshot for backup verification",
   "takenAt": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
   "fwVersion": "'"$(cat /etc/wb-fw-version 2>/dev/null)"'",
   "manualPackages": '"$(apt-mark showmanual 2>/dev/null | sort | jq -Rsc 'split("\n") | map(select(. != ""))')"',
@@ -84,206 +84,206 @@ SNAPEOF
 echo "Snapshot saved: $(ls -t /mnt/data/ai/wb-ai-integration/snapshots/snapshot-*.json 2>/dev/null | head -1)"'
 ```
 
-Примечание: если `jq` нет на контроллере, формируй JSON другим способом или пропусти этот шаг — он не критичен для бэкапа.
+Note: if `jq` is not on the controller, build the JSON another way or skip this step — it's not critical for the backup.
 
-### Шаг 2: отчёт об отличиях от стока
+### Step 2: report on differences from stock
 
-В сообщении пользователю выведи **отличия от типового контроллера** — это полезный артефакт сам по себе:
-- Доустановленные пакеты (`manual` минус стоковые) — список с версиями
-- Включённые сервисы сверх стока (`enabled` минус стандартные WB-сервисы)
-- Кастомные файлы и скрипты (`opt`, `localbin`, `localsbin`, `units`) — с путями
-- Изменённые конфиги (`dpkg` секция) — какие именно
-- Пользовательские каталоги в `/mnt/data/` (`mntdata`) — с размерами
-- Docker — установлен ли, сколько volumes/контейнеров
+In the user-facing message, present **differences from a stock controller** — this is a useful artifact in itself:
+- Additionally installed packages (`manual` minus stock) — list with versions
+- Enabled services beyond stock (`enabled` minus standard WB services)
+- Custom files and scripts (`opt`, `localbin`, `localsbin`, `units`) — with paths
+- Modified configs (`dpkg` section) — which exactly
+- User directories under `/mnt/data/` (`mntdata`) — with sizes
+- Docker — installed or not, how many volumes/containers
 
-Не вываливай сырой вывод — структурируй по человечески. Это первая часть ответа, которую видит пользователь.
+Don't dump raw output — structure it like a human would. This is the first part of the response the user sees.
 
-### Шаг 3: составь список путей и сразу запускай фазу 2
+### Step 3: build the path list and immediately start phase 2
 
-По результатам аудита собери **полный список путей** для архива. Источники:
+Based on audit results, build a **complete path list** for the archive. Sources:
 
-| Поле аудита | Что с ним делать |
+| Audit field | What to do with it |
 |---|---|
-| `opt`, `localbin`, `localsbin` (кастомные файлы) | Добавить каждый путь в список |
-| `units` (кастомные systemd-юниты) | Добавить файлы юнитов. Прочитать `ExecStart=` — если скрипт не из пакета, добавить и его |
-| `dpkg` (изменённые конфиги) | Добавить каждый изменённый конфиг |
-| `mntdata` (пользовательские каталоги) | Это **пользовательские проекты** (не Docker-хранилище!). Добавить каждый каталог, показать размер |
-| Доп. пакеты не из стока | `ssh root@<HOST> "dpkg -L <pkg> | grep -E '^/(etc|var/lib|opt|srv)'"` — добавить найденные пути |
-| Включённые сервисы сверх стока | Не архивировать — запишется в `services-enabled.list` автоматически |
+| `opt`, `localbin`, `localsbin` (custom files) | Add each path to the list |
+| `units` (custom systemd units) | Add unit files. Read `ExecStart=` — if the script isn't from a package, add it too |
+| `dpkg` (modified configs) | Add each modified config |
+| `mntdata` (user directories) | These are **user projects** (not Docker storage!). Add each directory, show the size |
+| Extra packages not from stock | `ssh root@<HOST> "dpkg -L <pkg> | grep -E '^/(etc|var/lib|opt|srv)'"` — add the found paths |
+| Enabled services beyond stock | Don't archive — they get recorded in `services-enabled.list` automatically |
 
-**Эвристика по размеру — без подтверждений:**
-- Каталог < 100 МБ -> включай.
-- Каталог 100 МБ - 1 ГБ -> включай, но **в сообщении предупреди** «такой-то каталог N МБ — войдёт в архив».
-- Каталог > 1 ГБ или named Docker volumes с БД -> **пропусти**, перечисли в сообщении как «не вошло в архив, при необходимости запросите отдельно».
-- Полный лимит итогового архива ~2 ГБ. Если по эвристике уходит больше — режь сначала самые крупные.
+**Size heuristic — without confirmations:**
+- Dir < 100 MB -> include.
+- Dir 100 MB - 1 GB -> include, but **warn in the message** "such-and-such directory is N MB — will go into the archive".
+- Dir > 1 GB or named Docker volumes with DBs -> **skip**, list in the message as "not in the archive, request separately if needed".
+- Total final archive limit ~2 GB. If the heuristic exceeds that — trim the largest first.
 
-В одном сообщении пользователю: отчёт об отличиях + «включаю в архив: ...; пропускаю как слишком крупное: ...». **Не жди ответа** — сразу переходи к фазе 2.
+In one message to the user: difference report + "including in the archive: ...; skipping as too large: ...". **Don't wait for a reply** — proceed straight to phase 2.
 
-## Фаза 2 — сборка архива
+## Phase 2 — building the archive
 
-**Все шаги складывают файлы в один каталог на контроллере.** В фазе 3 весь каталог пакуется в единый архив — объединять вручную не нужно.
+**All steps put files into one directory on the controller.** In phase 3, the whole directory is packed into a single archive — no need to merge by hand.
 
-> Замечание: core-tar включает `mnt/data/etc` рекурсивно — поэтому `/mnt/data/etc/docker/`, `/mnt/data/etc/wb-mqtt-serial.conf` (через симлинк) и пр. **уже там**. Не дублируй их в audit-files-tar.
+> Note: core-tar includes `mnt/data/etc` recursively — so `/mnt/data/etc/docker/`, `/mnt/data/etc/wb-mqtt-serial.conf` (via symlink), etc. are **already there**. Don't duplicate them in audit-files-tar.
 
-### Шаг 1: метаданные и core-конфиги
+### Step 1: metadata and core configs
 
-Запускай ЭТОТ скрипт через systemd-run (фоновая задача). Не придумывай свой скрипт для этой части.
+Run THIS script via systemd-run (background task). Don't invent your own script for this part.
 
 ```bash
 ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "set -e; TS=\$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-integration/backups/\$TS; mkdir -p \$B; cat /etc/wb-fw-version > \$B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release \$B/wb-release 2>/dev/null || true; apt-mark showmanual > \$B/packages-manual.list; dpkg-query -W -f='"'"'\${Package}=\${Version}\n'"'"' > \$B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk '"'"'{print \$1}'"'"' > \$B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c '"'"'T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac'"'"' _ {} \\; > \$B/symlinks-etc.list; tar czf \$B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \\( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \\) -prune -o \\( -name '"'"'docker-compose.y*ml'"'"' -o -name '"'"'compose.y*ml'"'"' \\) -print 2>/dev/null | tar czf \$B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=\$(ls -t /mnt/data/ai/wb-ai-integration/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n \"\$SNAP\" ] && cp \"\$SNAP\" \$B/state-snapshot.json; echo BACKUP_DIR=\$B; du -sh \$B \$B/*"'
 ```
 
-Проверь статус задачи:
+Check the job status:
 ```bash
 ssh root@<HOST> "systemctl status wb-ai-job-* --no-pager 2>/dev/null | head -30"
 ```
 
-Из вывода джобы возьми путь `BACKUP_DIR=...` — например `/mnt/data/ai/wb-ai-integration/backups/20260419-224500`. **Подставляй этот конкретный путь во все последующие шаги.** Не пиши `$B` в следующих командах — переменная не сохраняется между вызовами!
+From the job output, take the path `BACKUP_DIR=...` — for example `/mnt/data/ai/wb-ai-integration/backups/20260419-224500`. **Substitute this exact path in all subsequent steps.** Don't write `$B` in following commands — the variable does not persist between calls!
 
-Чтобы узнать лог фоновой задачи:
+To see the background job log:
 ```bash
 ssh root@<HOST> "journalctl -u 'wb-ai-job-*' --since '5 minutes ago' --no-pager | tail -20"
 ```
 
-### Шаг 2: данные по результатам аудита
+### Step 2: data based on audit results
 
 ```bash
-ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "tar czf <BACKUP_DIR>/audit-files.tar.gz --warning=no-file-changed --ignore-failed-read <пути из аудита> 2>/dev/null || true; du -sh <BACKUP_DIR>/audit-files.tar.gz"'
+ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "tar czf <BACKUP_DIR>/audit-files.tar.gz --warning=no-file-changed --ignore-failed-read <paths from audit> 2>/dev/null || true; du -sh <BACKUP_DIR>/audit-files.tar.gz"'
 ```
 
-Подставляй **конкретные пути** из шага 3 фазы 1:
-- Кастомные файлы: `/opt/my-app/`, `/usr/local/bin/my-script.sh`
-- Кастомные systemd-юниты: `/etc/systemd/system/my-service.service`
-- Изменённые конфиги: `/etc/mosquitto/mosquitto.conf`
-- Пользовательские каталоги: `/mnt/data/picoclow-docker/` — это пользовательские проекты, бэкапить!
-- Конфиги доп. пакетов: пути из `dpkg -L`
-- Конфиги известных пакетов (таблица ниже): `/mnt/data/root/zigbee2mqtt`, `/etc/mosquitto`, `/etc/nginx`, `/var/lib/grafana/grafana.db`, `/etc/influxdb`, `/root/.node-red/flows*.json`, `/root/.node-red/settings.js`, `/mnt/data/etc/docker`, `/etc/cron.d`
+Substitute **specific paths** from phase 1 step 3:
+- Custom files: `/opt/my-app/`, `/usr/local/bin/my-script.sh`
+- Custom systemd units: `/etc/systemd/system/my-service.service`
+- Modified configs: `/etc/mosquitto/mosquitto.conf`
+- User directories: `/mnt/data/picoclow-docker/` — these are user projects, back up!
+- Configs of extra packages: paths from `dpkg -L`
+- Configs of known packages (table below): `/mnt/data/root/zigbee2mqtt`, `/etc/mosquitto`, `/etc/nginx`, `/var/lib/grafana/grafana.db`, `/etc/influxdb`, `/root/.node-red/flows*.json`, `/root/.node-red/settings.js`, `/mnt/data/etc/docker`, `/etc/cron.d`
 
-### Шаг 3: named Docker volumes (если есть Docker)
+### Step 3: named Docker volumes (if Docker is present)
 
-Если в доп. пакетах есть `docker-ce`:
+If `docker-ce` is among the extra packages:
 ```bash
 ssh root@<HOST> "docker volume ls -q 2>/dev/null"
 ```
-Если есть volumes с данными:
+If there are volumes with data:
 ```bash
 ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "for v in \$(docker volume ls -q); do docker run --rm -v \$v:/data alpine tar czf - /data > <BACKUP_DIR>/docker-volume-\$v.tar.gz 2>/dev/null; done; ls -lh <BACKUP_DIR>/docker-volume-*.tar.gz 2>/dev/null"'
 ```
 
-## Фаза 3 — доставка (после завершения ВСЕХ задач)
+## Phase 3 — delivery (after ALL tasks complete)
 
-Дождись завершения всех шагов фазы 2 (core + audit-files + docker volumes если были).
+Wait for all phase 2 steps to finish (core + audit-files + docker volumes if any).
 
 ### 1. RESTORE.md
 
-Сгенерируй и запиши инструкцию восстановления:
+Generate and save the restore instructions:
 ```bash
-echo '<содержимое RESTORE.md>' | ssh root@<HOST> 'cat > <BACKUP_DIR>/RESTORE.md'
+echo '<RESTORE.md content>' | ssh root@<HOST> 'cat > <BACKUP_DIR>/RESTORE.md'
 ```
 
-Содержимое — по фактическим данным аудита. **Обязательные** секции (не пропускай ни одну):
+The content is based on actual audit data. **Mandatory** sections (don't skip any):
 
-1. **Пакеты** — перечисли ВСЕ доп. пакеты из аудита. Для Docker — через `wb-docker-manager.sh`. Для остальных — `apt install <pkg1> <pkg2> ...`. Порядок: сначала зависимости, потом зависимые. **Эта секция критична** — без пакетов конфиги бесполезны.
-2. **Файлы** — что распаковать и куда (`tar xzf core.tar.gz -C /`, `tar xzf audit-files.tar.gz -C /`)
-3. **Симлинки** — какие восстановить (из `symlinks-etc.list`)
-4. **Сервисы** — какие включить (`systemctl enable ...`) — по списку доп. включённых сервисов из аудита
-5. **Ручные шаги** — что нельзя автоматизировать (Docker-образы: `docker compose pull`, БД, node_modules)
-6. **Верификация** — сравнить текущее состояние с `state-snapshot.json`
+1. **Packages** — list ALL extra packages from the audit. For Docker — via `wb-docker-manager.sh`. For the rest — `apt install <pkg1> <pkg2> ...`. Order: dependencies first, dependents next. **This section is critical** — without packages, configs are useless.
+2. **Files** — what to extract and where (`tar xzf core.tar.gz -C /`, `tar xzf audit-files.tar.gz -C /`)
+3. **Symlinks** — which to restore (from `symlinks-etc.list`)
+4. **Services** — which to enable (`systemctl enable ...`) — by the list of additionally enabled services from the audit
+5. **Manual steps** — what can't be automated (Docker images: `docker compose pull`, DBs, node_modules)
+6. **Verification** — compare current state with `state-snapshot.json`
 
-Пиши конкретные пути, имена пакетов и команды — не `$переменные` и не `<placeholder>`.
+Write specific paths, package names and commands — not `$variables` and not `<placeholder>`.
 
-### 2. Собери в один файл
+### 2. Pack into a single file
 
 ```bash
 ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "cd /mnt/data/ai/wb-ai-integration/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz"'
 ```
 
-### 3. Проверь размер и отдай
+### 3. Check size and deliver
 
 ```bash
 ssh root@<HOST> "stat -c%s /mnt/data/ai/wb-ai-integration/backups/backup-<TS>.tar.gz"
 ```
-- < 200 МБ -> скачай:
+- < 200 MB -> download:
   ```bash
   scp root@<HOST>:/mnt/data/ai/wb-ai-integration/backups/backup-<TS>.tar.gz ./
   ```
-- > 200 МБ -> предложи пользователю скопировать самостоятельно через scp
+- > 200 MB -> suggest the user copy it themselves via scp
 
-### 4. Итоговый отчёт
+### 4. Final report
 
-- Какие доп. пакеты нужно установить при восстановлении — перечисли конкретные имена
-- Что сохранено (конкретные пути)
-- Что НЕ сохранено — предупреди:
-  - `/mnt/data/.docker/` (внутреннее хранилище Docker daemon: образы, слои) — восстанавливаются через `docker pull` / `docker compose pull`
-  - Большие БД (InfluxDB) — `influxd backup` вручную
-  - Node-RED `node_modules` — восстановится через `npm install`
+- Which extra packages need installing during restore — list specific names
+- What was saved (specific paths)
+- What was NOT saved — warn:
+  - `/mnt/data/.docker/` (Docker daemon's internal storage: images, layers) — restored via `docker pull` / `docker compose pull`
+  - Large DBs (InfluxDB) — `influxd backup` manually
+  - Node-RED `node_modules` — restored via `npm install`
 
-## Docker: что бэкапить, что нет
+## Docker: what to back up, what not
 
-**НЕ путай пользовательские проекты с Docker-хранилищем!**
+**Don't confuse user projects with Docker storage!**
 
-| Что | Где | Бэкапить? | Как |
+| What | Where | Back up? | How |
 |---|---|---|---|
-| compose-файлы | в проектах (`/mnt/data/<проект>/`) | ДА | tar как есть |
-| bind-mount данные | в проектах | ДА | tar как есть |
-| named volumes | `docker volume ls` | ДА, если есть данные | `docker run --rm -v vol:/d alpine tar czf - /d > vol.tar.gz` |
-| Docker daemon (`/mnt/data/.docker/`) | внутреннее хранилище | НЕТ | образы через `docker pull`, восстановятся из compose |
-| Конфиг демона | `/mnt/data/etc/docker/` | ДА | уже в core-архиве |
+| compose files | inside projects (`/mnt/data/<project>/`) | YES | tar as is |
+| bind-mount data | inside projects | YES | tar as is |
+| named volumes | `docker volume ls` | YES, if it has data | `docker run --rm -v vol:/d alpine tar czf - /d > vol.tar.gz` |
+| Docker daemon (`/mnt/data/.docker/`) | internal storage | NO | images via `docker pull`, restored from compose |
+| Daemon config | `/mnt/data/etc/docker/` | YES | already in core archive |
 
-Пример: `/mnt/data/picoclow-docker/` (82 МБ) — это **проект пользователя** с compose, конфигами и данными. Его НАДО бэкапить целиком. А `/mnt/data/.docker/` — это слои образов, их бэкапить бессмысленно.
+Example: `/mnt/data/picoclow-docker/` (82 MB) — that's a **user project** with compose, configs and data. Back it up entirely. And `/mnt/data/.docker/` is image layers — backing those up makes no sense.
 
-## Известные пакеты — что в архиве, что предупредить
+## Known packages — what's in the archive, what to warn about
 
-| Пакет | Что в архиве | Что предупредить |
+| Package | What's in the archive | What to warn about |
 |---|---|---|
-| `docker-ce` | `/mnt/data/etc/docker/` (попадает рекурсивно через `mnt/data/etc` в core-tar), compose-файлы, проекты из `mntdata` | `/mnt/data/.docker/` НЕ в архиве. Docker ставится **либо** через `wb-docker-manager.sh` из community-репо (если он есть на свежем контроллере: `wget -O /tmp/wb-docker-manager.sh https://raw.githubusercontent.com/wirenboard/wb-community/refs/heads/main/scripts/docker-install/wb-docker-manager.sh && bash /tmp/wb-docker-manager.sh --install`), **либо** обычным `apt install docker-ce containerd.io docker-ce-cli` если по версии `dpkg-query` видно, что было установлено именно так. Named volumes — отдельно через `docker run -v ...` |
+| `docker-ce` | `/mnt/data/etc/docker/` (included recursively via `mnt/data/etc` in core-tar), compose files, projects from `mntdata` | `/mnt/data/.docker/` is NOT in the archive. Docker is installed **either** via `wb-docker-manager.sh` from the community repo (if present on a fresh controller: `wget -O /tmp/wb-docker-manager.sh https://raw.githubusercontent.com/wirenboard/wb-community/refs/heads/main/scripts/docker-install/wb-docker-manager.sh && bash /tmp/wb-docker-manager.sh --install`), **or** plain `apt install docker-ce containerd.io docker-ce-cli` if `dpkg-query` shows that's how it was installed. Named volumes — separately via `docker run -v ...` |
 | `zigbee2mqtt` | `/mnt/data/root/zigbee2mqtt/` | -- |
-| `nodered` | `flows*.json`, `settings.js` | `node_modules` восстановится через `npm install` |
+| `nodered` | `flows*.json`, `settings.js` | `node_modules` is restored via `npm install` |
 | `mosquitto` | `/etc/mosquitto/` | -- |
-| `influxdb` | `/etc/influxdb/` | БД через `influxd backup`, не tar |
+| `influxdb` | `/etc/influxdb/` | DB via `influxd backup`, not tar |
 | `grafana` | `/var/lib/grafana/grafana.db`, `/etc/grafana/` | -- |
-| `nginx` | `/etc/nginx/` | Сертификаты `/etc/letsencrypt/` — отдельно |
+| `nginx` | `/etc/nginx/` | Certificates `/etc/letsencrypt/` — separately |
 
-## Что переживает FIT, что нет
+## What survives FIT, what doesn't
 
-FIT перезаписывает rootfs, НЕ трогает `/mnt/data/`.
+FIT overwrites rootfs, does NOT touch `/mnt/data/`.
 
-| Переживает | Стирается |
+| Survives | Wiped |
 |---|---|
-| `/mnt/data/` целиком | `/usr/local/bin/`, `/opt/`, `/srv/` |
-| Конфиги с симлинком в `/mnt/data/etc/` | `/etc/cron.d/<кастом>`, `/etc/systemd/system/<кастом>` |
-| Сеть/время из веб-интерфейса | apt-пакеты вне стока |
+| `/mnt/data/` entirely | `/usr/local/bin/`, `/opt/`, `/srv/` |
+| Configs symlinked into `/mnt/data/etc/` | `/etc/cron.d/<custom>`, `/etc/systemd/system/<custom>` |
+| Network/time from web UI | apt packages outside stock |
 
-## Восстановление
+## Restore
 
-1. Найди бэкап:
+1. Find the backup:
    ```bash
    ssh root@<HOST> "ls -lt /mnt/data/ai/wb-ai-integration/backups/"
    ```
-   Бэкап переживает FIT. Или пользователь загружает файл:
+   The backup survives FIT. Or the user uploads the file:
    ```bash
    scp ./backup-<TS>.tar.gz root@<HOST>:/mnt/data/ai/wb-ai-integration/backups/
    ```
-2. Прочитай RESTORE.md:
+2. Read RESTORE.md:
    ```bash
    ssh root@<HOST> "cat /mnt/data/ai/wb-ai-integration/backups/<TS>/RESTORE.md"
    ```
-3. Выполняй по шагам с подтверждением пользователя. Пакеты — через systemd-run.
-4. Верификация: сравни текущее состояние с `state-snapshot.json`.
+3. Execute step by step with user confirmation. Packages — via systemd-run.
+4. Verification: compare current state with `state-snapshot.json`.
 
-## Грабли
+## Pitfalls
 
-- Выдумывать `wb-backup`, `wbctl backup`, `backup.sh` — их не существует.
-- Core-скрипт менять нельзя. А вот audit-tar (шаг 2 фазы 2) — обязательно строй по данным аудита, не пропускай находки.
-- Остановиться на слепке — это НЕ бэкап. Продолжай к фазе 2.
-- Запускать tar в обычном ssh — таймаут. Только через systemd-run.
-- Бэкапить `/etc` или `/mnt/data` целиком — огромно и бесполезно.
-- Молчать про `/mnt/data/.docker/` — предупреди что не в архиве.
-- Лить сырой вывод аудита — покажи отчёт по категориям.
-- Раскидывать файлы по `/tmp`, `/root`, `/mnt/data/backups` — всё в `/mnt/data/ai/wb-ai-integration/backups/`.
-- Пропустить изменённые конфиги или кастомные systemd-юниты — они тоже нужны в архиве.
+- Inventing `wb-backup`, `wbctl backup`, `backup.sh` — they don't exist.
+- The core script can't be modified. But audit-tar (phase 2 step 2) — must be built based on audit data, don't skip findings.
+- Stopping at the snapshot — that's NOT a backup. Continue to phase 2.
+- Running tar in plain ssh — timeout. Only via systemd-run.
+- Backing up all of `/etc` or `/mnt/data` — huge and pointless.
+- Staying silent about `/mnt/data/.docker/` — warn that it's not in the archive.
+- Dumping raw audit output — show a categorized report.
+- Scattering files across `/tmp`, `/root`, `/mnt/data/backups` — everything in `/mnt/data/ai/wb-ai-integration/backups/`.
+- Skipping modified configs or custom systemd units — they also need to be in the archive.
 
-## Документация
+## Documentation
 
-- FIT-update: <https://wirenboard.com/wiki/Wirenboard_Firmware_Update>
-- Раздел data: <https://wirenboard.com/wiki/Data_Partition>
+- FIT update: <https://wirenboard.com/wiki/Wirenboard_Firmware_Update>
+- Data partition: <https://wirenboard.com/wiki/Data_Partition>

@@ -1,38 +1,38 @@
 ---
 name: serial-templates
-description: Создание кастомных Modbus-шаблонов для wb-mqtt-serial через MCP. /etc/wb-mqtt-serial.conf.d/templates/. Структура файла, регистры, форматы, parameters, groups.
+description: Authoring custom Modbus templates for wb-mqtt-serial via MCP. /etc/wb-mqtt-serial.conf.d/templates/. File structure, registers, formats, parameters, groups.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # serial-templates (MCP)
 
-Создание собственных шаблонов Modbus-устройств через `wb_*` tools. Когда устройства нет среди 250+ встроенных.
+Authoring your own Modbus device templates via `wb_*` tools. When the device isn't among the 250+ built-in ones.
 
-Подгружай при: «нет шаблона для устройства», «добавь Modbus-устройство <стороннего>», «создай шаблон», «как добавить кастомные регистры».
+Load this when: "no template for device", "add a Modbus device <third-party>", "create a template", "how to add custom registers".
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Найти похожий встроенный шаблон как стартовый | `wb_modbus_templates_list filter="<тип>"` |
-| Прочитать существующий шаблон | `wb_modbus_template device_type=<тип> view=full` |
-| Записать кастомный шаблон | `wb_write_file path=/etc/wb-mqtt-serial.conf.d/templates/<имя>.json` |
-| Применить (рестарт драйвера) | `wb_systemd_unit unit=wb-mqtt-serial action=restart` |
-| Проверить парсинг шаблона | `wb_logs unit=wb-mqtt-serial since="1m ago" grep="(?i)template"` |
-| Проверить публикацию канала | `wb_mqtt_read topic=/devices/<device.id>_<slave_id>/controls/<channel>` |
-| Прямое чтение регистра для калибровки scale/format | `wb_ssh_exec` `modbus_client_rpc -m rtu -a <slave> -t 4 -r <addr> -c <count> -b <baud> -s 2 -p N <port>` |
-| Backup кастомных шаблонов | `/controller-backup` (`/etc/wb-mqtt-serial.conf.d/` уже в core-tar) |
+| Intent | Tool |
+|--------|------|
+| Find a similar built-in template as a starting point | `wb_modbus_templates_list filter="<type>"` |
+| Read an existing template | `wb_modbus_template device_type=<type> view=full` |
+| Write a custom template | `wb_write_file path=/etc/wb-mqtt-serial.conf.d/templates/<name>.json` |
+| Apply (driver restart) | `wb_systemd_unit unit=wb-mqtt-serial action=restart` |
+| Check template parsing | `wb_logs unit=wb-mqtt-serial since="1m ago" grep="(?i)template"` |
+| Check channel publication | `wb_mqtt_read topic=/devices/<device.id>_<slave_id>/controls/<channel>` |
+| Direct register read for scale/format calibration | `wb_ssh_exec` `modbus_client_rpc -m rtu -a <slave> -t 4 -r <addr> -c <count> -b <baud> -s 2 -p N <port>` |
+| Backup of custom templates | `/controller-backup` (`/etc/wb-mqtt-serial.conf.d/` is already in core-tar) |
 
-## Где живут шаблоны
+## Where templates live
 
-| Каталог | Что | Можно править? |
-|---------|-----|----------------|
-| `/usr/share/wb-mqtt-serial/templates/` | Пакетные WB и Onokom | НЕТ — затрутся apt'ом |
-| `/etc/wb-mqtt-serial.conf.d/templates/<любое>.json` | Кастомные | Да, переживают апгрейд |
+| Directory | What | Editable? |
+|-----------|------|-----------|
+| `/usr/share/wb-mqtt-serial/templates/` | Packaged WB and Onokom | NO — overwritten by apt |
+| `/etc/wb-mqtt-serial.conf.d/templates/<any>.json` | Custom | Yes, survive upgrades |
 
-Кастомный с тем же `device_type` как пакетный — **переопределяет**.
+A custom one with the same `device_type` as a packaged one **overrides** it.
 
-## Минимальный шаблон
+## Minimal template
 
 ```json
 {
@@ -52,53 +52,53 @@ allowed-tools: Bash Read Write WebFetch
 
 ## Workflow
 
-1. **Документация устройства** — `WebFetch` мануал производителя. Без таблицы регистров (адрес/тип/scale) шаблон не делай.
-2. **Стартовый похожий шаблон** — `wb_modbus_templates_list filter="<категория>"`, потом `wb_modbus_template device_type=<похожий> view=full`. Скопируй структуру.
-3. **Запиши кастомный** — `wb_write_file path=/etc/wb-mqtt-serial.conf.d/templates/<имя>.json` с одним каналом для теста.
-4. **Рестарт драйвера** — `wb_systemd_unit unit=wb-mqtt-serial action=restart`.
-5. **Шаблон в списке?** — `wb_modbus_templates_list filter="<твой device_type>"` должен показать.
-6. **Добавь устройство в конфиг** — `wb_confed_load /etc/wb-mqtt-serial.conf` → дополни `ports[*].devices` записью с твоим `device_type` → `wb_confed_save`.
-7. **Проверь публикацию** — `wb_mqtt_read topic=/devices/<device.id>_<slave_id>/controls/<channel>`. Значение правдоподобное?
-8. **Калибровка `format`/`scale`/`word_order`** — `wb_ssh_exec` `modbus_client_rpc` для прямого raw, сравни с тем что публикует драйвер.
-9. **Расширь до всех каналов** — пачками по 5-10, проверка после каждой.
-10. **Параметры и группы** — после телеметрии.
+1. **Device documentation** — `WebFetch` the manufacturer manual. Without a register table (address/type/scale) don't make a template.
+2. **Similar starter template** — `wb_modbus_templates_list filter="<category>"`, then `wb_modbus_template device_type=<similar> view=full`. Copy the structure.
+3. **Write the custom one** — `wb_write_file path=/etc/wb-mqtt-serial.conf.d/templates/<name>.json` with one channel for testing.
+4. **Driver restart** — `wb_systemd_unit unit=wb-mqtt-serial action=restart`.
+5. **Template in the list?** — `wb_modbus_templates_list filter="<your device_type>"` should show it.
+6. **Add the device to the config** — `wb_confed_load /etc/wb-mqtt-serial.conf` → append `ports[*].devices` with an entry using your `device_type` → `wb_confed_save`.
+7. **Check publication** — `wb_mqtt_read topic=/devices/<device.id>_<slave_id>/controls/<channel>`. Plausible value?
+8. **Calibrate `format`/`scale`/`word_order`** — `wb_ssh_exec` `modbus_client_rpc` for direct raw, compare with what the driver publishes.
+9. **Expand to all channels** — in batches of 5-10, check after each.
+10. **Parameters and groups** — after telemetry.
 
-## Поля channel (ключевые)
+## Channel fields (key ones)
 
-| Поле | Назначение |
-|------|-----------|
+| Field | Purpose |
+|-------|---------|
 | `reg_type` | `coil` (FC1), `discrete` (FC2), `holding` (FC3), `input` (FC4) |
-| `address` | Адрес регистра (0-based; некоторые мануалы дают 1-based — проверь) |
+| `address` | Register address (0-based; some manuals are 1-based — check) |
 | `format` | `u8/s8/u16/s16/u32/s32/float/string/varstring/bcd16/bcd32` |
 | `scale` | `value = raw * scale` |
-| `word_order` | `big_endian` (default) или `little_endian` для u32/s32/float |
-| `error_value` | Raw == этому → MQTT `error` |
-| `condition` | Виден только если выражение по `parameters` истина |
-| `enabled` | `false` — есть в шаблоне, по умолчанию выключен |
-| `readonly` | `true` — даже у `holding`/`coil` только чтение |
+| `word_order` | `big_endian` (default) or `little_endian` for u32/s32/float |
+| `error_value` | Raw == this → MQTT `error` |
+| `condition` | Visible only if a `parameters` expression is true |
+| `enabled` | `false` — present in template, off by default |
+| `readonly` | `true` — read-only even for `holding`/`coil` |
 
-## Структура `parameters` и `groups` — см. bash-двойник.
+## `parameters` and `groups` structure — see bash-flavor twin.
 
-## Грабли
+## Gotchas
 
-- **Шаблон в `/usr/share/wb-mqtt-serial/templates/`** — затрётся apt'ом. Только `/etc/wb-mqtt-serial.conf.d/templates/`.
-- **Endianness** — для u32/s32/float `word_order: little_endian` если значение прыгает 65535-кратно.
-- **Scale в обратную сторону** — `raw / 10` vs `raw * 0.1`. Тест на одном канале.
-- **Дубликат `device_type`** — переопределяет пакетный молча. Используй префикс (`ACME-`, `MY-`).
-- **Кириллица в `device.id`** — нельзя, идёт в имя топика. Только `[a-z0-9-]`.
-- **Адрес 0-based vs 1-based** — стандарт Modbus 0-based, мануалы часто 1-based.
-- **Без `error_value`** — FFFF опубликуется как 65535 валидное значение.
+- **Template in `/usr/share/wb-mqtt-serial/templates/`** — overwritten by apt. Only `/etc/wb-mqtt-serial.conf.d/templates/`.
+- **Endianness** — for u32/s32/float use `word_order: little_endian` if the value jumps in 65535-multiples.
+- **Scale in reverse** — `raw / 10` vs `raw * 0.1`. Test on a single channel.
+- **Duplicate `device_type`** — silently overrides the packaged one. Use a prefix (`ACME-`, `MY-`).
+- **Cyrillic in `device.id`** — not allowed, it goes into the topic name. Only `[a-z0-9-]`.
+- **0-based vs 1-based address** — Modbus standard is 0-based, manuals are often 1-based.
+- **No `error_value`** — FFFF gets published as a valid 65535.
 
-## Связанные скиллы
+## Related skills
 
-- `/wb-mqtt-serial` — конфиг драйвера (добавление устройства с твоим device_type).
-- `/troubleshooting-serial` — проблемы CRC/таймаутов при разработке.
-- `/controller-backup` — `/etc/wb-mqtt-serial.conf.d/` в архиве.
+- `/wb-mqtt-serial` — driver config (adding a device with your device_type).
+- `/troubleshooting-serial` — CRC/timeout issues during development.
+- `/controller-backup` — `/etc/wb-mqtt-serial.conf.d/` is in the archive.
 
-Подробности (полный список полей, endianness, примеры формата) — bash-двойник `/serial-templates`.
+Details (full field list, endianness, format examples) — bash-flavor twin `/serial-templates`.
 
-## Документация
+## Documentation
 
-- Формат шаблона: <https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md>
+- Template format: <https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md>
 - Modbus FC: <https://modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf>
-- Примеры: 250+ шаблонов на контроллере, см. `wb_modbus_templates_list`.
+- Examples: 250+ templates on the controller, see `wb_modbus_templates_list`.

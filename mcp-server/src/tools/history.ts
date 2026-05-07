@@ -71,15 +71,15 @@ function rpcToSeries(channels: [string, string][], rpc: HistoryRpcResult): Histo
 
 export function registerHistoryTools(server: McpServer, ctx: Ctx) {
   server.registerTool('wb_history', {
-    description: 'Запросить историю данных из wb-mqtt-db (точки + статистика min/max/avg)',
+    description: 'Query data history from wb-mqtt-db (points + min/max/avg stats)',
     inputSchema: z.object({
       sn: SN,
-      channels: z.array(z.tuple([z.string(), z.string()])).describe('Каналы: [["device_id", "control_name"], ...]'),
-      period: z.string().optional().describe('Период: 1h, 6h, 24h, 7d, 30d'),
-      from: z.number().optional().describe('Unix timestamp начала'),
-      to: z.number().optional().describe('Unix timestamp конца'),
+      channels: z.array(z.tuple([z.string(), z.string()])).describe('Channels: [["device_id", "control_name"], ...]'),
+      period: z.string().optional().describe('Period: 1h, 6h, 24h, 7d, 30d'),
+      from: z.number().optional().describe('Unix timestamp of the start'),
+      to: z.number().optional().describe('Unix timestamp of the end'),
       limit: z.number().optional().default(1000),
-      min_interval: z.number().optional().describe('Мин интервал между точками (сек)'),
+      min_interval: z.number().optional().describe('Min interval between points (sec)'),
     }),
   }, async ({ sn, channels, period, from, to, limit, min_interval }) => {
     const { from: tsFrom, to: tsTo } = resolvePeriod(period, from, to)
@@ -93,19 +93,19 @@ export function registerHistoryTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_history_chart', {
-    description: 'Отрендерить SVG-чарт истории через Vega-Lite. Поддерживает: line, bar, area, point, histogram, heatmap, boxplot. Для 2 разных единиц рисует двойную Y-шкалу, для 3+ — нормализует в [0;1] с легендой диапазонов. Большие SVG (>50 КБ) сохраняй в outputPath.',
+    description: 'Render an SVG history chart via Vega-Lite. Supports: line, bar, area, point, histogram, heatmap, boxplot. For 2 different units it draws a dual Y-axis; for 3+ it normalizes to [0;1] with a range legend. Large SVGs (>50 KB) — save to outputPath.',
     inputSchema: z.object({
       sn: SN,
-      channels: z.array(z.tuple([z.string(), z.string()])).describe('Каналы: [["device_id","control_name"], ...]'),
-      period: z.string().optional().describe('Период: 1h, 6h, 24h, 7d, 30d (если не задан from/to)'),
-      from: z.number().optional().describe('Unix timestamp начала'),
-      to: z.number().optional().describe('Unix timestamp конца'),
+      channels: z.array(z.tuple([z.string(), z.string()])).describe('Channels: [["device_id","control_name"], ...]'),
+      period: z.string().optional().describe('Period: 1h, 6h, 24h, 7d, 30d (if from/to is not set)'),
+      from: z.number().optional().describe('Unix timestamp of the start'),
+      to: z.number().optional().describe('Unix timestamp of the end'),
       chartType: z.enum(['line','bar','area','point','histogram','heatmap','boxplot']).optional().default('line'),
       title: z.string().optional().default(''),
       ylabel: z.string().optional().default(''),
-      outputPath: z.string().optional().describe('Если задан — SVG записывается в этот локальный путь, инлайн возвращается только короткий status. Иначе SVG возвращается inline.'),
+      outputPath: z.string().optional().describe('If set, the SVG is written to this local path and only a short status is returned inline. Otherwise the SVG is returned inline.'),
       limit: z.number().optional(),
-      min_interval: z.number().optional().describe('Мин. интервал бакетов (сек). По умолчанию авто (0/60/600 в зависимости от длины периода).'),
+      min_interval: z.number().optional().describe('Min bucket interval (sec). Default auto (0/60/600 depending on period length).'),
     }),
   }, async ({ sn, channels, period, from, to, chartType, title, ylabel, outputPath, limit, min_interval }) => {
     const c = resolveController(ctx, sn)
@@ -127,7 +127,7 @@ export function registerHistoryTools(server: McpServer, ctx: Ctx) {
       return text({ ok: true, outputPath, svgBytes: svg.length, totalPoints, channels: channels.length, from: tsFrom, to: tsTo })
     }
     if (svg.length > 200_000) {
-      return err(`SVG слишком большой (${svg.length} байт) для inline-ответа. Передай outputPath, чтобы записать в файл, либо сократи period/уменьши число каналов.`)
+      return err(`SVG too large (${svg.length} bytes) for an inline response. Pass outputPath to write it to a file, or shorten period / reduce the number of channels.`)
     }
     return text({ svg, svgBytes: svg.length, totalPoints, channels: channels.length, from: tsFrom, to: tsTo })
   })

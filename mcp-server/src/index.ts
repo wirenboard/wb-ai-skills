@@ -55,8 +55,8 @@ async function main() {
   const ts = () => new Date().toISOString()
   console.error(`[wb-mcp ${ts()}] Started: ${SSH_USER}@*, discovery ${DISCOVERY_INTERVAL}ms`)
 
-  // Graceful shutdown: остановить discovery-таймер, чтобы не висел event loop;
-  // ManualStore сохраняется при каждом изменении (атомарным rename), отдельно flush'ить не надо.
+  // Graceful shutdown: stop the discovery timer so the event loop can exit;
+  // ManualStore persists on every change (via atomic rename), no separate flush needed.
   let shuttingDown = false
   const shutdown = (signal: string) => {
     if (shuttingDown) return

@@ -17,13 +17,13 @@ export interface HistorySeries {
 }
 
 export type ChartType =
-  | 'line'      // время-ряд линиями (по умолчанию)
-  | 'bar'       // столбики во времени (для дискретных событий, бинарных каналов)
-  | 'area'      // заливка под линией (накопления, доля)
-  | 'point'     // скаттер (редкие точки, выбросы)
-  | 'histogram' // распределение значений: x=бины значений, y=кол-во точек
-  | 'heatmap'   // плотность: x=время, y=бины значений, color=кол-во
-  | 'boxplot'   // ящики с усами по периодам — min/max/median/quartiles
+  | 'line'      // time series as lines (default)
+  | 'bar'       // bars over time (for discrete events, binary channels)
+  | 'area'      // fill under the line (accumulations, share)
+  | 'point'     // scatter (sparse points, outliers)
+  | 'histogram' // value distribution: x=value bins, y=point count
+  | 'heatmap'   // density: x=time, y=value bins, color=count
+  | 'boxplot'   // box-and-whisker per period — min/max/median/quartiles
 
 interface FlatPoint {
   t: string
@@ -114,7 +114,7 @@ export async function renderHistoryChart(
   chartType: ChartType = 'line',
 ): Promise<string> {
   const nonEmpty = series.filter(s => s.points.length > 0)
-  if (!nonEmpty.length) return emptySvg('Нет данных за выбранный период')
+  if (!nonEmpty.length) return emptySvg('No data for the selected period')
 
   const labelMap = buildLabelMap(nonEmpty)
   const values = flatten(nonEmpty, labelMap)
@@ -152,7 +152,7 @@ export async function renderHistoryChart(
     config: baseConfig,
   }
 
-  // ─── histogram: распределение значений по бинам ──────────────────────
+  // ─── histogram: value distribution by bins ───────────────────────────
   if (chartType === 'histogram') {
     return await renderSpec({
       ...baseSpec,
@@ -163,14 +163,14 @@ export async function renderHistoryChart(
           field: 'v', type: 'quantitative', bin: { maxbins: 30 },
           axis: { title: ylabel || groups.size === 1 ? [...groups.keys()][0] || null : null, grid: false },
         },
-        y: { aggregate: 'count', type: 'quantitative', axis: { title: 'кол-во', grid: true } },
+        y: { aggregate: 'count', type: 'quantitative', axis: { title: 'count', grid: true } },
         color: colorEnc,
         ...(seriesCount > 1 ? { xOffset: { field: 'series', type: 'nominal' } } : {}),
       },
     } as TopLevelSpec)
   }
 
-  // ─── heatmap: x=время-биннированное, y=значение-биннированное ────────
+  // ─── heatmap: x=binned time, y=binned value ──────────────────────────
   if (chartType === 'heatmap') {
     const tu = durationSec <= 7 * 86400 ? 'yearmonthdatehours' : 'yearmonthdate'
     const heatmapMark = { type: 'rect' as const, tooltip: true }
@@ -186,7 +186,7 @@ export async function renderHistoryChart(
           encoding: {
             x: { field: 't', type: 'temporal', timeUnit: tu, axis: { title: null, format: timeFormat, labelAngle: -30 } },
             y: { field: 'v', type: 'quantitative', bin: { maxbins: 24 }, axis: { title: null } },
-            color: { aggregate: 'count', type: 'quantitative', scale: { scheme: 'blues' }, legend: { title: 'плотность', orient: 'right' } },
+            color: { aggregate: 'count', type: 'quantitative', scale: { scheme: 'blues' }, legend: { title: 'density', orient: 'right' } },
           },
         },
       } as unknown as TopLevelSpec)
@@ -199,12 +199,12 @@ export async function renderHistoryChart(
       encoding: {
         x: { field: 't', type: 'temporal', timeUnit: tu, axis: { title: null, format: timeFormat, labelAngle: -30 } },
         y: { field: 'v', type: 'quantitative', bin: { maxbins: 30 }, axis: { title: ylabel || onlyUnit || null } },
-        color: { aggregate: 'count', type: 'quantitative', scale: { scheme: 'blues' }, legend: { title: 'плотность', orient: 'right' } },
+        color: { aggregate: 'count', type: 'quantitative', scale: { scheme: 'blues' }, legend: { title: 'density', orient: 'right' } },
       },
     } as TopLevelSpec)
   }
 
-  // ─── boxplot: разброс по периодам (час / день в зависимости от длины) ─
+  // ─── boxplot: spread by period (hour / day depending on length) ──────
   if (chartType === 'boxplot') {
     const tu = durationSec <= 86400 ? 'hours' : durationSec <= 7 * 86400 ? 'yearmonthdate' : 'yearweek'
     return await renderSpec({
@@ -219,7 +219,7 @@ export async function renderHistoryChart(
     } as TopLevelSpec)
   }
 
-  // ─── line / bar / area / point — все time-series виды ────────────────
+  // ─── line / bar / area / point — all time-series kinds ──────────────
   const markType: 'line' | 'bar' | 'area' | 'point' =
     chartType === 'bar' ? 'bar' :
     chartType === 'area' ? 'area' :
@@ -272,7 +272,7 @@ export async function renderHistoryChart(
     })
     return await renderSpec({ ...baseSpec, data: { values }, layer: layers, resolve: { scale: { y: 'independent' } } } as unknown as TopLevelSpec)
   }
-  // 3+ единиц — нормализация
+  // 3+ units — normalize
   const legendLabels = nonEmpty.map(s => {
     const base = labelMap.get(s)!
     const range = `${s.min.toFixed(2)}…${s.max.toFixed(2)}${s.units ? ` ${s.units}` : ''}`
@@ -289,7 +289,7 @@ export async function renderHistoryChart(
       x: xTimeEnc,
       y: {
         field: 'vn', type: 'quantitative',
-        axis: { title: 'нормализовано (0…1)', grid: true, format: '.1f' },
+        axis: { title: 'normalized (0…1)', grid: true, format: '.1f' },
         scale: { domain: [0, 1] },
       },
       color: {

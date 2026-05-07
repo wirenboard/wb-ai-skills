@@ -4,7 +4,7 @@ import { type Ctx, resolveController, text, SN } from '../helpers.ts'
 
 export function registerDiscoveryTools(server: McpServer, ctx: Ctx) {
   server.registerTool('wb_discover', {
-    description: 'Найти контроллеры Wiren Board в локальной сети (mDNS + ручные)',
+    description: 'Find Wiren Board controllers on the local network (mDNS + manual)',
     inputSchema: z.object({}),
   }, async () => {
     const list = ctx.discovery.list()
@@ -15,7 +15,7 @@ export function registerDiscoveryTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_probe', {
-    description: 'Проверить доступность контроллера и получить информацию о системе',
+    description: 'Check controller reachability and fetch system information',
     inputSchema: z.object({ sn: SN }),
   }, async ({ sn }) => {
     const c = resolveController(ctx, sn)
@@ -23,9 +23,9 @@ export function registerDiscoveryTools(server: McpServer, ctx: Ctx) {
   })
 
   server.registerTool('wb_add_controller', {
-    description: 'Добавить контроллер вручную по hostname или IP',
+    description: 'Add a controller manually by hostname or IP',
     inputSchema: z.object({
-      host: z.string().describe('Hostname или IP'),
+      host: z.string().describe('Hostname or IP'),
     }),
   }, async ({ host }) => {
     const c = ctx.discovery.addManual(host)

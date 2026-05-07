@@ -1,16 +1,16 @@
 ---
 name: wb-cloud
-description: Wiren Board Cloud — облачный агент `wb-cloud-agent` на контроллере. Активация, привязка к аккаунту, статус подключения, отвязка, диагностика связи с облаком. Свой облачный backend.
+description: Wiren Board Cloud — `wb-cloud-agent` cloud agent on the controller. Activation, account binding, connection status, unbinding, cloud connectivity diagnostics. Custom cloud backend.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # wb-cloud
 
-`wb-cloud-agent` — служба на контроллере, поддерживающая туннель к Wiren Board Cloud (`https://wirenboard.cloud`) для удалённого доступа к Web UI и API. Каждый контроллер имеет криптографический сертификат в защищённой памяти (`ATECCx08`), которым подписывается активация.
+`wb-cloud-agent` is a service on the controller that maintains a tunnel to Wiren Board Cloud (`https://wirenboard.cloud`) for remote access to web UI and API. Each controller has a cryptographic certificate in protected memory (`ATECCx08`) used to sign the activation.
 
-Подгружай при: «привязать контроллер к облаку», «активировать в wirenboard.cloud», «не открывается через облако», «отвязать от аккаунта», «свой cloud backend», «статус облака», «удалённый доступ через wirenboard.cloud».
+Load this on: "bind controller to cloud", "activate in wirenboard.cloud", "doesn't open via cloud", "unbind from account", "custom cloud backend", "cloud status", "remote access via wirenboard.cloud".
 
-## Архитектура
+## Architecture
 
 ```
 Web UI (wirenboard.cloud)
@@ -19,67 +19,67 @@ Web UI (wirenboard.cloud)
       ▼
 wb-cloud-agent  ──reads──▶  /etc/wb-cloud-agent.conf  (LOG_LEVEL, CLIENT_CERT_ENGINE_KEY, CLOUD_BASE_URL)
       │
-      ├── /var/lib/wb-cloud-agent/device_bundle.crt.pem      (сертификат устройства)
+      ├── /var/lib/wb-cloud-agent/device_bundle.crt.pem      (device certificate)
       ├── /var/lib/wb-cloud-agent/providers/<provider>/       (per-provider state)
       │
-      └── публикует в MQTT:
+      └── publishes to MQTT:
           /devices/system__wb-cloud-agent__<provider>/controls/status
                                                            /activation_link
                                                            /cloud_base_url
 ```
 
-Provider — конкретное облако. По умолчанию `wirenboard.cloud`. Можно поднять свой — см. ниже.
+Provider — a specific cloud. By default `wirenboard.cloud`. You can run your own — see below.
 
-## Базовые команды
+## Basic commands
 
 ```bash
-# Активность сервиса
+# Service status
 ssh root@<HOST> 'systemctl is-active wb-cloud-agent'
 
-# Конфиг
+# Config
 ssh root@<HOST> 'cat /etc/wb-cloud-agent.conf'
 
-# Сертификат устройства (наличие)
+# Device certificate (presence)
 ssh root@<HOST> 'ls -la /var/lib/wb-cloud-agent/device_bundle.crt.pem'
 
-# Провайдеры (список облаков)
+# Providers (cloud list)
 ssh root@<HOST> 'ls /var/lib/wb-cloud-agent/providers/'
 
-# MQTT-статус (для конкретного провайдера)
+# MQTT status (for a specific provider)
 ssh root@<HOST> "mosquitto_sub -F '%t\\t%p' -t '/devices/system__wb-cloud-agent__+/controls/+' -W 3"
 ```
 
-## Активация (привязка к аккаунту)
+## Activation (binding to an account)
 
-1. Убедись, что сервис запущен и есть интернет:
+1. Make sure the service is running and there's internet:
    ```bash
    ssh root@<HOST> 'systemctl is-active wb-cloud-agent && curl -s -m5 https://wirenboard.cloud >/dev/null && echo ok'
    ```
 
-2. Если `inactive` — запусти:
+2. If `inactive` — start:
    ```bash
    ssh root@<HOST> 'systemctl enable --now wb-cloud-agent'
    ```
 
-3. Получи activation_link:
+3. Get the activation_link:
    ```bash
    ssh root@<HOST> "mosquitto_sub -t '/devices/system__wb-cloud-agent__wirenboard.cloud/controls/activation_link' -C 1 -W 5"
    ```
 
-4. Открой ссылку в браузере, авторизуйся в `wirenboard.cloud`, привяжи к аккаунту.
+4. Open the link in a browser, log in to `wirenboard.cloud`, bind to the account.
 
-5. После привязки `status` поменяется на `active`:
+5. After binding, `status` changes to `active`:
    ```bash
    ssh root@<HOST> "mosquitto_sub -t '/devices/system__wb-cloud-agent__wirenboard.cloud/controls/status' -C 1 -W 5"
    ```
 
-   Возможные значения `status`:
-   - `unknown` — агент только запустился, ещё не подключился.
-   - `ok` (или `active`) — туннель установлен, контроллер виден из облака.
-   - `not_activated` — сертификат есть, но устройство не привязано к аккаунту.
-   - `error` — см. логи.
+   Possible `status` values:
+   - `unknown` — agent just started, hasn't connected yet.
+   - `ok` (or `active`) — tunnel established, controller visible from cloud.
+   - `not_activated` — certificate is present, but the device isn't bound to an account.
+   - `error` — see logs.
 
-## Отвязка / сброс активации
+## Unbinding / activation reset
 
 ```bash
 ssh root@<HOST> 'systemctl stop wb-cloud-agent'
@@ -87,11 +87,11 @@ ssh root@<HOST> 'rm -rf /var/lib/wb-cloud-agent/providers/wirenboard.cloud/'
 ssh root@<HOST> 'systemctl start wb-cloud-agent'
 ```
 
-После этого agent выпустит новый activation_link. Старая привязка в личном кабинете wirenboard.cloud сохранится, но будет указывать в никуда — её нужно удалить вручную через Web UI облака.
+After this, the agent issues a new activation_link. The old binding in the wirenboard.cloud account stays but points to nowhere — delete it manually via the cloud's web UI.
 
-## Свой облачный backend
+## Custom cloud backend
 
-CLOUD_BASE_URL в `/etc/wb-cloud-agent.conf` указывает на адрес облака. По умолчанию `https://wirenboard.cloud/`. Чтобы переключить:
+CLOUD_BASE_URL in `/etc/wb-cloud-agent.conf` points to the cloud address. Default is `https://wirenboard.cloud/`. To switch:
 
 ```bash
 ssh root@<HOST> 'cat > /etc/wb-cloud-agent.conf' <<'EOF'
@@ -104,35 +104,35 @@ EOF
 ssh root@<HOST> 'systemctl restart wb-cloud-agent'
 ```
 
-Свой backend должен реализовывать API совместимое с `wirenboard.cloud`. Это редкий случай — обычно для self-hosted развёртываний или тестовых стендов. Cертификат устройства ATECC всё равно подписан Wiren Board, но может быть верифицирован своим CA если доверяете root-сертификату WB.
+A custom backend must implement an API compatible with `wirenboard.cloud`. This is rare — usually for self-hosted deployments or test benches. The device's ATECC certificate is still signed by Wiren Board, but it can be verified against your CA if you trust the WB root cert.
 
-## Диагностика «не подключается к облаку»
+## Diagnostics: "not connecting to cloud"
 
-1. **Сервис активен?** `systemctl is-active wb-cloud-agent`. `inactive` → `enable --now`.
-2. **Сертификат есть?** `ls /var/lib/wb-cloud-agent/device_bundle.crt.pem`. Нет — контроллер не Wiren Board или ATECC сломан.
-3. **Интернет наружу?** `curl -s -m5 https://wirenboard.cloud >/dev/null && echo ok`. Нет — см. `/network` (failover, DNS).
-4. **Логи**: `journalctl -u wb-cloud-agent -n 100 --no-pager`. Типовые ошибки:
-   - `connection refused` / `timeout` — сетевая проблема.
-   - `Certificate verification failed` — кривая дата на контроллере (`date`), синхронизуй NTP.
-   - `Authentication failed` — сертификат отозван / устройство удалено из БД облака.
-5. **MQTT публикуется?** `mosquitto_sub -t '/devices/system__wb-cloud-agent__wirenboard.cloud/controls/status' -C 1 -W 3`. Пусто — агент не доходит до публикации, проверь логи.
+1. **Service active?** `systemctl is-active wb-cloud-agent`. `inactive` → `enable --now`.
+2. **Certificate present?** `ls /var/lib/wb-cloud-agent/device_bundle.crt.pem`. No — controller isn't a Wiren Board or ATECC is broken.
+3. **Internet outbound?** `curl -s -m5 https://wirenboard.cloud >/dev/null && echo ok`. No — see `/network` (failover, DNS).
+4. **Logs**: `journalctl -u wb-cloud-agent -n 100 --no-pager`. Typical errors:
+   - `connection refused` / `timeout` — network issue.
+   - `Certificate verification failed` — wrong date on the controller (`date`), sync NTP.
+   - `Authentication failed` — certificate revoked / device removed from cloud DB.
+5. **MQTT publishing?** `mosquitto_sub -t '/devices/system__wb-cloud-agent__wirenboard.cloud/controls/status' -C 1 -W 3`. Empty — agent doesn't reach publication, check logs.
 
-## Связь со скиллами
+## Related skills
 
-- `/network` — если облако недоступно из-за интернета.
-- `/services` — `wb-cloud-agent` это systemd-юнит, override-conf и mask/unmask отсюда.
-- `/controller-backup` — `/etc/wb-cloud-agent.conf` уже включён в core-tar; `/var/lib/wb-cloud-agent/providers/` обычно НЕ бэкапится (новая активация даёт новый providers state, и это нормально).
-- `/troubleshooting` — общая диагностика, kernel mismatch, место.
+- `/network` — if cloud is unreachable due to internet.
+- `/services` — `wb-cloud-agent` is a systemd unit, override-conf and mask/unmask are here.
+- `/controller-backup` — `/etc/wb-cloud-agent.conf` is already in core-tar; `/var/lib/wb-cloud-agent/providers/` is generally NOT backed up (a new activation gives new providers state, and that's normal).
+- `/troubleshooting` — general diagnostics, kernel mismatch, disk space.
 
-## Грабли
+## Pitfalls
 
-- **Время сильно врёт** — TLS handshake к облаку упадёт. NTP должен работать (`systemctl is-active ntp` или `systemd-timesyncd`).
-- **VPN на контроллере с маршрутом по умолчанию** — может ломать доступ к облаку, если VPN-сервер блокирует исходящий wirenboard.cloud. Проверь маршрут: `ip route get $(getent hosts wirenboard.cloud | awk "{print \$1}")`.
-- **CLIENT_CERT_ENGINE_KEY** менять руками не нужно — это адрес сертификата в ATECC, прошит на заводе.
-- **Удалить контроллер в Web UI облака без локального сброса** — local agent продолжит ломиться с `Authentication failed`. Сделай локально cleanup providers/ и перезапусти агент.
-- **Активация-ссылка одноразовая** — если кликнул, но не довёл до конца, agent сгенерит новую при следующем запросе/рестарте.
+- **Time is way off** — TLS handshake to cloud will fail. NTP must work (`systemctl is-active ntp` or `systemd-timesyncd`).
+- **VPN on the controller with default route** — may break cloud access if VPN server blocks outbound wirenboard.cloud. Check the route: `ip route get $(getent hosts wirenboard.cloud | awk "{print \$1}")`.
+- **CLIENT_CERT_ENGINE_KEY** doesn't need manual editing — it's the certificate address in ATECC, factory-set.
+- **Deleting controller in cloud web UI without local reset** — local agent will keep hammering with `Authentication failed`. Do local cleanup of providers/ and restart the agent.
+- **Activation link is single-use** — if you clicked but didn't finish, the agent generates a new one on the next request/restart.
 
-## Документация
+## Documentation
 
 - WB Cloud: <https://wirenboard.com/wiki/Wiren_Board_Cloud>
-- Удалённый доступ: <https://wirenboard.com/wiki/Remote_access>
+- Remote access: <https://wirenboard.com/wiki/Remote_access>

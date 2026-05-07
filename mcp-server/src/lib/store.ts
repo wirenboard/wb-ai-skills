@@ -43,8 +43,8 @@ export class ManualStore {
   }
 
   private save() {
-    // Атомарная запись: сначала во временный файл рядом, потом rename.
-    // Защищает от полу-записи при SIGINT/kill в процессе сохранения.
+    // Atomic write: first to a sibling temp file, then rename.
+    // Protects against partial writes if SIGINT/kill arrives mid-save.
     mkdirSync(dirname(this.path), { recursive: true })
     const tmp = `${this.path}.tmp.${process.pid}`
     writeFileSync(tmp, JSON.stringify([...this.entries.values()], null, 2))

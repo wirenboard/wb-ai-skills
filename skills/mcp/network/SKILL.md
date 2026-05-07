@@ -1,36 +1,36 @@
 ---
 name: network
-description: Сетевая конфигурация контроллера Wiren Board через MCP — NetworkManager + wb-connection-manager. ethernet/wifi/4G/OpenVPN, static IP, failover, DNS. Hotspot настройки.
+description: Wiren Board controller network configuration via MCP — NetworkManager + wb-connection-manager. ethernet/wifi/4G/OpenVPN, static IP, failover, DNS. Hotspot settings.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # network (MCP)
 
-Сетевая подсистема WB через MCP-tools `wb_network_status` + `wb_confed_load/save` для `/etc/wb-connection-manager.conf` + `wb_ssh_exec` для `nmcli` команд.
+WB networking subsystem via MCP tools `wb_network_status` + `wb_confed_load/save` for `/etc/wb-connection-manager.conf` + `wb_ssh_exec` for `nmcli` commands.
 
-Подгружай при: «настрой 4G», «дай инет через sim1», «WiFi-точка», «не пингуется наружу», «static IP», «настроить DNS», «не цепляется eth1», «модем не подключается», «failover не работает», «OpenVPN клиент».
+Load this when: "configure 4G", "give internet via sim1", "WiFi access point", "doesn't ping out", "static IP", "configure DNS", "won't pick up eth1", "modem won't connect", "failover broken", "OpenVPN client".
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Сводка по сети (интерфейсы, NM-соединения, default route) | `wb_network_status` (опц. `pingTarget=8.8.8.8` для проверки инета) |
-| Конфиг wb-connection-manager (приоритеты, failover) | `wb_confed_load path=/etc/wb-connection-manager.conf` |
-| Сохранить конфиг wb-connection-manager | `wb_confed_save` |
-| nmcli команды (modify connection, up/down) | `wb_ssh_exec` `nmcli ...` |
-| Сканировать WiFi | `wb_ssh_exec` `nmcli device wifi list ifname wlan1` |
-| Управление модемом (mmcli) | `wb_ssh_exec` `mmcli -L`/`mmcli -m 0` |
-| Логи NM / wb-connection-manager / ModemManager | `wb_logs unit=NetworkManager` / `wb_logs unit=wb-connection-manager` / `wb_logs unit=ModemManager` |
+| Intent | Tool |
+|--------|------|
+| Network summary (interfaces, NM connections, default route) | `wb_network_status` (opt. `pingTarget=8.8.8.8` for internet check) |
+| wb-connection-manager config (priorities, failover) | `wb_confed_load path=/etc/wb-connection-manager.conf` |
+| Save wb-connection-manager config | `wb_confed_save` |
+| nmcli commands (modify connection, up/down) | `wb_ssh_exec` `nmcli ...` |
+| Scan WiFi | `wb_ssh_exec` `nmcli device wifi list ifname wlan1` |
+| Modem control (mmcli) | `wb_ssh_exec` `mmcli -L`/`mmcli -m 0` |
+| Logs of NM / wb-connection-manager / ModemManager | `wb_logs unit=NetworkManager` / `wb_logs unit=wb-connection-manager` / `wb_logs unit=ModemManager` |
 
-## Сценарий: текущее состояние сети
+## Scenario: current network state
 
 ```
 wb_network_status sn=<SN> pingTarget=8.8.8.8
 ```
 
-Возвращает: `interfaces[]`, `defaultRoute`, `nmConnections[]`, `nmDevices[]`, `ping {lossPct, reachable}`. Один вызов закрывает «есть линк / есть default / есть инет».
+Returns: `interfaces[]`, `defaultRoute`, `nmConnections[]`, `nmDevices[]`, `ping {lossPct, reachable}`. One call covers "is there a link / is there a default / is there internet".
 
-## Сценарий: подключиться к WiFi
+## Scenario: connect to WiFi
 
 ```
 wb_ssh_exec sn=<SN> cmd='nmcli device wifi list ifname wlan1'
@@ -38,83 +38,83 @@ wb_ssh_exec sn=<SN> cmd='nmcli device wifi connect "<SSID>" password "<pwd>" ifn
 wb_ssh_exec sn=<SN> cmd='nmcli connection modify "<SSID>" connection.autoconnect yes'
 ```
 
-Если только один WiFi-чип (`wlan0` под AP) — сначала `nmcli connection down wb-ap`, иначе drama.
+If there's only one WiFi chip (`wlan0` under AP) — first `nmcli connection down wb-ap`, otherwise drama.
 
-## Сценарий: настроить hotspot
+## Scenario: configure a hotspot
 
-Профиль `wb-ap` уже есть. Поправить SSID и пароль:
+The `wb-ap` profile is already there. Tweak SSID and password:
 
 ```
 wb_ssh_exec sn=<SN> cmd='nmcli connection modify wb-ap 802-11-wireless.ssid "MyAP" 802-11-wireless-security.key-mgmt wpa-psk 802-11-wireless-security.psk "MyPassword123"'
 wb_ssh_exec sn=<SN> cmd='nmcli connection up wb-ap'
 ```
 
-## Сценарий: static IP
+## Scenario: static IP
 
 ```
 wb_ssh_exec sn=<SN> cmd='nmcli connection modify wb-eth0 ipv4.method manual ipv4.addresses 192.168.10.50/24 ipv4.gateway 192.168.10.1 ipv4.dns "192.168.10.1 8.8.8.8"'
 wb_ssh_exec sn=<SN> cmd='nmcli connection up wb-eth0'
 ```
 
-DHCP обратно — `ipv4.method auto`, обнулить `ipv4.addresses`/`ipv4.gateway`/`ipv4.dns` пустыми строками.
+DHCP back — `ipv4.method auto`, clear `ipv4.addresses`/`ipv4.gateway`/`ipv4.dns` with empty strings.
 
-## Сценарий: 4G/GSM
+## Scenario: 4G/GSM
 
 ```
-wb_ssh_exec sn=<SN> cmd='mmcli -L'                       # есть ли модем
-wb_ssh_exec sn=<SN> cmd='mmcli -m 0'                     # сигнал, registration, IMEI
+wb_ssh_exec sn=<SN> cmd='mmcli -L'                       # is there a modem
+wb_ssh_exec sn=<SN> cmd='mmcli -m 0'                     # signal, registration, IMEI
 wb_ssh_exec sn=<SN> cmd='nmcli connection modify wb-gsm-sim1 gsm.apn "internet" gsm.pin "1234"'
 wb_ssh_exec sn=<SN> cmd='nmcli connection up wb-gsm-sim1'
 ```
 
-`wb-gsm-sim1` / `wb-gsm-sim2` — преднастроенные профили под две SIM.
+`wb-gsm-sim1` / `wb-gsm-sim2` — preconfigured profiles for two SIMs.
 
-## Сценарий: OpenVPN клиент
+## Scenario: OpenVPN client
 
 ```
-wb_write_file sn=<SN> path=/tmp/client.ovpn content=<содержимое .ovpn>
+wb_write_file sn=<SN> path=/tmp/client.ovpn content=<.ovpn contents>
 wb_ssh_exec sn=<SN> cmd='nmcli connection import type openvpn file /tmp/client.ovpn'
 wb_ssh_exec sn=<SN> cmd='nmcli connection modify <name> +vpn.data username=<user> +vpn.secrets password=<pwd>'
 wb_ssh_exec sn=<SN> cmd='nmcli connection up <name>'
 ```
 
-## Сценарий: «нет интернета»
+## Scenario: "no internet"
 
-1. `wb_network_status pingTarget=8.8.8.8` — линк, default route, ping.
-2. Если ping ОК но `nslookup` не работает — DNS:
+1. `wb_network_status pingTarget=8.8.8.8` — link, default route, ping.
+2. If ping is OK but `nslookup` doesn't work — DNS:
    ```
    wb_ssh_exec sn=<SN> cmd='cat /etc/resolv.conf; nslookup google.com'
    ```
-3. Логи переключений failover:
+3. Failover switching logs:
    ```
    wb_logs sn=<SN> unit=wb-connection-manager since="1h ago" lines=30
    ```
-4. Если 4G — `mmcli -m 0 | grep -E 'state|registration|signal'`.
+4. If 4G — `mmcli -m 0 | grep -E 'state|registration|signal'`.
 
-## Failover и приоритеты
+## Failover and priorities
 
-`wb_confed_load /etc/wb-connection-manager.conf` → `content.ui.con_switch.connections` — упорядоченный массив UUID от высшего приоритета к низшему. Правка — поменять порядок и `wb_confed_save`.
+`wb_confed_load /etc/wb-connection-manager.conf` → `content.ui.con_switch.connections` — ordered array of UUIDs from highest to lowest priority. To edit — change order and `wb_confed_save`.
 
-## Грабли
+## Gotchas
 
-- **Правка `/etc/resolv.conf` руками** — затирается NM. Только через `nmcli ipv4.dns`.
-- **VPN ломает доступ к WB-AP** — если VPN ставит default через себя, локальная сеть отвалится. Используй `connection.autoconnect-priority` или ручной запуск VPN.
-- **`wlan0` под AP** — одновременно как клиент нельзя, нужен второй WiFi-адаптер.
-- **APN провайдера** — без правильного `gsm.apn` модем не получит IP.
-- **`ipv4.ignore-auto-dns`** — без него ваш DNS добавится в конец списка, DHCP-DNS будет первым.
-- **Failover «прыгает»** — низкий GSM-сигнал, плохой WiFi. Логи wb-connection-manager покажут.
-- **NM-профили в `/etc/NetworkManager/system-connections/*.nmconnection` не переживут FIT** — backup через `/controller-backup`.
+- **Editing `/etc/resolv.conf` by hand** — overwritten by NM. Only via `nmcli ipv4.dns`.
+- **VPN breaks access to WB-AP** — if VPN sets a default route through itself, the local network falls off. Use `connection.autoconnect-priority` or manual VPN start.
+- **`wlan0` under AP** — can't be a client at the same time, need a second WiFi adapter.
+- **Provider's APN** — without correct `gsm.apn` the modem won't get an IP.
+- **`ipv4.ignore-auto-dns`** — without it your DNS is appended at the end of the list, DHCP DNS is first.
+- **Failover "flaps"** — low GSM signal, poor WiFi. wb-connection-manager logs will show.
+- **NM profiles in `/etc/NetworkManager/system-connections/*.nmconnection` won't survive FIT** — backup via `/controller-backup`.
 
-## Связанные скиллы
+## Related skills
 
-- `/troubleshooting` — общая диагностика «не работает».
-- `/services` — кастомные `*.service` для запуска VPN/скриптов.
-- `/controller-backup` — сохранение NM-профилей перед FIT.
-- `/wb-cloud` — облачный агент через интернет.
+- `/troubleshooting` — general "doesn't work" diagnostics.
+- `/services` — custom `*.service` for running VPN/scripts.
+- `/controller-backup` — saving NM profiles before FIT.
+- `/wb-cloud` — cloud agent over the internet.
 
-Подробности (синтаксис nmcli, OpenVPN, mmcli) — bash-двойник `/network`.
+Details (nmcli syntax, OpenVPN, mmcli) — bash-flavor twin `/network`.
 
-## Документация
+## Documentation
 
 - NetworkManager: <https://networkmanager.dev/docs/>
 - ModemManager: <https://www.freedesktop.org/wiki/Software/ModemManager/>

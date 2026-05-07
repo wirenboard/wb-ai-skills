@@ -8,10 +8,10 @@ export type Ctx = {
   discovery: Discovery
 }
 
-/** Найти контроллер по SN/host. Если не нашли в реестре — пробуем зарезолвить через
- *  defaultHost(sn) (`wirenboard-<SN>.local`). Это позволяет вызвать `wb_probe sn=NEW`
- *  без предварительного `wb_discover` или `wb_add_controller`. Если SN полностью
- *  чужой и mDNS не найдёт его — ssh-команда дальше упадёт с понятной ошибкой. */
+/** Find a controller by SN/host. If it isn't in the registry, try resolving via
+ *  defaultHost(sn) (`wirenboard-<SN>.local`). This lets you call `wb_probe sn=NEW`
+ *  without a prior `wb_discover` or `wb_add_controller`. If the SN is entirely
+ *  foreign and mDNS can't find it, the ssh command downstream will fail with a clear error. */
 export function resolveController(ctx: Ctx, sn: string): Controller {
   const c = ctx.discovery.findByKey(sn)
   if (c) return c
@@ -27,6 +27,6 @@ export function err(msg: string) {
   return { content: [{ type: 'text' as const, text: msg }], isError: true as const }
 }
 
-export const SN = z.string().describe('Серийный номер контроллера (например A25NDEMJ)')
+export const SN = z.string().describe('Controller serial number (e.g. A25NDEMJ)')
 
 export const LONG_COMMANDS_RE = /\b(apt\s+(update|install|upgrade|dist-upgrade|remove|purge)|docker\s+(run|pull|build|compose)|wb-release\s+-[ty])/

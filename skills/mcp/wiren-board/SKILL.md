@@ -1,264 +1,264 @@
 ---
 name: wiren-board
-description: Управление контроллерами Wiren Board через MCP-сервер wiren-board. Подключай при любой работе с контроллерами WB.
+description: Managing Wiren Board controllers via the wiren-board MCP server. Connect for any work with WB controllers.
 allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 ---
 
 # wiren-board (MCP)
 
-Мастер-скилл для работы с контроллерами Wiren Board через MCP-tools `wb_*`. Все операции с контроллером — через MCP, а не напрямую через `ssh`/`mosquitto_*`/`avahi-browse`. Подгружай при любом упоминании контроллеров WB, MQTT-топиков, устройств на шине, правил автоматизации, конфигурации оборудования.
+Master skill for working with Wiren Board controllers via `wb_*` MCP tools. All controller operations go through MCP, not directly via `ssh`/`mosquitto_*`/`avahi-browse`. Load this on any mention of WB controllers, MQTT topics, devices on the bus, automation rules, hardware configuration.
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Найти контроллеры в сети | `wb_discover` (mDNS + ручные) |
-| Доступность контроллера + системная инфа | `wb_probe` |
-| Добавить контроллер вручную (нет mDNS, есть IP) | `wb_add_controller` |
-| Команда на контроллере (быстрая, до 2 мин) | `wb_ssh_exec` |
-| Долгая команда (`apt`, `docker pull/build`, `wb-release`) | `wb_ssh_exec_async` → `wb_job_status` / `wb_job_tail` / `wb_job_cancel` |
-| Прочитать файл (до 64 КБ) | `wb_read_file` |
-| Записать файл (SFTP) | `wb_write_file` |
-| Чтение retained-топика | `wb_mqtt_read` |
-| Запись в MQTT (контрол → `<topic>/on`) | `wb_mqtt_write` |
-| Список топиков по префиксу | `wb_mqtt_list` |
+| Intent | Tool |
+|--------|------|
+| Find controllers on the network | `wb_discover` (mDNS + manual) |
+| Controller reachability + system info | `wb_probe` |
+| Add a controller manually (no mDNS, have IP) | `wb_add_controller` |
+| Command on controller (quick, up to 2 min) | `wb_ssh_exec` |
+| Long command (`apt`, `docker pull/build`, `wb-release`) | `wb_ssh_exec_async` → `wb_job_status` / `wb_job_tail` / `wb_job_cancel` |
+| Read a file (up to 64 KB) | `wb_read_file` |
+| Write a file (SFTP) | `wb_write_file` |
+| Read retained topic | `wb_mqtt_read` |
+| Write to MQTT (control → `<topic>/on`) | `wb_mqtt_write` |
+| List topics by prefix | `wb_mqtt_list` |
 | MQTT RPC (wb-mqtt-serial, confed, wbrules, db_logger) | `wb_mqtt_rpc` |
-| Список устройств / контролов | `wb_mqtt_devices`, `wb_mqtt_controls` |
-| История значения | `wb_history` |
-| SVG-чарт истории (line/bar/area/heatmap…) | `wb_history_chart` |
-| Аудит / снимок состояния | `wb_audit`, `wb_state_save`, `wb_state_diff` |
-| Метрики (load/RAM/диск), логи unit'а, failed-сервисы | `wb_metrics`, `wb_logs`, `wb_failed` |
-| Modbus: шаблон / список шаблонов / прошивка / probe / порты / scan / авто-добавить | `wb_modbus_template`, `wb_modbus_templates_list`, `wb_modbus_device_info`, `wb_modbus_probe`, `wb_modbus_ports`, `wb_modbus_scan`, `wb_modbus_add_devices` |
-| Modbus serial debug (raw RS-485 пакеты) | `wb_serial_debug` |
+| List devices / controls | `wb_mqtt_devices`, `wb_mqtt_controls` |
+| Value history | `wb_history` |
+| SVG history chart (line/bar/area/heatmap…) | `wb_history_chart` |
+| Audit / state snapshot | `wb_audit`, `wb_state_save`, `wb_state_diff` |
+| Metrics (load/RAM/disk), unit logs, failed services | `wb_metrics`, `wb_logs`, `wb_failed` |
+| Modbus: template / templates list / firmware / probe / ports / scan / auto-add | `wb_modbus_template`, `wb_modbus_templates_list`, `wb_modbus_device_info`, `wb_modbus_probe`, `wb_modbus_ports`, `wb_modbus_scan`, `wb_modbus_add_devices` |
+| Modbus serial debug (raw RS-485 packets) | `wb_serial_debug` |
 | wb-rules: list / load / save / disable / delete | `wb_rules_list`, `wb_rules_load`, `wb_rules_save`, `wb_rules_disable`, `wb_rules_delete` |
 | Confed: load / save | `wb_confed_load`, `wb_confed_save` |
 
-## Обнаружение контроллеров
+## Discovering controllers
 
-`wb_discover` — единственный путь. Внутри объединяет mDNS-скан (через `bonjour-service` + `avahi-browse`) и ручные добавления (`wb_add_controller`). Возвращает `sn`, `host`, адреса, `reachable`, `fw`. Не дёргай `avahi-browse`/`ping` руками.
+`wb_discover` is the only path. Internally it merges mDNS scan (via `bonjour-service` + `avahi-browse`) and manual additions (`wb_add_controller`). Returns `sn`, `host`, addresses, `reachable`, `fw`. Don't poke `avahi-browse`/`ping` by hand.
 
-**Холодный кеш — норма.** Discovery опрашивает сеть каждые `WB_DISCOVERY_INTERVAL` мс (default 15000). Если контроллер только что появился или MCP-сервер только что запустился, первый `wb_discover` может вернуть пустой список или неполный. Подожди ~5-15 сек и повтори.
+**Cold cache is normal.** Discovery polls the network every `WB_DISCOVERY_INTERVAL` ms (default 15000). If the controller just appeared or the MCP server just started, the first `wb_discover` may return an empty or incomplete list. Wait ~5-15 sec and retry.
 
-Если контроллер совсем не виден через mDNS (Docker-окружение, закрытый multicast, разные VLAN):
+If the controller isn't visible via mDNS at all (Docker environment, closed multicast, different VLANs):
 
-- `wb_add_controller` с `host=<IP-или-hostname>` — заведёт запись, попробует получить SN.
+- `wb_add_controller` with `host=<IP-or-hostname>` — creates an entry, attempts to fetch the SN.
 
-Адреса, которые возвращает `wb_discover`, не содержат IPv6 link-local (`fe80::*`) — для SSH с этого хоста они всё равно бесполезны без указания scope-id.
+The addresses returned by `wb_discover` don't include IPv6 link-local (`fe80::*`) — for SSH from this host they're useless without specifying a scope-id anyway.
 
-### Формат серийного номера
+### Serial number format
 
-- SN — буквенно-цифровой, вида `A25NDEMJ` (длина может отличаться).
+- SN is alphanumeric, like `A25NDEMJ` (length may vary).
 - Hostname: `wirenboard-<sn>.local`.
-- Все tools принимают `sn`; mDNS-резолвинг внутри.
-- Получить SN с контроллера руками (если не удалось через discovery): `wb_ssh_exec` `cat /var/lib/wirenboard/short_sn.conf` или `wb_mqtt_read` `/devices/system/controls/Short SN`.
+- All tools accept `sn`; mDNS resolution happens internally.
+- Get the SN from the controller manually (if discovery failed): `wb_ssh_exec` `cat /var/lib/wirenboard/short_sn.conf` or `wb_mqtt_read` `/devices/system/controls/Short SN`.
 
-### Версия прошивки
+### Firmware version
 
-- Через `wb_probe` — приходит в системной инфе.
-- Прямые файлы при необходимости: `wb_read_file` `/etc/wb-fw-version` (формат — timestamp `YYYYMMDDHHMM`) и `/usr/lib/wb-release` (shell-нотация: `RELEASE_NAME`, `SUITE`, `TARGET`).
+- Via `wb_probe` — comes in the system info.
+- Direct files if needed: `wb_read_file` `/etc/wb-fw-version` (format — timestamp `YYYYMMDDHHMM`) and `/usr/lib/wb-release` (shell notation: `RELEASE_NAME`, `SUITE`, `TARGET`).
 
-## Команды на контроллере
+## Commands on the controller
 
-### Быстрые (до 2 минут)
+### Quick (up to 2 minutes)
 
-`wb_ssh_exec` с `sn` и `cmd`. Tool работает через пул соединений и отдаёт stdout/stderr/exit_code.
+`wb_ssh_exec` with `sn` and `cmd`. The tool uses a connection pool and returns stdout/stderr/exit_code.
 
-Примеры команд (что класть в `cmd`):
+Command examples (what to put in `cmd`):
 
 - `systemctl is-active wb-mqtt-serial`
 - `df -h / /mnt/data`
 - `uptime; free -h`
 - `ls /dev/ttyRS485-* /dev/ttyMOD* 2>/dev/null`
 
-### Длинные (apt, tar, сборка, wb-release)
+### Long (apt, tar, build, wb-release)
 
-**Только** через `wb_ssh_exec_async`. Синхронный `wb_ssh_exec` упадёт по таймауту, оборвав apt в середине транзакции.
+**Only** via `wb_ssh_exec_async`. Synchronous `wb_ssh_exec` will timeout, breaking apt mid-transaction.
 
-Цикл:
+Cycle:
 
-1. `wb_ssh_exec_async` `cmd="..."` → возвращает `job_id`.
-2. `wb_job_tail` `job_id=...` → инкрементальный лог (вызывай с интервалом).
+1. `wb_ssh_exec_async` `cmd="..."` → returns `job_id`.
+2. `wb_job_tail` `job_id=...` → incremental log (call periodically).
 3. `wb_job_status` `job_id=...` → `running` / `exited` (`exit_code`).
-4. `wb_job_cancel` `job_id=...` — если нужно отменить (только до критической фазы установки).
+4. `wb_job_cancel` `job_id=...` — if cancellation is needed (only before the critical install phase).
 
-Внутри tool использует systemd-run, задача переживает разрыв соединения.
+Internally the tool uses systemd-run, the job survives connection drop.
 
-## MQTT-операции
+## MQTT operations
 
-### Чтение и запись
+### Reading and writing
 
-| Сценарий | Tool |
+| Scenario | Tool |
 |----------|------|
-| Прочитать значение контрола | `wb_mqtt_read` topic=`/devices/<d>/controls/<c>` |
-| Прочитать тип/meta | `wb_mqtt_read` topic=`/devices/<d>/controls/<c>/meta/type` |
-| Записать значение контрола | `wb_mqtt_write` topic=`/devices/<d>/controls/<c>/on` value=`...` |
-| Список устройств | `wb_mqtt_devices` или `wb_mqtt_list` `prefix=/devices/+/meta/name` |
-| Список контролов устройства | `wb_mqtt_controls` или `wb_mqtt_list` `prefix=/devices/<d>/controls/+` |
+| Read control value | `wb_mqtt_read` topic=`/devices/<d>/controls/<c>` |
+| Read type/meta | `wb_mqtt_read` topic=`/devices/<d>/controls/<c>/meta/type` |
+| Write control value | `wb_mqtt_write` topic=`/devices/<d>/controls/<c>/on` value=`...` |
+| List devices | `wb_mqtt_devices` or `wb_mqtt_list` `prefix=/devices/+/meta/name` |
+| List device controls | `wb_mqtt_controls` or `wb_mqtt_list` `prefix=/devices/<d>/controls/+` |
 
-**Важно:** для управления контролами публикуй в `<topic>/on`, не в сам `<topic>` — иначе значение затрётся драйвером.
+**Important:** to control values, publish to `<topic>/on`, not to `<topic>` itself — otherwise the value is overwritten by the driver.
 
 ### MQTT RPC
 
-`wb_mqtt_rpc` инкапсулирует генерацию client_id, подписку на reply-топик, паузу до публикации запроса и таймаут. Не пиши `mosquitto_sub`/`mosquitto_pub` вручную для стандартных сервисов.
+`wb_mqtt_rpc` encapsulates client_id generation, reply-topic subscription, pause before publishing the request, and timeout. Don't write `mosquitto_sub`/`mosquitto_pub` by hand for standard services.
 
-Параметры: `service` (например `wb-mqtt-serial`), `method` (`config/Load`), `params` (объект, обязательный — даже пустой `{}`), `timeout` (сек, по умолчанию разумный для метода).
+Parameters: `service` (e.g. `wb-mqtt-serial`), `method` (`config/Load`), `params` (object, mandatory — even empty `{}`), `timeout` (sec, default reasonable per method).
 
-Для специализированных операций есть высокоуровневые tools — предпочитай их:
+For specialized operations there are higher-level tools — prefer them:
 
-| Цель | Tool |
+| Goal | Tool |
 |------|------|
-| Список доступных шаблонов | `wb_modbus_templates_list` (без filter — сводка по группам, с filter — flat list) |
-| Содержимое шаблона устройства (по device_type или mqtt-id, регистронезависимо) | `wb_modbus_template` |
-| Параметры прошивки устройства (fw, model, parameters) | `wb_modbus_device_info` |
-| Пинг устройства на шине | `wb_modbus_probe` |
-| Параметры RS-485 портов | `wb_modbus_ports` |
-| Сканирование шины | `wb_modbus_scan` (через wb-device-manager, async; `scan_type:"extended"`=Fast Modbus, `"standard"`=обычный) |
-| Добавить найденное сканом в конфиг | `wb_modbus_add_devices` (по одному, dryRun=true для предпросмотра) |
-| Raw RS-485 debug-логи драйвера | `wb_serial_debug` |
-| Прочитать `/etc/wb-mqtt-serial.conf` или `/etc/wb-hardware.conf` | `wb_confed_load` |
-| Записать конфиг с валидацией и рестартом | `wb_confed_save` |
-| Список / load / save / disable / delete правил | `wb_rules_list`, `wb_rules_load`, `wb_rules_save`, `wb_rules_disable`, `wb_rules_delete` |
+| List of available templates | `wb_modbus_templates_list` (without filter — group summary, with filter — flat list) |
+| Device template contents (by device_type or mqtt-id, case-insensitive) | `wb_modbus_template` |
+| Device firmware parameters (fw, model, parameters) | `wb_modbus_device_info` |
+| Ping a device on the bus | `wb_modbus_probe` |
+| RS-485 port parameters | `wb_modbus_ports` |
+| Bus scanning | `wb_modbus_scan` (via wb-device-manager, async; `scan_type:"extended"`=Fast Modbus, `"standard"`=regular) |
+| Add scan findings to the config | `wb_modbus_add_devices` (one at a time, dryRun=true for preview) |
+| Raw RS-485 driver debug logs | `wb_serial_debug` |
+| Read `/etc/wb-mqtt-serial.conf` or `/etc/wb-hardware.conf` | `wb_confed_load` |
+| Write a config with validation and restart | `wb_confed_save` |
+| List / load / save / disable / delete rules | `wb_rules_list`, `wb_rules_load`, `wb_rules_save`, `wb_rules_disable`, `wb_rules_delete` |
 
-`wb_mqtt_rpc` нужен для редких/нестандартных вызовов (например `db_logger`, ручные сервисы).
+`wb_mqtt_rpc` is needed for rare/non-standard calls (e.g. `db_logger`, manual services).
 
-### Доступные RPC-сервисы (через `wb_mqtt_rpc` или специализированные tools)
+### Available RPC services (via `wb_mqtt_rpc` or specialized tools)
 
-#### wb-mqtt-serial — драйвер Modbus/RS-485
+#### wb-mqtt-serial — Modbus/RS-485 driver
 
-| Метод | Tool | params |
-|-------|------|--------|
-| `config/Load` (конфиг + `types[]` шаблонов) | `wb_mqtt_rpc` или `wb_confed_load(path=/etc/wb-mqtt-serial.conf)` | `{}` |
-| Шаблон устройства (channels/parameters/groups) | `wb_modbus_template` | `{device_type:"WB-MR6C"}` или `{device_type:"wb-mr6c"}` (mqtt-id, регистронезависимо) |
-| `device/LoadConfig` (параметры прошивки fw/model/parameters) | `wb_modbus_device_info` | `{device_id:"wb-mr6c_138"}` или полный набор по адресу |
+| Method | Tool | params |
+|--------|------|--------|
+| `config/Load` (config + `types[]` of templates) | `wb_mqtt_rpc` or `wb_confed_load(path=/etc/wb-mqtt-serial.conf)` | `{}` |
+| Device template (channels/parameters/groups) | `wb_modbus_template` | `{device_type:"WB-MR6C"}` or `{device_type:"wb-mr6c"}` (mqtt-id, case-insensitive) |
+| `device/LoadConfig` (firmware fw/model/parameters) | `wb_modbus_device_info` | `{device_id:"wb-mr6c_138"}` or full set by address |
 | `device/Probe` | `wb_modbus_probe` | `{path,baud_rate,slave_id}` |
-| Сканирование шины (через `wb-device-manager/bus-scan`) | `wb_modbus_scan` | `{port?, baud_rate?, scan_type:"extended"\|"standard"}` |
-| Авто-добавить найденное в конфиг | `wb_modbus_add_devices` | `{dryRun:true}` для предпросмотра |
+| Bus scan (via `wb-device-manager/bus-scan`) | `wb_modbus_scan` | `{port?, baud_rate?, scan_type:"extended"\|"standard"}` |
+| Auto-add findings to config | `wb_modbus_add_devices` | `{dryRun:true}` for preview |
 | `ports/Load` | `wb_modbus_ports` | `{}` |
 
-#### confed — редактор конфигов
+#### confed — config editor
 
-| Метод | Tool | Назначение |
-|-------|------|-----------|
-| `Editor/Load` | `wb_confed_load` | Загрузить конфиг по path |
-| `Editor/Save` | `wb_confed_save` | Сохранить (валидация JSON + атомарный рестарт сервиса) |
+| Method | Tool | Purpose |
+|--------|------|---------|
+| `Editor/Load` | `wb_confed_load` | Load config by path |
+| `Editor/Save` | `wb_confed_save` | Save (JSON validation + atomic service restart) |
 
-**Используй `wb_confed_save` вместо `wb_write_file`** для `/etc/wb-mqtt-serial.conf`, `/etc/wb-hardware.conf`, `/etc/wb-mqtt-mbgate.conf` и т.п. — он валидирует JSON и атомарно перезапускает зависимый сервис. Прямая запись битого JSON через `wb_write_file` может остановить опрос шины.
+**Use `wb_confed_save` instead of `wb_write_file`** for `/etc/wb-mqtt-serial.conf`, `/etc/wb-hardware.conf`, `/etc/wb-mqtt-mbgate.conf`, etc. — it validates JSON and atomically restarts the dependent service. Direct write of broken JSON via `wb_write_file` may stop bus polling.
 
-#### wbrules — движок правил
+#### wbrules — rules engine
 
-| Метод | Tool |
-|-------|------|
+| Method | Tool |
+|--------|------|
 | `Editor/List` | `wb_rules_list` |
 | `Editor/Load` | `wb_rules_load` |
-| `Editor/Save` | `wb_rules_save` (валидация JS + горячая перезагрузка) |
-| Удаление | `wb_rules_delete` (только с явным OK) |
+| `Editor/Save` | `wb_rules_save` (JS validation + hot reload) |
+| Removal | `wb_rules_delete` (only with explicit OK) |
 
-## Файловые операции
+## File operations
 
-| Действие | Tool |
-|----------|------|
-| Прочитать файл (≤64 КБ) | `wb_read_file` |
-| Записать файл (SFTP, любого размера в пределах диска) | `wb_write_file` |
-| Скачать каталог рекурсивно | вне MCP — локальный `scp -r root@<host>:<dir> <local>` |
-| Загрузить каталог рекурсивно | вне MCP — локальный `scp -r <local> root@<host>:<dir>` |
+| Action | Tool |
+|--------|------|
+| Read a file (≤64 KB) | `wb_read_file` |
+| Write a file (SFTP, any size within disk) | `wb_write_file` |
+| Download a directory recursively | outside MCP — local `scp -r root@<host>:<dir> <local>` |
+| Upload a directory recursively | outside MCP — local `scp -r <local> root@<host>:<dir>` |
 
-`scp` для каталогов делается через локальный Bash в обход MCP, потому что tool `wb_write_file` работает с одним файлом за вызов.
+`scp` for directories goes through local Bash bypassing MCP because the `wb_write_file` tool handles one file per call.
 
-Для записи многих мелких конфигов (например, при восстановлении бэкапа) используй `wb_write_file` в цикле или `wb_ssh_exec_async` `cmd='tar -xzf /tmp/backup.tar.gz -C /'`.
+For writing many small configs (e.g. on backup restore) use `wb_write_file` in a loop or `wb_ssh_exec_async` `cmd='tar -xzf /tmp/backup.tar.gz -C /'`.
 
-## Правила безопасности
+## Safety rules
 
-### ЗАПРЕЩЕНО
+### FORBIDDEN
 
-- **НЕ запускать FIT-прошивку** (`wb-fw-update`, `swupdate`, `wb-run-update`, `fit-update`) — прошивка только через web UI контроллера. FIT перезаписывает rootfs целиком, ошибка может окирпичить контроллер.
-- **`wb-factoryreset` — только с явным подтверждением пользователя и обязательным бэкапом перед.** Стирает все пользовательские данные (конфиги, правила, шаблоны, Docker-образы), пароль root возвращается к `wirenboard`, кастомные SSH-ключи пропадают. Полный сценарий — в `/controller-update` (Сценарий D). Не запускай по неоднозначной формулировке («очисти», «сброс»).
+- **Do NOT run FIT firmware** (`wb-fw-update`, `swupdate`, `wb-run-update`, `fit-update`) — firmware only via the controller's web UI. FIT rewrites the rootfs entirely, an error can brick the controller.
+- **`wb-factoryreset` — only with explicit user confirmation and a mandatory backup before.** Wipes all user data (configs, rules, templates, Docker images), root password reverts to `wirenboard`, custom SSH keys are gone. Full scenario — in `/controller-update` (Scenario D). Don't run on ambiguous wording ("clean", "reset").
 
-### Бэкап перед правкой конфигов — ОБЯЗАТЕЛЬНО
+### Backup before editing configs — MANDATORY
 
-Перед любой записью в конфигурационный файл:
+Before any write to a configuration file:
 
 ```
 wb_ssh_exec sn=<SN> cmd='cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date +%s)'
 ```
 
-Файлы, требующие бэкапа: `wb-mqtt-serial.conf`, `wb-hardware.conf`, файлы в `/etc/network/`, `/etc/mosquitto/`, `/etc/wb-rules/`.
+Files requiring backup: `wb-mqtt-serial.conf`, `wb-hardware.conf`, files in `/etc/network/`, `/etc/mosquitto/`, `/etc/wb-rules/`.
 
-### RPC/специализированные tools вместо прямой правки
+### RPC/specialized tools instead of direct edits
 
-| Конфиг | Tool | Почему |
-|--------|------|--------|
-| `/etc/wb-mqtt-serial.conf` | `wb_confed_save` | Валидация JSON + атомарный рестарт драйвера |
-| Правила `/etc/wb-rules/*.js` | `wb_rules_save` | Валидация JS + горячая перезагрузка |
-| `/etc/wb-hardware.conf` | `wb_confed_save` | Валидация + применение без reboot |
+| Config | Tool | Why |
+|--------|------|-----|
+| `/etc/wb-mqtt-serial.conf` | `wb_confed_save` | JSON validation + atomic driver restart |
+| Rules `/etc/wb-rules/*.js` | `wb_rules_save` | JS validation + hot reload |
+| `/etc/wb-hardware.conf` | `wb_confed_save` | Validation + apply without reboot |
 
-### Подтверждение пользователя
+### User confirmation
 
-**Спрашивай подтверждение перед:**
-- Деструктивными операциями: `rm`, `reboot`, `dpkg --remove`, `apt-get purge`, `wb_rules_delete`.
-- Перезапуском критичных сервисов: `systemctl restart wb-mqtt-serial`, `systemctl restart mosquitto`.
-- Изменением сетевой конфигурации (можно потерять доступ).
-- Остановкой Docker-контейнеров.
+**Ask for confirmation before:**
+- Destructive operations: `rm`, `reboot`, `dpkg --remove`, `apt-get purge`, `wb_rules_delete`.
+- Restarting critical services: `systemctl restart wb-mqtt-serial`, `systemctl restart mosquitto`.
+- Network configuration changes (can lose access).
+- Stopping Docker containers.
 
-**БЕЗ подтверждения (выполняй сразу):**
-- Диагностика и чтение: `wb_metrics`, `wb_logs`, `wb_failed`, `wb_mqtt_read`, `wb_mqtt_list`, `wb_audit`, `wb_modbus_*` read-only методы.
-- Сканирование шины (`wb_modbus_scan`) — read-only для устройств.
-- Просмотр правил/конфигов (`wb_rules_load`, `wb_confed_load`).
+**WITHOUT confirmation (run immediately):**
+- Diagnostics and reads: `wb_metrics`, `wb_logs`, `wb_failed`, `wb_mqtt_read`, `wb_mqtt_list`, `wb_audit`, `wb_modbus_*` read-only methods.
+- Bus scanning (`wb_modbus_scan`) — read-only for devices.
+- Viewing rules/configs (`wb_rules_load`, `wb_confed_load`).
 
-### Логи — только свежие
+### Logs — only fresh
 
-Через `wb_logs` укажи разумный `since` или `lines`. Не вытаскивай весь журнал — у unit'ов на контроллерах он может быть большим.
+In `wb_logs` specify a reasonable `since` or `lines`. Don't pull the entire journal — it can be huge for unit logs on controllers.
 
-## Типовые диагностические сценарии
+## Typical diagnostic scenarios
 
-| Сценарий | Tools |
-|---------|-------|
-| Упавшие сервисы | `wb_failed` |
-| Место и нагрузка | `wb_metrics` |
-| Ошибки в журнале | `wb_logs` `priority=err` (или `wb_ssh_exec` `journalctl -p err -n 50 --no-pager`) |
-| Kernel mismatch | `wb_audit` отметит расхождение или `wb_ssh_exec` `uname -r; dpkg -l linux-image-wb*` |
-| Список serial-портов | `wb_ssh_exec` `ls /dev/ttyRS485-* /dev/ttyMOD* 2>/dev/null` |
-| Жив ли MQTT-брокер | `wb_mqtt_list` (если возвращает топики — брокер живой), при сомнении `wb_logs unit=mosquitto` |
+| Scenario | Tools |
+|----------|-------|
+| Failed services | `wb_failed` |
+| Space and load | `wb_metrics` |
+| Errors in journal | `wb_logs` `priority=err` (or `wb_ssh_exec` `journalctl -p err -n 50 --no-pager`) |
+| Kernel mismatch | `wb_audit` will flag the discrepancy or `wb_ssh_exec` `uname -r; dpkg -l linux-image-wb*` |
+| List of serial ports | `wb_ssh_exec` `ls /dev/ttyRS485-* /dev/ttyMOD* 2>/dev/null` |
+| Is MQTT broker alive | `wb_mqtt_list` (if it returns topics — broker is alive); if in doubt `wb_logs unit=mosquitto` |
 
-## Скиллы
+## Skills
 
-Доступные скиллы для специфических задач — вызывай `/skill-name` когда задача попадает в их область:
+Available skills for specific tasks — call `/skill-name` when the task falls into their area:
 
-| Скилл | Область |
-|-------|---------|
-| `/wb-mqtt-serial` | Конфигурация Modbus-устройств, включение/отключение каналов, добавление устройств |
-| `/serial-templates` | Создание собственных Modbus-шаблонов (когда родного нет) |
-| `/wb-rules` | JS-правила автоматизации (defineRule, виртуальные устройства, таймеры, cron) |
-| `/scenarios` | Декларативные сценарии Web UI (devicesControl, lightControl, thermostat, schedule) |
-| `/notifications` | Telegram/Email/SMS из правил (`Notify.*`), `alarms.conf` |
-| `/troubleshooting` | Общая диагностика: упавшие сервисы, место на диске, kernel mismatch, Docker |
-| `/troubleshooting-serial` | RS-485/Modbus: CRC-ошибки, таймауты, проблемы сигнала |
+| Skill | Area |
+|-------|------|
+| `/wb-mqtt-serial` | Modbus device configuration, channel enable/disable, device addition |
+| `/serial-templates` | Authoring custom Modbus templates (when there's no native one) |
+| `/wb-rules` | JS automation rules (defineRule, virtual devices, timers, cron) |
+| `/scenarios` | Declarative Web UI scenarios (devicesControl, lightControl, thermostat, schedule) |
+| `/notifications` | Telegram/Email/SMS from rules (`Notify.*`), `alarms.conf` |
+| `/troubleshooting` | General diagnostics: failed services, disk space, kernel mismatch, Docker |
+| `/troubleshooting-serial` | RS-485/Modbus: CRC errors, timeouts, signal issues |
 | `/services` | systemd: override-conf, drop-ins, custom units/timers, mask/unmask |
 | `/network` | NetworkManager + wb-connection-manager: ethernet/wifi/4G/OpenVPN, failover |
-| `/wb-cloud` | Wiren Board Cloud agent: активация, статус, отвязка |
-| `/mqtt-broker` | mosquitto admin: пользователи, ACL, мосты, TLS |
-| `/controller-backup` | Полный бэкап: конфиги, пакеты, данные, Docker volumes |
-| `/controller-update` | Обновление прошивки и пакетов |
-| `/hardware-modules` | Модули расширения (MOD1-MOD4): Zigbee, CAN, RS-485, релейные |
-| `/software-install` | Установка ПО: Docker, Zigbee2MQTT, Home Assistant, Node-RED, Grafana |
-| `/zigbee` | Zigbee-устройства: сопряжение, управление, группы, OTA |
-| `/history` | История данных, графики (`wb_history_chart`), экспорт |
-| `/bugreport` | Составление багрепорта с диагностическим архивом |
+| `/wb-cloud` | Wiren Board Cloud agent: activation, status, unbinding |
+| `/mqtt-broker` | mosquitto admin: users, ACL, bridges, TLS |
+| `/controller-backup` | Full backup: configs, packages, data, Docker volumes |
+| `/controller-update` | Firmware and package updates |
+| `/hardware-modules` | Expansion modules (MOD1-MOD4): Zigbee, CAN, RS-485, relay |
+| `/software-install` | Software installation: Docker, Zigbee2MQTT, Home Assistant, Node-RED, Grafana |
+| `/zigbee` | Zigbee devices: pairing, control, groups, OTA |
+| `/history` | Data history, charts (`wb_history_chart`), export |
+| `/bugreport` | Composing a bug report with diagnostic archive |
 
-`/diagrams` (Mermaid) и `/documentation-search` есть только в bash-флейворе — они не зависят от контроллера, MCP-двойник не имеет смысла. Если установлены параллельно из `skills/bash/` — будут доступны.
+`/diagrams` (Mermaid) and `/documentation-search` exist only in bash flavor — they don't depend on the controller, the MCP twin makes no sense. If installed in parallel from `skills/bash/` — they'll be available.
 
-## Принципы работы
+## Operating principles
 
-1. **Сначала диагностика, потом действия.** Прежде чем что-то менять — разберись в текущем состоянии. `wb_confed_load`, `wb_logs`, `wb_mqtt_read`/`wb_mqtt_list`, `wb_metrics`.
+1. **Diagnostics first, then actions.** Before changing anything — figure out the current state. `wb_confed_load`, `wb_logs`, `wb_mqtt_read`/`wb_mqtt_list`, `wb_metrics`.
 
-2. **Не угадывай имена топиков.** Имена устройств и контролов зависят от конфигурации конкретного контроллера. Сначала `wb_mqtt_devices` / `wb_mqtt_controls`.
+2. **Don't guess topic names.** Device and control names depend on the specific controller's configuration. First `wb_mqtt_devices` / `wb_mqtt_controls`.
 
-3. **Не спрашивай «хотите ли вы» — делай.** Пользователь остановит, если что. Исключение — деструктивные операции (см. правила безопасности).
+3. **Don't ask "would you like" — do it.** The user will stop you if anything. Exception — destructive operations (see safety rules).
 
-4. **Действуй автономно.** Проверяй факты через tools, не спрашивай «установлен ли X?» — выясни сам:
+4. **Act autonomously.** Verify facts via tools, don't ask "is X installed?" — find out yourself:
    - `wb_ssh_exec` `dpkg -l | grep docker`
    - `wb_ssh_exec` `ip addr show`
-   - `wb_audit` для общей картины
+   - `wb_audit` for the overall picture
 
-5. **Шаблоны и конфиги — с контроллера, не из интернета.** На железке актуальная версия под установленную прошивку. Не делай WebFetch шаблонов с GitHub — используй `wb_modbus_template`.
+5. **Templates and configs from the controller, not the internet.** On the device, the version is current for the installed firmware. Don't WebFetch templates from GitHub — use `wb_modbus_template`.
 
-6. **Документация — перед починкой.** Для типовых задач (Docker, Zigbee, Home Assistant) сначала прочитай соответствующую страницу вики через WebFetch: `https://wirenboard.com/wiki/<Тема>`.
+6. **Documentation before fixing.** For typical tasks (Docker, Zigbee, Home Assistant) first read the corresponding wiki page via WebFetch: `https://wirenboard.com/wiki/<Topic>`.

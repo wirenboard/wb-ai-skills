@@ -1,113 +1,113 @@
 ---
 name: wb-mqtt-serial
-description: "Драйвер Modbus/RS-485 на контроллере Wiren Board. Конфиг /etc/wb-mqtt-serial.conf, шаблоны, доступ через MQTT RPC. Включение/отключение каналов, добавление устройств, сканирование шины, правка конфигурации wb-mqtt-serial."
+description: "Modbus/RS-485 driver on a Wiren Board controller. Config /etc/wb-mqtt-serial.conf, templates, access via MQTT RPC. Enabling/disabling channels, adding devices, scanning the bus, editing wb-mqtt-serial configuration."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
 # wb-mqtt-serial
 
-Драйвер Modbus/RS-485. Конфиг `/etc/wb-mqtt-serial.conf`, шаблоны `/usr/share/wb-mqtt-serial/templates/` (пакетные, не трогай) и `/etc/wb-mqtt-serial.conf.d/templates/` (свои). Доступ через MQTT RPC `wb-mqtt-serial/...`, не через файлы. Подгружай на: «канал не публикуется», «не вижу устройство на шине», «опрос замер», «включи канал X», «просканируй шину», «slave_id / холдинг / coil / input регистр», включение/отключение каналов, добавление/удаление/правка устройств в конфиге wb-mqtt-serial, «добавь modbus-устройство», «удали устройство», «очисти список устройств», «измени конфиг serial», «wb-mqtt-serial.conf», правка ports/devices в конфиге.
+Modbus/RS-485 driver. Config `/etc/wb-mqtt-serial.conf`, templates `/usr/share/wb-mqtt-serial/templates/` (packaged, don't touch) and `/etc/wb-mqtt-serial.conf.d/templates/` (your own). Access via MQTT RPC `wb-mqtt-serial/...`, not via files. Load this on: "channel not publishing", "don't see device on the bus", "polling stalled", "enable channel X", "scan the bus", "slave_id / holding / coil / input register", enabling/disabling channels, adding/removing/editing devices in the wb-mqtt-serial config, "add a Modbus device", "remove a device", "clear device list", "edit serial config", "wb-mqtt-serial.conf", editing ports/devices in the config.
 
-**Граница скиллов:** если нужно создать шаблон для устройства которого нет во встроенных — это скилл `wb-mqtt-serial-template`. Если проблема с сигналом/CRC/таймаутами — `troubleshooting-serial`.
+**Skill boundary:** if a template needs to be created for a device that isn't among the built-ins — that's the `wb-mqtt-serial-template` skill. If the issue is signal/CRC/timeouts — `troubleshooting-serial`.
 
-**Переменная HOST:** во всех примерах ниже `<HOST>` означает `wirenboard-<SN>.local`, где `<SN>` — серийный номер контроллера (например `wirenboard-AABBCCDD.local`). Подставляй реальный адрес.
+**HOST variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
 
-## RPC и файлы — что откуда брать
+## RPC and files — what to take from where
 
-| Что | Откуда | Почему |
+| What | From | Why |
 |-----|--------|--------|
-| Все каналы устройства, включая `enabled:false` | **Файл** `/usr/share/wb-mqtt-serial/templates/config-<device.id>.json` | На текущих прошивках (wb-2602, wb-2507) `templates/GetTemplate` RPC **не работает** (таймаут), а `device/LoadConfig` возвращает только `{fw, model, parameters}` без channels |
-| Текущий конфиг драйвера | RPC `config/Load` | |
-| Параметры прошивки устройства (debounce, modes, in/out mappings) | RPC `device/LoadConfig` | Только `{fw, model, parameters}` |
-| Параметры RS-485 портов | RPC `ports/Load` | |
-| Запись конфига | RPC `confed/Editor/Save` | Валидация + атомарный рестарт. Битый JSON не пишется, опрос шины жив |
-| Сканирование шины | RPC `wb-device-manager/bus-scan/Start` (асинхронно, прогресс/devices в retained `/wb-device-manager/state`) | `scan_type:"extended"` — Fast Modbus, `"standard"` — обычный. Старый `wb-mqtt-serial/port/Scan` молча пропускает живые WB-устройства (баг наблюдался на WB-MAP6S) |
-| Точечная проверка slave_id | RPC `device/Probe` | |
+| All device channels, including `enabled:false` | **File** `/usr/share/wb-mqtt-serial/templates/config-<device.id>.json` | On current firmwares (wb-2602, wb-2507) `templates/GetTemplate` RPC **doesn't work** (timeout), and `device/LoadConfig` returns only `{fw, model, parameters}` without channels |
+| Current driver config | RPC `config/Load` | |
+| Device firmware parameters (debounce, modes, in/out mappings) | RPC `device/LoadConfig` | Only `{fw, model, parameters}` |
+| RS-485 port parameters | RPC `ports/Load` | |
+| Writing the config | RPC `confed/Editor/Save` | Validation + atomic restart. Broken JSON isn't written, bus polling stays alive |
+| Bus scanning | RPC `wb-device-manager/bus-scan/Start` (async, progress/devices in retained `/wb-device-manager/state`) | `scan_type:"extended"` — Fast Modbus, `"standard"` — regular. The old `wb-mqtt-serial/port/Scan` silently misses live WB devices (bug observed on WB-MAP6S) |
+| Pinpoint slave_id check | RPC `device/Probe` | |
 
-Прямой `ssh ... cat >` в `.conf` — только с бэкапом и осознанно (см. ниже).
+Direct `ssh ... cat >` to a `.conf` — only with backup and consciously (see below).
 
-- **«Канала нет в MQTT» ≠ «не поддерживается».** Многие каналы шаблонов идут с `"enabled": false` (Uptime, Counter, Total, Serial). Сначала прочти шаблон из файла, потом выводы.
-- **Шаблон ищи на контроллере, не на GitHub.** На железке — актуальный под прошивку. `WebFetch` шаблонов почти всегда зря.
-- **Кастомный шаблон — последнее средство.** Сначала проверь встроенный.
-- **Скан асинхронный.** `wb-device-manager/bus-scan/Start` возвращает сразу, прогресс смотри в retained-state.
+- **"Channel not in MQTT" ≠ "not supported."** Many template channels are `"enabled": false` (Uptime, Counter, Total, Serial). First read the template, then conclude.
+- **Look for the template on the controller, not on GitHub.** On the hardware — it matches the firmware. `WebFetch` for templates is almost always a waste.
+- **Custom template — last resort.** First check the built-in.
+- **Scan is async.** `wb-device-manager/bus-scan/Start` returns immediately, watch progress in retained state.
 
-## MQTT RPC через Bash
+## MQTT RPC via Bash
 
-Паттерн MQTT RPC на контроллере — подписка на reply, публикация запроса:
+The MQTT RPC pattern on the controller — subscribe to reply, publish the request:
 
 ```bash
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); mosquitto_sub -t "/rpc/v1/<driver>/<service>/<method>/$CID/reply" -C 1 -W <timeout> & sleep 0.2; mosquitto_pub -t "/rpc/v1/<driver>/<service>/<method>/$CID" -m '"'"'{"id":1,"params":{...}}'"'"'; wait'
 ```
 
-`params` — вложенный объект, обязательное поле (даже пустой `{}`).
+`params` is a nested object, mandatory field (even an empty `{}`).
 
-### Получение списка каналов устройства (через файл)
+### Getting the device channel list (via file)
 
-Найди шаблон устройства по `device_type` (например `WB-MR6C`):
+Find the device template by `device_type` (e.g. `WB-MR6C`):
 
 ```bash
-# Имя файла = config-<device.id>.json, где device.id — поле из шаблона.
-# Простой случай: WB-MR6C → wb-mr6c. Сложный (с пробелами/точками): "WB-MR6C v.3" → wb-mr6cv3.
-# Самый надёжный способ — найти по полю device_type:
+# File name = config-<device.id>.json, where device.id is a field from the template.
+# Simple case: WB-MR6C → wb-mr6c. Complex (with spaces/dots): "WB-MR6C v.3" → wb-mr6cv3.
+# Most reliable way — find by device_type field:
 ssh root@<HOST> 'for f in /usr/share/wb-mqtt-serial/templates/*.json; do dt=$(jq -r ".device_type" "$f" 2>/dev/null); if [ "$dt" = "WB-MR6C" ]; then echo "$f"; break; fi; done'
 ```
 
-Прочитать каналы:
+Read channels:
 
 ```bash
 ssh root@<HOST> 'jq ".device.channels[] | {name, enabled}" /usr/share/wb-mqtt-serial/templates/config-wb-mr6c.json'
-# или весь шаблон целиком:
+# or the whole template:
 ssh root@<HOST> 'cat /usr/share/wb-mqtt-serial/templates/config-wb-mr6c.json'
 ```
 
-Структура шаблона: `{title, device_type, group, hw, device:{name, id, channels:[...], parameters:[...], groups:[...], translations:{}}}`.
+Template structure: `{title, device_type, group, hw, device:{name, id, channels:[...], parameters:[...], groups:[...], translations:{}}}`.
 
-### Примеры RPC вызовов
+### RPC call examples
 
-**Параметры прошивки устройства (debounce, modes, mappings) — НЕ каналы:**
+**Device firmware parameters (debounce, modes, mappings) — NOT channels:**
 ```bash
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); mosquitto_sub -t "/rpc/v1/wb-mqtt-serial/device/LoadConfig/$CID/reply" -C 1 -W 5 & sleep 0.2; mosquitto_pub -t "/rpc/v1/wb-mqtt-serial/device/LoadConfig/$CID" -m '"'"'{"id":1,"params":{"device_id":"wb-mr6c_138"}}'"'"'; wait'
 ```
 
-Возвращает `{fw, model, parameters}`. Для WB-MR6C `parameters` — это `in0_mode`, `in0_debounce_ms`, `in1_out1_sp` и пр. **Каналов в ответе нет** — для каналов читай файл-шаблон (см. выше).
+Returns `{fw, model, parameters}`. For WB-MR6C `parameters` is `in0_mode`, `in0_debounce_ms`, `in1_out1_sp`, etc. **No channels in the response** — for channels read the template file (see above).
 
-**Текущий конфиг драйвера:**
+**Current driver config:**
 ```bash
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); mosquitto_sub -t "/rpc/v1/wb-mqtt-serial/config/Load/$CID/reply" -C 1 -W 5 & sleep 0.2; mosquitto_pub -t "/rpc/v1/wb-mqtt-serial/config/Load/$CID" -m '"'"'{"id":1,"params":{}}'"'"'; wait'
 ```
 
-**Сохранить конфиг (валидация + рестарт):**
+**Save config (validation + restart):**
 
-⚠️ **Критично:** `content` — это **JSON-объект**, не сериализованная строка. Если передать строку (с экранированными кавычками внутри), `confed/Editor/Save` запишет её в файл буквально как `"{...}"`-литерал, и `wb-mqtt-serial` упадёт с `requires objectValue`, оборвав опрос **всей шины** до восстановления из бэкапа.
+⚠️ **Critical:** `content` is a **JSON object**, not a serialized string. If you pass a string (with escaped quotes inside), `confed/Editor/Save` writes it to the file literally as a `"{...}"` literal, and `wb-mqtt-serial` falls over with `requires objectValue`, halting polling of the **entire bus** until restored from backup.
 
 ```bash
-# Подготовь новый конфиг локально на контроллере как файл:
+# Prepare the new config locally on the controller as a file:
 ssh root@<HOST> 'cp /etc/wb-mqtt-serial.conf /tmp/wb-mqtt-serial.conf.new'
-# … правишь /tmp/wb-mqtt-serial.conf.new любым способом (jq, sed, awk) …
+# … edit /tmp/wb-mqtt-serial.conf.new any way (jq, sed, awk) …
 
-# Сохрани через RPC: jq -Rs читает файл и кладёт его как JSON-string в поле, потом fromjson превращает в объект:
+# Save via RPC: jq -Rs reads the file raw and puts it as JSON string in the field, then fromjson turns it into an object:
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); PAYLOAD=$(jq -nc --rawfile c /tmp/wb-mqtt-serial.conf.new "{id:1,params:{path:\"/etc/wb-mqtt-serial.conf\",content:(\$c|fromjson)}}"); mosquitto_sub -t "/rpc/v1/confed/Editor/Save/$CID/reply" -C 1 -W 15 & sleep 0.2; mosquitto_pub -t "/rpc/v1/confed/Editor/Save/$CID" -m "$PAYLOAD"; wait'
 ```
 
-Ключевая часть payload — `content:($c|fromjson)`: jq берёт содержимое файла как **объект**, а не как строку. Без `fromjson` (то есть `content:$c` или прямая подстановка `"content":"..."`) — словишь bus-down.
+Key part of the payload — `content:($c|fromjson)`: jq takes the file content as an **object**, not as a string. Without `fromjson` (i.e. `content:$c` or direct substitution `"content":"..."`) — you get bus-down.
 
-После Save проверь, что файл стал именно объектом, а не строкой:
+After Save, verify the file became an object, not a string:
 
 ```bash
 ssh root@<HOST> 'head -c 50 /etc/wb-mqtt-serial.conf'
-# Норм:    {\n    "debug" : false,\n    "ports" ...
-# Ошибка:  "{\\n    \\"debug\\": ...    ← так быть не должно
+# OK:    {\n    "debug" : false,\n    "ports" ...
+# Bad:   "{\\n    \\"debug\\": ...    ← shouldn't be like this
 ```
 
-Если стало строкой — немедленно откатывай из бэкапа.
+If it became a string — immediately roll back from backup.
 
-**Скан шины (через `wb-device-manager`, асинхронно):**
+**Bus scan (via `wb-device-manager`, async):**
 
 ```bash
-# Старт (возвращает сразу)
+# Start (returns immediately)
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); mosquitto_sub -t "/rpc/v1/wb-device-manager/bus-scan/Start/$CID/reply" -C 1 -W 10 & sleep 0.2; mosquitto_pub -t "/rpc/v1/wb-device-manager/bus-scan/Start/$CID" -m '"'"'{"id":1,"params":{"scan_type":"extended","preserve_old_results":false,"port":{"path":"/dev/ttyRS485-1","baud_rate":115200,"parity":"N","data_bits":8,"stop_bits":2}}}'"'"'; wait'
 
-# Polling прогресс из retained-state
+# Polling progress from retained-state
 ssh root@<HOST> 'for i in $(seq 1 60); do
   s=$(mosquitto_sub -t /wb-device-manager/state -C 1 -W 2)
   echo "$s" | jq -r ".scanning, .progress" | xargs echo
@@ -115,109 +115,109 @@ ssh root@<HOST> 'for i in $(seq 1 60); do
   sleep 2
 done'
 
-# Финальные devices
+# Final devices
 ssh root@<HOST> 'mosquitto_sub -t /wb-device-manager/state -C 1 -W 3 | jq ".devices"'
 ```
 
-`scan_type:"extended"` — Fast Modbus (WB+Onokom, секунды). `scan_type:"standard"` — обычный Modbus (медленнее, но видит сторонние). Перебор baud — повторяй Start с другими параметрами и `preserve_old_results:true`.
+`scan_type:"extended"` — Fast Modbus (WB+Onokom, seconds). `scan_type:"standard"` — regular Modbus (slower, but sees third-party). Iterating bauds — repeat Start with other parameters and `preserve_old_results:true`.
 
-**Старый `wb-mqtt-serial/port/Scan` не использовать** — он молча пропускает живые WB-устройства (наблюдалось на WB-MAP6S). Если что-то не нашлось через `bus-scan` — проверяй точечно `device/Probe`.
+**Don't use the old `wb-mqtt-serial/port/Scan`** — it silently misses live WB devices (observed on WB-MAP6S). If something wasn't found via `bus-scan` — check pinpoint with `device/Probe`.
 
-**Точечная проверка slave_id:**
+**Pinpoint slave_id check:**
 ```bash
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); mosquitto_sub -t "/rpc/v1/wb-mqtt-serial/device/Probe/$CID/reply" -C 1 -W 10 & sleep 0.2; mosquitto_pub -t "/rpc/v1/wb-mqtt-serial/device/Probe/$CID" -m '"'"'{"id":1,"params":{"path":"/dev/ttyRS485-1","baud_rate":9600,"slave_id":138}}'"'"'; wait'
 ```
 
-Прочее: `device/Load` — живые значения каналов; `device/Set` — записать `{"channel_name": value}` (только по явной просьбе пользователя).
+Other: `device/Load` — live channel values; `device/Set` — write `{"channel_name": value}` (only on explicit user request).
 
-## Чтение MQTT-топиков
+## Reading MQTT topics
 
-**Прочитать значение канала:**
+**Read a channel value:**
 ```bash
 ssh root@<HOST> "mosquitto_sub -t '/devices/<device_id>/controls/<channel>' -C 1 -W 5"
 ```
 
-**Список устройств/топиков:**
+**List devices/topics:**
 ```bash
 ssh root@<HOST> "mosquitto_sub -t '/devices/+/meta/name' -C 100 -W 3"
 ```
 
-**Записать значение:**
+**Write a value:**
 ```bash
 ssh root@<HOST> "mosquitto_pub -t '/devices/<device_id>/controls/<channel>/on' -m '<value>'"
 ```
 
-## Сценарий «включи канал X на устройстве Y»
+## Scenario "enable channel X on device Y"
 
-1. Список устройств: `ssh root@<HOST> "mosquitto_sub -t '/devices/+/meta/name' -C 100 -W 3"` — найди `device_id`.
-2. **Список каналов из шаблона** (включая `enabled:false`): `ssh root@<HOST> 'jq ".device.channels[] | {name, enabled}" /usr/share/wb-mqtt-serial/templates/config-<device.id>.json'` — выясни, какие каналы вообще существуют для этого `device_type`.
-3. **Бэкап:** `ssh root@<HOST> "cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date +%s)"`.
-4. `config/Load({})` через RPC → сохрани результат в `/tmp/wb-mqtt-serial.conf.new` на контроллере.
-5. Правь JSON — найди устройство в `ports[*].devices[*]`, в его `channels` добавь/обнови запись `{"name": "<имя>", "enabled": true}` (имена каналов берутся из шаблона, шаг 2).
-6. Покажи пользователю diff, предупреди про рестарт `wb-mqtt-serial` (опрос замрёт ~5-10 сек).
-7. `confed/Editor/Save` с `content:($c|fromjson)` (см. пример выше — обязательно как объект, не строка).
-8. Через 10-20 сек: `ssh root@<HOST> "mosquitto_sub -t '/devices/<device_id>/controls/<channel>' -C 1 -W 20"`.
+1. Device list: `ssh root@<HOST> "mosquitto_sub -t '/devices/+/meta/name' -C 100 -W 3"` — find `device_id`.
+2. **Channel list from the template** (including `enabled:false`): `ssh root@<HOST> 'jq ".device.channels[] | {name, enabled}" /usr/share/wb-mqtt-serial/templates/config-<device.id>.json'` — find out which channels even exist for this `device_type`.
+3. **Backup:** `ssh root@<HOST> "cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date +%s)"`.
+4. `config/Load({})` via RPC → save the result to `/tmp/wb-mqtt-serial.conf.new` on the controller.
+5. Edit JSON — find the device in `ports[*].devices[*]`, add/update an entry `{"name": "<name>", "enabled": true}` in its `channels` (channel names come from the template, step 2).
+6. Show the user a diff, warn about the `wb-mqtt-serial` restart (polling pauses ~5-10 sec).
+7. `confed/Editor/Save` with `content:($c|fromjson)` (see example above — must be as an object, not a string).
+8. After 10-20 sec: `ssh root@<HOST> "mosquitto_sub -t '/devices/<device_id>/controls/<channel>' -C 1 -W 20"`.
 
-## Сценарий «что подключено на шине»
+## Scenario "what's connected on the bus"
 
-1. Порты: `ssh root@<HOST> "ls /dev/ttyRS485-* /dev/ttyMOD*"` или из `config/Load.config.ports`.
-2. **`wb-device-manager/bus-scan/Start`** на каждом порту с `scan_type:"extended"` (см. выше).
-3. После каждого старта — polling `/wb-device-manager/state` пока `scanning:false`.
-4. `state.devices` — массив `{title, sn, device_signature, port:{path}, cfg:{slave_id, baud_rate, parity, data_bits, stop_bits}, fw:{version}, online}`.
-5. Сравни с `config/Load.config.ports[*].devices` — что уже сконфигурировано, что новое.
+1. Ports: `ssh root@<HOST> "ls /dev/ttyRS485-* /dev/ttyMOD*"` or from `config/Load.config.ports`.
+2. **`wb-device-manager/bus-scan/Start`** on each port with `scan_type:"extended"` (see above).
+3. After each start — polling `/wb-device-manager/state` until `scanning:false`.
+4. `state.devices` — array of `{title, sn, device_signature, port:{path}, cfg:{slave_id, baud_rate, parity, data_bits, stop_bits}, fw:{version}, online}`.
+5. Compare with `config/Load.config.ports[*].devices` — what's already configured, what's new.
 
-## Сценарий «добавить найденные сканером устройства в конфиг»
+## Scenario "add devices found by the scanner to the config"
 
-После `bus-scan` retained `/wb-device-manager/state` содержит `devices[]` с `{device_signature, port.path, cfg.{slave_id,baud_rate,parity,data_bits,stop_bits}}`. Добавлять — **по одному, с подтверждением на каждом шаге**.
+After `bus-scan` retained `/wb-device-manager/state` contains `devices[]` with `{device_signature, port.path, cfg.{slave_id,baud_rate,parity,data_bits,stop_bits}}`. Add — **one at a time, with confirmation at each step**.
 
-Алгоритм (без жёсткого скрипта — следуй по шагам, на каждом покажи пользователю что собираешься сделать):
+Algorithm (no rigid script — follow step by step, at each show the user what you're going to do):
 
-1. **Прочитай скан-результат**: `mosquitto_sub -t /wb-device-manager/state -C 1 -W 3` (примеры выше). Отбрось устройства с `bootloader_mode:true`.
+1. **Read the scan result**: `mosquitto_sub -t /wb-device-manager/state -C 1 -W 3` (examples above). Drop devices with `bootloader_mode:true`.
 
-2. **Получи mapping `signature → device_type`** один раз: вызови `wb-mqtt-serial/config/Load`, в ответе `.result.types[].types[]` каждый шаблон содержит `hw[].signature`. Скан возвращает `device_signature` — найди соответствующий `type` (= `device_type` для конфига).
+2. **Get mapping `signature → device_type`** once: call `wb-mqtt-serial/config/Load`, in the response `.result.types[].types[]` each template contains `hw[].signature`. The scan returns `device_signature` — find the matching `type` (= `device_type` for the config).
 
-3. **Покажи пользователю таблицу кандидатов**: `port`, `slave_id`, `device_signature`, `device_type` (если найден), `fw`, `sn`. Параллельно — что уже в конфиге на тех же портах (вызови `confed/Editor/Load /etc/wb-mqtt-serial.conf` → `.result.content.ports[*].devices[*].slave_id`). Согласуй список к добавлению.
+3. **Show the user the candidate table**: `port`, `slave_id`, `device_signature`, `device_type` (if found), `fw`, `sn`. In parallel — what's already in the config on those ports (call `confed/Editor/Load /etc/wb-mqtt-serial.conf` → `.result.content.ports[*].devices[*].slave_id`). Agree the list to add.
 
-4. **Для каждого подтверждённого устройства** — отдельный Load → mutate → Save:
-   - `confed/Editor/Load /etc/wb-mqtt-serial.conf` — свежий снимок (между шагами могло измениться).
-   - **Прочитай шаблон устройства** (`/usr/share/wb-mqtt-serial/templates/config-<mqtt-id>.json`) и собери default-значения параметров: `jq -c '[.device.parameters[] | select(.default != null) | {(.id): .default}] | add' <template>`. Это **обязательно** — schema драйвера требует все required-параметры в device-record (типичный кейс: WB-MAI6 `in1_type..in6_type`). Без default'ов конфиг отвергается, опрос всей шины не запускается.
-   - В `result.content.ports[]` найди port с нужным `path`. Если `slave_id` уже в его `devices` — пропусти и доложи. Иначе допиши `{device_type, slave_id, enabled:true, ...defaults}` в его `devices`.
-   - Покажи мини-diff пользователю (что добавится в этот port).
-   - `confed/Editor/Save` с `content` — **JSON-объект, не строка** (формат payload — см. блок «Запись конфига» выше). Confed валидирует и сам рестартует `wb-mqtt-serial`, опрос замрёт ~5-10 сек.
-   - Через 10-20 сек проверь публикацию: `mosquitto_sub -t /devices/+/meta/name -C 100 -W 5 | grep <ожидаемое имя>`.
-   - Если save упал по validation (`Missing required property '...'`) — посмотри `journalctl -u wb-mqtt-serial -p err --since "1 min ago"` и допиши недостающие параметры.
+4. **For each confirmed device** — separate Load → mutate → Save:
+   - `confed/Editor/Load /etc/wb-mqtt-serial.conf` — fresh snapshot (it could change between steps).
+   - **Read the device template** (`/usr/share/wb-mqtt-serial/templates/config-<mqtt-id>.json`) and collect default parameter values: `jq -c '[.device.parameters[] | select(.default != null) | {(.id): .default}] | add' <template>`. This is **mandatory** — the driver's schema requires all required parameters in the device record (typical case: WB-MAI6 `in1_type..in6_type`). Without defaults the config is rejected, polling on the entire bus won't start.
+   - In `result.content.ports[]` find the port with the right `path`. If `slave_id` is already in its `devices` — skip and report. Otherwise append `{device_type, slave_id, enabled:true, ...defaults}` to its `devices`.
+   - Show a mini-diff to the user (what will be added to this port).
+   - `confed/Editor/Save` with `content` — **JSON object, not string** (payload format — see "Writing the config" block above). Confed validates and restarts `wb-mqtt-serial` itself, polling pauses ~5-10 sec.
+   - After 10-20 sec verify publishing: `mosquitto_sub -t /devices/+/meta/name -C 100 -W 5 | grep <expected name>`.
+   - If save failed validation (`Missing required property '...'`) — look at `journalctl -u wb-mqtt-serial -p err --since "1 min ago"` and add the missing parameters.
 
-5. **Не сливай несколько устройств в один Save** — если один из них упадёт по schema-валидации (неизвестный `device_type` или коллизия), остальные тоже не применятся, и придётся диагностировать что именно сломалось.
+5. **Don't merge multiple devices into one Save** — if one of them fails schema validation (unknown `device_type` or collision), the rest also won't apply, and you'll have to debug what exactly broke.
 
-### Грабли при auto-добавлении
+### Pitfalls in auto-add
 
-- **`device_signature` без шаблона** — пропускай и докладывай пользователю. Возможно стороннее устройство или новый WB-модуль из testing-релиза, шаблона ещё нет в установленной прошивке.
-- **`slave_id` уже сконфигурирован** — конфликт. Сначала переадресуй через `wb-mqtt-serial/device/Setup` (только по явной просьбе пользователя), потом добавляй.
-- **`baud_rate` устройства ≠ `port.baud_rate`** — добавление пройдёт, но опроса не будет. Решение через `device/Setup` или сменить baud порта.
-- **bootloader_mode: true** — устройство в fw-update, добавлять рано; дождись завершения и пере-сканируй.
+- **`device_signature` without a template** — skip and report to the user. Possibly a third-party device or a new WB module from a testing release whose template isn't in the installed firmware yet.
+- **`slave_id` already configured** — collision. First reassign via `wb-mqtt-serial/device/Setup` (only on explicit user request), then add.
+- **`baud_rate` of the device ≠ `port.baud_rate`** — adding will go through, but no polling. Solution via `device/Setup` or change port baud.
+- **bootloader_mode: true** — device is in fw-update, too early to add; wait for completion and rescan.
 
-## Прямая правка файла — бэкап обязателен
+## Direct file editing — backup mandatory
 
-Если без `confed/Editor/Save` (через `ssh ... cat >`) — сначала бэкап, потом `systemctl restart wb-mqtt-serial`:
+If without `confed/Editor/Save` (via `ssh ... cat >`) — first backup, then `systemctl restart wb-mqtt-serial`:
 
 ```bash
 ssh root@<HOST> "cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date +%s)"
 ```
 
-## Грабли
+## Pitfalls
 
-- **`confed/Editor/Save` с content как строкой** — кладёт опрос всей шины. `content` всегда объект, не сериализованная строка. См. пример с `jq -nc --rawfile c ... '... content:($c|fromjson) ...'` выше.
-- **`device/LoadConfig` ≠ список каналов.** Возвращает `{fw, model, parameters}` — параметры прошивки (debounce, modes, mappings). Каналы — в файле `/usr/share/wb-mqtt-serial/templates/config-*.json`.
-- **`templates/GetTemplate` RPC** — на текущих прошивках (wb-2602, wb-2507) не работает (таймаут). Не используй.
-- «Канал не поддерживается» по MQTT-листингу без чтения шаблона — см. выше, `enabled:false` не публикуется.
-- `WebFetch` шаблона с GitHub вместо чтения файла на контроллере — на железе актуальнее.
-- Кастомный шаблон до проверки встроенного.
-- Прямой `cat >` в `.conf` без валидации — битый JSON положит опрос шины.
-- Правка пакетных шаблонов в `/usr/share/...` — перезапишутся апдейтом. Кастом — только в `/etc/wb-mqtt-serial.conf.d/templates/`.
-- `port/Scan` без timeout >= 30 сек — таймаут, частичный ответ.
+- **`confed/Editor/Save` with content as a string** — kills polling on the whole bus. `content` is always an object, not a serialized string. See the example with `jq -nc --rawfile c ... '... content:($c|fromjson) ...'` above.
+- **`device/LoadConfig` ≠ channel list.** Returns `{fw, model, parameters}` — firmware parameters (debounce, modes, mappings). Channels — in the file `/usr/share/wb-mqtt-serial/templates/config-*.json`.
+- **`templates/GetTemplate` RPC** — doesn't work on current firmwares (wb-2602, wb-2507) (timeout). Don't use.
+- "Channel not supported" based on MQTT listing without reading the template — see above, `enabled:false` doesn't publish.
+- `WebFetch` of the template from GitHub instead of reading the file on the controller — on the hardware it's more current.
+- A custom template before checking the built-in.
+- Direct `cat >` to `.conf` without validation — broken JSON kills bus polling.
+- Editing packaged templates in `/usr/share/...` — overwritten by an update. Custom — only in `/etc/wb-mqtt-serial.conf.d/templates/`.
+- `port/Scan` without timeout >= 30 sec — timeout, partial response.
 
-## Документация
+## Documentation
 
 - Wiki: <https://wirenboard.com/wiki/wb-mqtt-serial>
-- Исходники + шаблоны: <https://github.com/wirenboard/wb-mqtt-serial>
-- Страницы модулей: `https://wirenboard.com/wiki/<Модель>` (WB-MR6C, WB-MSW_v.4 и т.п.)
+- Sources + templates: <https://github.com/wirenboard/wb-mqtt-serial>
+- Module pages: `https://wirenboard.com/wiki/<Model>` (WB-MR6C, WB-MSW_v.4, etc.)

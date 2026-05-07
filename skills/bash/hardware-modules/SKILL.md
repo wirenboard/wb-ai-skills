@@ -1,38 +1,38 @@
 ---
 name: hardware-modules
-description: Настройка модулей расширения WB (MOD1-4, WBIO, RS-485, Zigbee, CAN) через confed RPC.
+description: Configuring WB expansion modules (MOD1-4, WBIO, RS-485, Zigbee, CAN) via confed RPC.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # hardware-modules
 
-Настройка внутренних модулей расширения контроллера Wiren Board.
+Configuring internal expansion modules of a Wiren Board controller.
 
-## Архитектура
+## Architecture
 
-- **Конфиг:** `/etc/wb-hardware.conf` (JSON)
-- **Сервис:** `wb-hwconf-manager` — применяет Device Tree overlays
-- **Правка:** через confed RPC (не правь файл напрямую!)
+- **Config:** `/etc/wb-hardware.conf` (JSON)
+- **Service:** `wb-hwconf-manager` — applies Device Tree overlays
+- **Editing:** via confed RPC (don't edit the file directly!)
 
-## Слоты
+## Slots
 
-Точный набор слотов зависит от платформы (wb6/wb7/wb8) и ревизии. **Бери из `schema` ответа `Editor/Load`** — он отражает реальное железо. Типовая картина:
+The exact set of slots depends on the platform (wb6/wb7/wb8) and revision. **Take it from the `schema` of the `Editor/Load` response** — it reflects the actual hardware. Typical picture:
 
-| Слот в `content` | Что это | Возможный port |
+| Slot in `content` | What it is | Possible port |
 |------------------|---------|----------------|
-| `wb84-mod1`..`wb84-mod3` (на wb8) или `mod1`..`mod4` (на wb7) | Внутренние слоты UART/GPIO. Часть слотов — UART-only, часть — GPIO-only (например `wb84-mod1` без UART) | `/dev/ttyMOD<N>` если модуль UART (Zigbee, CAN-UART, RS-485, RS-232, GPS) |
-| `wb84-rs485-1`, `wb84-rs485-2` | Встроенные RS-485 с терминатором | `/dev/ttyRS485-1`, `/dev/ttyRS485-2` |
-| `wb84-extio1`..`wb84-extio8` | GPIO для WBIO-модулей (реле, сухие контакты, SSR) | — (нет tty) |
-| `wb84-w1`, `wb84-w2` | Клеммы W1/W2 в режиме 1-Wire master | — (через w1-bus, не tty) |
-| `wb84-wbmz5` | Слот резервного питания БРП | — |
-| `wb72-wbc` | Слот модема (на платформах с поддержкой) | — (modem) |
+| `wb84-mod1`..`wb84-mod3` (on wb8) or `mod1`..`mod4` (on wb7) | Internal UART/GPIO slots. Some slots are UART-only, some GPIO-only (e.g. `wb84-mod1` without UART) | `/dev/ttyMOD<N>` if the module is UART (Zigbee, CAN-UART, RS-485, RS-232, GPS) |
+| `wb84-rs485-1`, `wb84-rs485-2` | Built-in RS-485 with terminator | `/dev/ttyRS485-1`, `/dev/ttyRS485-2` |
+| `wb84-extio1`..`wb84-extio8` | GPIO for WBIO modules (relays, dry contacts, SSR) | — (no tty) |
+| `wb84-w1`, `wb84-w2` | W1/W2 terminals in 1-Wire master mode | — (via w1-bus, not tty) |
+| `wb84-wbmz5` | Backup power slot (BRP) | — |
+| `wb72-wbc` | Modem slot (on supported platforms) | — (modem) |
 
-Префикс (`wb84-*` для wb8, без префикса для wb7 и т.п.) меняется между ревизиями — не закладывайся на конкретный ID, выбирай по `schema.title` / `description`.
+The prefix (`wb84-*` for wb8, no prefix for wb7, etc.) varies between revisions — don't hard-code a specific ID, pick by `schema.title` / `description`.
 
-## Чтение конфигурации
+## Reading configuration
 
 ```bash
-# Загрузить текущий конфиг + схему через confed RPC
+# Load current config + schema via confed RPC
 ssh root@<HOST> bash -c '
   ID=$(cat /dev/urandom | tr -dc a-z0-9 | head -c8)
   mosquitto_sub -t "/rpc/v1/confed/Editor/Load/${ID}/reply" -C 1 -W 15 &
@@ -43,28 +43,28 @@ ssh root@<HOST> bash -c '
 '
 ```
 
-Ответ содержит `configPath`, `content` (объект конфига) и `schema` (JSON Schema со всеми модулями).
+The response contains `configPath`, `content` (config object) and `schema` (JSON Schema with all modules).
 
-## Установка модуля
+## Installing a module
 
-**Шаг 0:** Спроси пользователя в какой слот вставлен модуль физически. Не выбирай сам!
+**Step 0:** Ask the user which slot the module is physically inserted in. Don't pick yourself!
 
-**Шаг 1:** Прочитай конфиг (выше) — определи `module` из `schema`. Человекочитаемое описание — в `content.modules[].description` (не в `schema.definitions`, там только техническая дискриминация по `id`).
+**Step 1:** Read the config (above) — determine `module` from `schema`. Human-readable description is in `content.modules[].description` (not in `schema.definitions`, which only has technical discrimination by `id`).
 
-Реальные ID с прошивок wb-2507/wb8 — для ориентира, **не копировать вслепую**:
+Real IDs from wb-2507/wb8 firmwares — for orientation, **don't copy blindly**:
 
-| Модуль | module ID (примеры) |
+| Module | module ID (examples) |
 |--------|---------------------|
 | Zigbee | `wbe2r-r-zigbee` |
 | RS-232 | `wbe2-i-rs232` |
-| RS-485 (встроенные) | `wb67-can-rs485` |
-| RS-485 (внешний слот, изолированный) | `wbe2-i-rs485-iso` |
+| RS-485 (built-in) | `wb67-can-rs485` |
+| RS-485 (external slot, isolated) | `wbe2-i-rs485-iso` |
 | CAN | `wb67-can`, `wbe-i-can-iso`, `wb67-can-uart` |
 | 1-Wire | `wb6-wx-1wire` |
 
-> Точные ID зависят от платформы и ревизии. **Всегда** бери из `schema` ответа — у разных ревизий разные пакеты `wbe2-*` / `wb67-*` / `wb84-*`.
+> Exact IDs depend on platform and revision. **Always** take from the schema response — different revisions have different `wbe2-*` / `wb67-*` / `wb84-*` packages.
 
-**Шаг 2:** Измени `content` — в нужном слоте установи `module`. Сохрани через confed:
+**Step 2:** Modify `content` — set `module` in the desired slot. Save via confed:
 
 ```bash
 ssh root@<HOST> bash -c '
@@ -72,25 +72,25 @@ ssh root@<HOST> bash -c '
   mosquitto_sub -t "/rpc/v1/confed/Editor/Save/${ID}/reply" -C 1 -W 15 &
   SUB_PID=$!
   sleep 0.3
-  mosquitto_pub -t "/rpc/v1/confed/Editor/Save/${ID}" -m "{\"id\":\"${ID}\",\"params\":{\"path\":\"/etc/wb-hardware.conf\",\"content\":<полный JSON>}}"
+  mosquitto_pub -t "/rpc/v1/confed/Editor/Save/${ID}" -m "{\"id\":\"${ID}\",\"params\":{\"path\":\"/etc/wb-hardware.conf\",\"content\":<full JSON>}}"
   wait $SUB_PID
 '
 ```
 
-**Шаг 3:** Проверь — но только если устанавливаешь UART-модуль (Zigbee/CAN-UART/RS-232/RS-485/GPS):
+**Step 3:** Verify — but only if installing a UART module (Zigbee/CAN-UART/RS-232/RS-485/GPS):
 ```bash
 ssh root@<HOST> 'ls -la /dev/ttyMOD<N>'
 ```
-Для GPIO/1-Wire/extio/WBMZ5/модема порта `/dev/ttyMOD*` не появится — это **нормально**, не путай с ошибкой установки. Для 1-Wire — проверка через `ls /sys/bus/w1/devices/`. Для extio/WBIO — через `mosquitto_sub /devices/+/meta/name` (появится новое устройство в MQTT).
+For GPIO/1-Wire/extio/WBMZ5/modem the `/dev/ttyMOD*` port won't appear — that's **normal**, don't confuse with an installation error. For 1-Wire — verify via `ls /sys/bus/w1/devices/`. For extio/WBIO — via `mosquitto_sub /devices/+/meta/name` (a new device will appear in MQTT).
 
-## Грабли
+## Pitfalls
 
-- **Не правь `/etc/wb-hardware.conf` через ssh напрямую** — только confed RPC
-- **ID модулей** зависят от ревизии — всегда бери из schema
-- После установки Zigbee → настрой zigbee2mqtt (`/software-install`)
-- Смена модуля в слоте — старый деинициализируется, устройства пропадут
+- **Don't edit `/etc/wb-hardware.conf` via ssh directly** — only confed RPC
+- **Module IDs** depend on revision — always take from schema
+- After installing Zigbee → set up zigbee2mqtt (`/software-install`)
+- Changing the module in a slot — the old one is deinitialized, devices disappear
 
-## Документация
+## Documentation
 
 - <https://wiki.wirenboard.com/wiki/Internal_modules>
 - <https://wiki.wirenboard.com/wiki/WBIO>

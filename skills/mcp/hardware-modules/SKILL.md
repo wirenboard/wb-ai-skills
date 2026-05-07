@@ -1,93 +1,93 @@
 ---
 name: hardware-modules
-description: Настройка модулей расширения WB (MOD1-4, WBIO, RS-485, Zigbee, CAN) через MCP — wb_confed_load/save для /etc/wb-hardware.conf.
+description: Configuring WB expansion modules (MOD1-4, WBIO, RS-485, Zigbee, CAN) via MCP — wb_confed_load/save for /etc/wb-hardware.conf.
 allowed-tools: Bash Read Write WebFetch
 ---
 
 # hardware-modules (MCP)
 
-Настройка внутренних модулей расширения контроллера Wiren Board через MCP-tools `wb_confed_*`.
+Configuring internal expansion modules of a Wiren Board controller via `wb_confed_*` MCP tools.
 
-## Архитектура
+## Architecture
 
-- **Конфиг:** `/etc/wb-hardware.conf` (JSON).
-- **Сервис:** `wb-hwconf-manager` — применяет Device Tree overlays.
-- **Правка:** через `wb_confed_save` (не пиши файл напрямую через `wb_write_file` — `wb_confed_save` валидирует и атомарно перезапускает зависимые сервисы).
+- **Config:** `/etc/wb-hardware.conf` (JSON).
+- **Service:** `wb-hwconf-manager` — applies Device Tree overlays.
+- **Editing:** via `wb_confed_save` (don't write the file directly via `wb_write_file` — `wb_confed_save` validates and atomically restarts dependent services).
 
-## Маршрутизация tools
+## Tool routing
 
-| Намерение | Tool |
-|-----------|------|
-| Прочитать `/etc/wb-hardware.conf` (с JSON Schema) | `wb_confed_load path=/etc/wb-hardware.conf` |
-| Записать конфиг (валидация + применение) | `wb_confed_save` |
-| Какие порты появились (`/dev/ttyMODn`, `/dev/ttyRS485-n`) | `wb_ssh_exec` `ls -la /dev/ttyMOD* /dev/ttyRS485-*` |
-| Логи драйвера модуля | `wb_logs unit=<unit>` |
-| Состояние сервисов после смены | `wb_failed` |
+| Intent | Tool |
+|--------|------|
+| Read `/etc/wb-hardware.conf` (with JSON Schema) | `wb_confed_load path=/etc/wb-hardware.conf` |
+| Write config (validation + apply) | `wb_confed_save` |
+| Which ports appeared (`/dev/ttyMODn`, `/dev/ttyRS485-n`) | `wb_ssh_exec` `ls -la /dev/ttyMOD* /dev/ttyRS485-*` |
+| Module driver logs | `wb_logs unit=<unit>` |
+| Service state after change | `wb_failed` |
 
-## Слоты
+## Slots
 
-Точный набор зависит от платформы (wb6/wb7/wb8) и ревизии — **бери из `schema`**, возвращаемой `wb_confed_load`. Типовая картина:
+The exact set depends on the platform (wb6/wb7/wb8) and revision — **take it from the `schema`** returned by `wb_confed_load`. Typical picture:
 
-| Слот в `content` | Что это | Возможный port |
-|------------------|---------|----------------|
-| `mod1`..`modN` или `wb84-mod1`..`wb84-mod3` | Внутренние слоты UART/GPIO. Часть UART-only, часть GPIO-only | `/dev/ttyMOD<N>` если модуль UART (Zigbee, CAN-UART, RS-485, RS-232, GPS) |
-| `wb84-rs485-1`, `wb84-rs485-2` | Встроенные RS-485 с терминатором | `/dev/ttyRS485-1`, `/dev/ttyRS485-2` |
-| `wb84-extio1`..`wb84-extio8` | GPIO для WBIO-модулей (реле, сухие контакты, SSR) | — (нет tty) |
-| `wb84-w1`, `wb84-w2` | Клеммы W1/W2 в режиме 1-Wire master | — (через w1-bus) |
-| `wb84-wbmz5` | Слот резервного питания БРП | — |
-| `wb72-wbc` | Слот модема | — (modem) |
+| Slot in `content` | What it is | Possible port |
+|-------------------|-----------|---------------|
+| `mod1`..`modN` or `wb84-mod1`..`wb84-mod3` | Internal UART/GPIO slots. Some UART-only, some GPIO-only | `/dev/ttyMOD<N>` if module is UART (Zigbee, CAN-UART, RS-485, RS-232, GPS) |
+| `wb84-rs485-1`, `wb84-rs485-2` | Built-in RS-485 with terminator | `/dev/ttyRS485-1`, `/dev/ttyRS485-2` |
+| `wb84-extio1`..`wb84-extio8` | GPIO for WBIO modules (relays, dry contacts, SSR) | — (no tty) |
+| `wb84-w1`, `wb84-w2` | W1/W2 terminals in 1-Wire master mode | — (via w1-bus) |
+| `wb84-wbmz5` | Backup power BRP slot | — |
+| `wb72-wbc` | Modem slot | — (modem) |
 
-Префикс ID (`wb84-*` для wb8 и т.п.) меняется между ревизиями — не закладывайся на него, выбирай по `schema.title`/`description`.
+The ID prefix (`wb84-*` for wb8 etc.) varies between revisions — don't depend on it, choose by `schema.title`/`description`.
 
-## Чтение конфигурации
+## Reading the configuration
 
-`wb_confed_load path=/etc/wb-hardware.conf` возвращает `configPath`, `content` (объект конфига) и `schema` (JSON Schema со всеми модулями). Из schema берут точные ID модулей для текущей ревизии платы.
+`wb_confed_load path=/etc/wb-hardware.conf` returns `configPath`, `content` (config object) and `schema` (JSON Schema with all modules). Take the precise module IDs for the current board revision from the schema.
 
-## Установка модуля
+## Installing a module
 
-**Шаг 0:** Спроси пользователя, в какой слот вставлен модуль физически. Не выбирай сам!
+**Step 0:** Ask the user which slot the module is physically inserted in. Don't choose yourself!
 
-**Шаг 1:** `wb_confed_load` — определи допустимое значение `module` из `schema`. Человекочитаемое описание модуля — в `content.modules[].description`.
+**Step 1:** `wb_confed_load` — determine the valid `module` value from `schema`. The human-readable module description is in `content.modules[].description`.
 
-Реальные ID с прошивок wb-2507/wb8 — для ориентира, **не копировать вслепую**:
+Real IDs from wb-2507/wb8 firmware — for reference, **don't copy blindly**:
 
-| Модуль | module ID (примеры) |
-|--------|---------------------|
+| Module | module ID (examples) |
+|--------|----------------------|
 | Zigbee | `wbe2r-r-zigbee` |
 | RS-232 | `wbe2-i-rs232` |
-| RS-485 (встроенные) | `wb67-can-rs485` |
-| RS-485 (внешний слот, изолированный) | `wbe2-i-rs485-iso` |
+| RS-485 (built-in) | `wb67-can-rs485` |
+| RS-485 (external slot, isolated) | `wbe2-i-rs485-iso` |
 | CAN | `wb67-can`, `wbe-i-can-iso`, `wb67-can-uart` |
 | 1-Wire | `wb6-wx-1wire` |
 
-> Точные ID зависят от платформы и ревизии. **Всегда** бери из `schema` ответа — у разных ревизий разные пакеты `wbe2-*` / `wb67-*` / `wb84-*`.
+> Exact IDs depend on platform and revision. **Always** take from the `schema` of the response — different revisions have different `wbe2-*` / `wb67-*` / `wb84-*` packages.
 
-**Шаг 2:** Измени `content` — в нужном слоте установи `module`. Сохрани:
+**Step 2:** Modify `content` — set `module` in the desired slot. Save:
 
 ```
-wb_confed_save sn=<SN> path=/etc/wb-hardware.conf content=<полный JSON>
+wb_confed_save sn=<SN> path=/etc/wb-hardware.conf content=<full JSON>
 ```
 
-**Шаг 3:** Проверь — но только если устанавливаешь UART-модуль (Zigbee/CAN-UART/RS-232/RS-485/GPS):
+**Step 3:** Verify — but only if installing a UART module (Zigbee/CAN-UART/RS-232/RS-485/GPS):
 
 ```
 wb_ssh_exec sn=<SN> cmd='ls -la /dev/ttyMOD<N>'
 ```
 
-Для GPIO/1-Wire/extio/WBMZ5/модема порта `/dev/ttyMOD*` не появится — это **нормально**, не путай с ошибкой установки. Для 1-Wire — `wb_ssh_exec` `ls /sys/bus/w1/devices/`. Для extio/WBIO — `wb_mqtt_devices` (новое устройство появится в `/devices/+/meta/name`).
+For GPIO/1-Wire/extio/WBMZ5/modem, the `/dev/ttyMOD*` port won't appear — this is **normal**, don't confuse with installation error. For 1-Wire — `wb_ssh_exec` `ls /sys/bus/w1/devices/`. For extio/WBIO — `wb_mqtt_devices` (a new device will appear in `/devices/+/meta/name`).
 
-И в любом случае — `wb_failed` чтобы убедиться, что зависимые сервисы не упали.
+In any case — `wb_failed` to make sure dependent services didn't fail.
 
-**Шаг 4:** Смена профиля MOD1-4 может потребовать **перезагрузки контроллера** — `wb_confed_save` рестарт `wb-hwconf-manager` не всегда покрывает применение нового overlay. Если порт не появился — предупреди пользователя и предложи `reboot` (с подтверждением).
+**Step 4:** Switching the MOD1-4 profile may require a **controller reboot** — `wb_confed_save` restarting `wb-hwconf-manager` doesn't always cover applying a new overlay. If the port doesn't appear — warn the user and propose `reboot` (with confirmation).
 
-## Грабли
+## Gotchas
 
-- **Не пиши `/etc/wb-hardware.conf` через `wb_write_file`** — только `wb_confed_save`. Битый JSON может оставить контроллер без сети после рестарта `wb-hwconf-manager`.
-- **ID модулей** зависят от ревизии — всегда бери из `schema`, не из памяти.
-- После установки Zigbee → настрой zigbee2mqtt (`/software-install`).
-- Смена модуля в слоте — старый деинициализируется, устройства пропадут.
+- **Don't write `/etc/wb-hardware.conf` via `wb_write_file`** — only `wb_confed_save`. Broken JSON can leave the controller without network after `wb-hwconf-manager` restart.
+- **Module IDs** depend on revision — always take from `schema`, not from memory.
+- After installing Zigbee → configure zigbee2mqtt (`/software-install`).
+- Changing the module in a slot — the old one is deinitialized, devices disappear.
 
-## Документация
+## Documentation
 
 - <https://wiki.wirenboard.com/wiki/Internal_modules>
 - <https://wiki.wirenboard.com/wiki/WBIO>
