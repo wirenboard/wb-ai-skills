@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install wb-ai-integration skills into Claude Code or opencode.
+# Install wb-ai-skills skills into Claude Code or opencode.
 #
 # Usage:
 #   ./install-skills.sh <flavor> <target> [--global]

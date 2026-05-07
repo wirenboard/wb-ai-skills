@@ -210,8 +210,8 @@ export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
     const script = [
       'set -e',
       'CONF=/etc/wb-mqtt-serial.conf',
-      'LOGFILE=/mnt/data/ai/wb-ai-integration/diag/debug-serial.log',
-      'mkdir -p /mnt/data/ai/wb-ai-integration/diag',
+      'LOGFILE=/mnt/data/ai/wb-ai-skills/diag/debug-serial.log',
+      'mkdir -p /mnt/data/ai/wb-ai-skills/diag',
       // trap: whatever happens next, restore debug:false and restart the driver.
       'restore_off() { python3 -c "import json; c=json.load(open(\\"$CONF\\")); c[\\"debug\\"]=False; json.dump(c,open(\\"$CONF\\",\\"w\\"),indent=2)" 2>/dev/null || true; systemctl restart wb-mqtt-serial >/dev/null 2>&1 || true; echo "[wb_serial_debug] restored debug:false"; }',
       'trap restore_off EXIT INT TERM',
@@ -228,8 +228,8 @@ export function registerDiagnosticTools(server: McpServer, ctx: Ctx) {
     const job = await ctx.ssh.jobStart(c, script, 'serial debug collect')
     return text({
       jobId: job.jobId,
-      logPath: '/mnt/data/ai/wb-ai-integration/diag/debug-serial.log',
-      message: `Debug capture started for ${duration} sec. Use wb_job_status / wb_job_tail for progress. After completion, fetch logs via wb_read_file path=/mnt/data/ai/wb-ai-integration/diag/debug-serial.log (or scp if >64 KB).`,
+      logPath: '/mnt/data/ai/wb-ai-skills/diag/debug-serial.log',
+      message: `Debug capture started for ${duration} sec. Use wb_job_status / wb_job_tail for progress. After completion, fetch logs via wb_read_file path=/mnt/data/ai/wb-ai-skills/diag/debug-serial.log (or scp if >64 KB).`,
     })
   })
 }

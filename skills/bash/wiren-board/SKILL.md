@@ -128,7 +128,7 @@ For tasks that must survive an SSH disconnect. **The best pattern is script-file
 
 ```bash
 ID=$(head -c4 /dev/urandom | od -An -tx1 | tr -d ' ')
-DIR=/mnt/data/ai/wb-ai-integration/jobs
+DIR=/mnt/data/ai/wb-ai-skills/jobs
 ssh root@<host> bash -s <<EOF
 mkdir -p $DIR
 cat > $DIR/$ID.sh <<'JOB'
@@ -151,7 +151,7 @@ echo "jobId=$ID"
 Status check:
 
 ```bash
-ssh root@<host> 'systemctl is-active wb-ai-job-<id>; systemctl show wb-ai-job-<id> -p Result,ExecMainStatus --no-pager; tail -30 /mnt/data/ai/wb-ai-integration/jobs/<id>.log'
+ssh root@<host> 'systemctl is-active wb-ai-job-<id>; systemctl show wb-ai-job-<id> -p Result,ExecMainStatus --no-pager; tail -30 /mnt/data/ai/wb-ai-skills/jobs/<id>.log'
 ```
 
 Cancel:

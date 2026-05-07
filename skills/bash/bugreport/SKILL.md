@@ -40,10 +40,10 @@ ssh root@<HOST> 'echo "running: $(uname -r)"; dpkg -l "linux-image-wb*" 2>/dev/n
 
 ```bash
 # Collect (background task, ~30-60 sec):
-ssh root@<HOST> 'mkdir -p /mnt/data/ai/wb-ai-integration && systemd-run --unit=wb-ai-diag --collect bash -c "wb-diag-collect /mnt/data/ai/wb-ai-integration/diag"'
+ssh root@<HOST> 'mkdir -p /mnt/data/ai/wb-ai-skills && systemd-run --unit=wb-ai-diag --collect bash -c "wb-diag-collect /mnt/data/ai/wb-ai-skills/diag"'
 
 # Wait for completion and find the actual name of the latest archive:
-LATEST=$(ssh root@<HOST> 'ls -t /mnt/data/ai/wb-ai-integration/diag_*.zip 2>/dev/null | head -1')
+LATEST=$(ssh root@<HOST> 'ls -t /mnt/data/ai/wb-ai-skills/diag_*.zip 2>/dev/null | head -1')
 echo "diag archive: $LATEST"
 
 # Download **only the latest** under a clear name:

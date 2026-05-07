@@ -103,7 +103,7 @@ export type SnapshotResult = { snapshotPath: string; takenAt: string }
 export async function runSnapshot(ssh: SshPool, c: Controller): Promise<SnapshotResult> {
   const a = await runAudit(ssh, c)
   const ts = new Date().toISOString().replace(/[:.]/g, '-')
-  const path = `/mnt/data/ai/wb-ai-integration/snapshots/snapshot-${ts}.json`
+  const path = `/mnt/data/ai/wb-ai-skills/snapshots/snapshot-${ts}.json`
   const payload = JSON.stringify({
     takenAt: new Date().toISOString(),
     fwVersion: a.fw,
@@ -116,7 +116,7 @@ export async function runSnapshot(ssh: SshPool, c: Controller): Promise<Snapshot
     localSbin: a.localSbin,
     symlinks: a.symlinks,
   }, null, 2)
-  await ssh.exec(c, 'mkdir -p /mnt/data/ai/wb-ai-integration/snapshots', 5000)
+  await ssh.exec(c, 'mkdir -p /mnt/data/ai/wb-ai-skills/snapshots', 5000)
   await ssh.writeFile(c, path, payload)
   return { snapshotPath: path, takenAt: new Date().toISOString() }
 }

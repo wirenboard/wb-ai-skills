@@ -59,10 +59,10 @@ Software diagnostics of the serial bus (RS-485, Modbus and other protocols) at t
    wb_serial_debug sn=<SN> duration=<DURATION>
    ```
 
-   The tool returns `{jobId, logPath: /mnt/data/ai/wb-ai-integration/diag/debug-serial.log, message}`. Progress — `wb_job_status` / `wb_job_tail`. After completion:
+   The tool returns `{jobId, logPath: /mnt/data/ai/wb-ai-skills/diag/debug-serial.log, message}`. Progress — `wb_job_status` / `wb_job_tail`. After completion:
 
    ```
-   wb_read_file sn=<SN> path=/mnt/data/ai/wb-ai-integration/diag/debug-serial.log
+   wb_read_file sn=<SN> path=/mnt/data/ai/wb-ai-skills/diag/debug-serial.log
    ```
 
    If the log is large (>64 KB) — `wb_read_file` will fail; use local `scp` outside MCP. **Right after the tool, verify that debug is actually off and the driver is alive:**
@@ -89,7 +89,7 @@ Software diagnostics of the serial bus (RS-485, Modbus and other protocols) at t
 
    104-105 — uptime (u32, sec). 121-122 — Vsupply / Vmin (u16, mV) **only** on relays/dimmers/MCM. On WB-MAI/WB-MAP/some MR3, these registers map differently (input/measurement). If the value is implausible for voltage (5V on 24V supply) — for this model the register is different; see the device wiki page.
 
-7. **Save the report** — `wb_write_file` `/mnt/data/ai/wb-ai-integration/diag/serial-diag.txt` with the report text.
+7. **Save the report** — `wb_write_file` `/mnt/data/ai/wb-ai-skills/diag/serial-diag.txt` with the report text.
 
 ## Device firmware version
 

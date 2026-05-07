@@ -168,7 +168,7 @@ export class SshPool {
   }
 
   /** Start a background command via systemd-run.
-   *  Approach: command → /mnt/data/ai/wb-ai-integration/jobs/<id>.sh, log via
+   *  Approach: command → /mnt/data/ai/wb-ai-skills/jobs/<id>.sh, log via
    *  systemd `StandardOutput=append:` (not shell-redirect). No shell-quoting,
    *  no risk of `;` collapsing inside `bash -c '… > LOG'`. The script is saved —
    *  jobStatus can display it. Old .sh/.log files are GC'd by TTL. */
@@ -258,7 +258,7 @@ export class SshPool {
   }
 }
 
-const JOB_DIR = '/mnt/data/ai/wb-ai-integration/jobs'
+const JOB_DIR = '/mnt/data/ai/wb-ai-skills/jobs'
 const JOB_UNIT_PREFIX = 'wb-ai-job-'
 const JOB_TTL_SEC = 24 * 3600
 

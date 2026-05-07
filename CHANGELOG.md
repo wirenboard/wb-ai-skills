@@ -23,7 +23,7 @@ First public release. Tested on A25NDEMJ (wb7, wb-2410/wb-2602) and A2V6W7I6 (wb
 
 - **Discovery (3):** `wb_discover` (mDNS + manual), `wb_probe`, `wb_add_controller`.
 - **SSH+files (4):** `wb_ssh_exec`, `wb_ssh_exec_async`, `wb_read_file`, `wb_write_file`.
-- **Async jobs (3):** `wb_job_status`, `wb_job_tail`, `wb_job_cancel`. Via `systemd-run --collect` + script-file (`/mnt/data/ai/wb-ai-integration/jobs/<id>.sh`) + `StandardOutput=append:`. Survives SSH disconnect, gc by 24-hour TTL.
+- **Async jobs (3):** `wb_job_status`, `wb_job_tail`, `wb_job_cancel`. Via `systemd-run --collect` + script-file (`/mnt/data/ai/wb-ai-skills/jobs/<id>.sh`) + `StandardOutput=append:`. Survives SSH disconnect, gc by 24-hour TTL.
 - **MQTT (4):** `wb_mqtt_read` (any topic, not only WB), `wb_mqtt_write` (with optional `retain`/`qos`), `wb_mqtt_list`, `wb_mqtt_rpc`.
 - **MQTT devices (3):** `wb_mqtt_devices`, `wb_mqtt_controls`, `wb_mqtt_inventory` — combined: id+driver+error+controls with unpacked meta and error flags per [WB Conventions](https://github.com/wirenboard/conventions) (`r`/`w`/`p`).
 - **Confed (2):** `wb_confed_load`, `wb_confed_save`. Accepts content as object **or** JSON string (auto-parses — otherwise confed will write an escape-quoted string and break the config).
@@ -59,5 +59,5 @@ During development and testing on live controllers, around two dozen bugs were c
 - **modbus_scan**: `wb-mqtt-serial/port/Scan` silently skipped live WB devices (observed on WB-MAP6S) — switched to `wb-device-manager/bus-scan/Start`.
 - **modbus_template**: scanning 250+ files via jq was timing out — switched to mapping via RPC `config/Load.types`.
 
-[Unreleased]: https://github.com/wirenboard/wb-ai-integration/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/wirenboard/wb-ai-integration/releases/tag/v0.1.0
+[Unreleased]: https://github.com/wirenboard/wb-ai-skills/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/wirenboard/wb-ai-skills/releases/tag/v0.1.0

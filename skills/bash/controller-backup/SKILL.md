@@ -14,7 +14,7 @@ Backup and restore of a WB controller — collect an archive with configs, data 
 
 **Backup = tar.gz archive** with files, configs, package lists.
 
-**All files go to `/mnt/data/ai/wb-ai-integration/backups/`.** Don't scatter them across `/tmp`, `/root`, `/mnt/data/backups`.
+**All files go to `/mnt/data/ai/wb-ai-skills/backups/`.** Don't scatter them across `/tmp`, `/root`, `/mnt/data/backups`.
 
 **HOST variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the controller serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
 
@@ -66,13 +66,13 @@ Output sections breakdown:
 Save a controller state snapshot as JSON on the controller:
 
 ```bash
-ssh root@<HOST> 'mkdir -p /mnt/data/ai/wb-ai-integration/snapshots'
+ssh root@<HOST> 'mkdir -p /mnt/data/ai/wb-ai-skills/snapshots'
 ```
 
 Collect the same audit data and produce a JSON file:
 
 ```bash
-ssh root@<HOST> 'cat > /mnt/data/ai/wb-ai-integration/snapshots/snapshot-$(date +%Y-%m-%dT%H-%M-%S).json << SNAPEOF
+ssh root@<HOST> 'cat > /mnt/data/ai/wb-ai-skills/snapshots/snapshot-$(date +%Y-%m-%dT%H-%M-%S).json << SNAPEOF
 {
   "_comment": "Controller snapshot for backup verification",
   "takenAt": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
@@ -81,7 +81,7 @@ ssh root@<HOST> 'cat > /mnt/data/ai/wb-ai-integration/snapshots/snapshot-$(date 
   "enabledUnits": '"$(systemctl list-unit-files --state=enabled --no-legend 2>/dev/null | awk "{print \$1}" | sort | jq -Rsc 'split("\n") | map(select(. != ""))')"'
 }
 SNAPEOF
-echo "Snapshot saved: $(ls -t /mnt/data/ai/wb-ai-integration/snapshots/snapshot-*.json 2>/dev/null | head -1)"'
+echo "Snapshot saved: $(ls -t /mnt/data/ai/wb-ai-skills/snapshots/snapshot-*.json 2>/dev/null | head -1)"'
 ```
 
 Note: if `jq` is not on the controller, build the JSON another way or skip this step — it's not critical for the backup.
@@ -130,7 +130,7 @@ In one message to the user: difference report + "including in the archive: ...; 
 Run THIS script via systemd-run (background task). Don't invent your own script for this part.
 
 ```bash
-ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "set -e; TS=\$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-integration/backups/\$TS; mkdir -p \$B; cat /etc/wb-fw-version > \$B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release \$B/wb-release 2>/dev/null || true; apt-mark showmanual > \$B/packages-manual.list; dpkg-query -W -f='"'"'\${Package}=\${Version}\n'"'"' > \$B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk '"'"'{print \$1}'"'"' > \$B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c '"'"'T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac'"'"' _ {} \\; > \$B/symlinks-etc.list; tar czf \$B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \\( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \\) -prune -o \\( -name '"'"'docker-compose.y*ml'"'"' -o -name '"'"'compose.y*ml'"'"' \\) -print 2>/dev/null | tar czf \$B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=\$(ls -t /mnt/data/ai/wb-ai-integration/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n \"\$SNAP\" ] && cp \"\$SNAP\" \$B/state-snapshot.json; echo BACKUP_DIR=\$B; du -sh \$B \$B/*"'
+ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "set -e; TS=\$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-skills/backups/\$TS; mkdir -p \$B; cat /etc/wb-fw-version > \$B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release \$B/wb-release 2>/dev/null || true; apt-mark showmanual > \$B/packages-manual.list; dpkg-query -W -f='"'"'\${Package}=\${Version}\n'"'"' > \$B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk '"'"'{print \$1}'"'"' > \$B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c '"'"'T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac'"'"' _ {} \\; > \$B/symlinks-etc.list; tar czf \$B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \\( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \\) -prune -o \\( -name '"'"'docker-compose.y*ml'"'"' -o -name '"'"'compose.y*ml'"'"' \\) -print 2>/dev/null | tar czf \$B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=\$(ls -t /mnt/data/ai/wb-ai-skills/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n \"\$SNAP\" ] && cp \"\$SNAP\" \$B/state-snapshot.json; echo BACKUP_DIR=\$B; du -sh \$B \$B/*"'
 ```
 
 Check the job status:
@@ -138,7 +138,7 @@ Check the job status:
 ssh root@<HOST> "systemctl status wb-ai-job-* --no-pager 2>/dev/null | head -30"
 ```
 
-From the job output, take the path `BACKUP_DIR=...` — for example `/mnt/data/ai/wb-ai-integration/backups/20260419-224500`. **Substitute this exact path in all subsequent steps.** Don't write `$B` in following commands — the variable does not persist between calls!
+From the job output, take the path `BACKUP_DIR=...` — for example `/mnt/data/ai/wb-ai-skills/backups/20260419-224500`. **Substitute this exact path in all subsequent steps.** Don't write `$B` in following commands — the variable does not persist between calls!
 
 To see the background job log:
 ```bash
@@ -195,17 +195,17 @@ Write specific paths, package names and commands — not `$variables` and not `<
 ### 2. Pack into a single file
 
 ```bash
-ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "cd /mnt/data/ai/wb-ai-integration/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz"'
+ssh root@<HOST> 'systemd-run --unit=wb-ai-job-$(cat /dev/urandom | tr -dc a-z0-9 | head -c8) --collect bash -c "cd /mnt/data/ai/wb-ai-skills/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz"'
 ```
 
 ### 3. Check size and deliver
 
 ```bash
-ssh root@<HOST> "stat -c%s /mnt/data/ai/wb-ai-integration/backups/backup-<TS>.tar.gz"
+ssh root@<HOST> "stat -c%s /mnt/data/ai/wb-ai-skills/backups/backup-<TS>.tar.gz"
 ```
 - < 200 MB -> download:
   ```bash
-  scp root@<HOST>:/mnt/data/ai/wb-ai-integration/backups/backup-<TS>.tar.gz ./
+  scp root@<HOST>:/mnt/data/ai/wb-ai-skills/backups/backup-<TS>.tar.gz ./
   ```
 - > 200 MB -> suggest the user copy it themselves via scp
 
@@ -258,15 +258,15 @@ FIT overwrites rootfs, does NOT touch `/mnt/data/`.
 
 1. Find the backup:
    ```bash
-   ssh root@<HOST> "ls -lt /mnt/data/ai/wb-ai-integration/backups/"
+   ssh root@<HOST> "ls -lt /mnt/data/ai/wb-ai-skills/backups/"
    ```
    The backup survives FIT. Or the user uploads the file:
    ```bash
-   scp ./backup-<TS>.tar.gz root@<HOST>:/mnt/data/ai/wb-ai-integration/backups/
+   scp ./backup-<TS>.tar.gz root@<HOST>:/mnt/data/ai/wb-ai-skills/backups/
    ```
 2. Read RESTORE.md:
    ```bash
-   ssh root@<HOST> "cat /mnt/data/ai/wb-ai-integration/backups/<TS>/RESTORE.md"
+   ssh root@<HOST> "cat /mnt/data/ai/wb-ai-skills/backups/<TS>/RESTORE.md"
    ```
 3. Execute step by step with user confirmation. Packages — via systemd-run.
 4. Verification: compare current state with `state-snapshot.json`.
@@ -280,7 +280,7 @@ FIT overwrites rootfs, does NOT touch `/mnt/data/`.
 - Backing up all of `/etc` or `/mnt/data` — huge and pointless.
 - Staying silent about `/mnt/data/.docker/` — warn that it's not in the archive.
 - Dumping raw audit output — show a categorized report.
-- Scattering files across `/tmp`, `/root`, `/mnt/data/backups` — everything in `/mnt/data/ai/wb-ai-integration/backups/`.
+- Scattering files across `/tmp`, `/root`, `/mnt/data/backups` — everything in `/mnt/data/ai/wb-ai-skills/backups/`.
 - Skipping modified configs or custom systemd units — they also need to be in the archive.
 
 ## Documentation

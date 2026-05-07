@@ -1,4 +1,4 @@
-# Installing wb-ai-integration
+# Installing wb-ai-skills
 
 Two independent installation paths. Pick **one**:
 
@@ -29,8 +29,8 @@ sudo apt install avahi-utils mosquitto-clients sshpass jq
 ### 2. Cloning and installing skills
 
 ```bash
-git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration
-cd wb-ai-integration
+git clone https://github.com/wirenboard/wb-ai-skills.git wb-ai-skills
+cd wb-ai-skills
 
 # Globally for Claude Code:
 ./install-skills.sh bash claude --global
@@ -90,8 +90,8 @@ curl -fsSL https://bun.sh/install | bash
 ### 2. Installing the MCP server
 
 ```bash
-git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration
-cd wb-ai-integration/mcp-server
+git clone https://github.com/wirenboard/wb-ai-skills.git wb-ai-skills
+cd wb-ai-skills/mcp-server
 bun install
 ```
 
@@ -115,7 +115,7 @@ In `~/.claude.json` (global) or `.mcp.json` (in project):
   "mcpServers": {
     "wiren-board": {
       "command": "bun",
-      "args": ["run", "/ABS/PATH/wb-ai-integration/mcp-server/src/index.ts"],
+      "args": ["run", "/ABS/PATH/wb-ai-skills/mcp-server/src/index.ts"],
       "env": {
         "WB_SSH_USER": "root",
         "WB_SSH_PASSWORD": "wirenboard"
@@ -128,7 +128,7 @@ In `~/.claude.json` (global) or `.mcp.json` (in project):
 Or in one command:
 
 ```bash
-claude mcp add wiren-board -- bun run /ABS/PATH/wb-ai-integration/mcp-server/src/index.ts
+claude mcp add wiren-board -- bun run /ABS/PATH/wb-ai-skills/mcp-server/src/index.ts
 ```
 
 ### 5. Connecting the MCP server to opencode
@@ -140,7 +140,7 @@ In `~/.config/opencode/opencode.json`:
   "mcp": {
     "wiren-board": {
       "type": "local",
-      "command": ["bun", "run", "/ABS/PATH/wb-ai-integration/mcp-server/src/index.ts"],
+      "command": ["bun", "run", "/ABS/PATH/wb-ai-skills/mcp-server/src/index.ts"],
       "environment": {
         "WB_SSH_USER": "root",
         "WB_SSH_PASSWORD": "wirenboard"
@@ -219,7 +219,7 @@ Or specify the full path in `.mcp.json`: `"command": "/home/<user>/.bun/bin/bun"
 
 1. Restart Claude Code after editing `.mcp.json` / `~/.claude.json`.
 2. Check the logs: Claude Code writes MCP startup errors to its log (`/help` → diagnostics section).
-3. Test by hand: `bun run /ABS/PATH/wb-ai-integration/mcp-server/src/index.ts` — should output nothing (stdio transport waits for messages); if it outputs an error — that's the problem.
+3. Test by hand: `bun run /ABS/PATH/wb-ai-skills/mcp-server/src/index.ts` — should output nothing (stdio transport waits for messages); if it outputs an error — that's the problem.
 
 ### `Invalid subscription topic` in `wb_mqtt_list`
 
@@ -249,7 +249,7 @@ Delete the created files/symlinks in the directory that `install-skills.sh` prin
 # Claude Code (global) — install-skills.sh places symlinks to directories:
 unlink ~/.claude/skills/wiren-board   # each by name
 # or in bulk:
-find ~/.claude/skills -maxdepth 1 -type l -lname '*wb-ai-integration/skills/*' -delete
+find ~/.claude/skills -maxdepth 1 -type l -lname '*wb-ai-skills/skills/*' -delete
 
 # opencode (global) — these are flat .md files:
 rm ~/.config/opencode/agents/wiren-board.md   # each by name
@@ -265,13 +265,13 @@ claude mcp remove wiren-board
 
 # The server itself leaves nothing on the host — Bun doesn't install global binaries.
 # Delete the project clone:
-rm -rf wb-ai-integration
+rm -rf wb-ai-skills
 ```
 
 ### Artifacts on controllers
 
-Skills write to `/mnt/data/ai/wb-ai-integration/` (snapshots, jobs, diag, backups). Not critical — survives factoryreset and doesn't interfere with operation. Manual cleanup if you want:
+Skills write to `/mnt/data/ai/wb-ai-skills/` (snapshots, jobs, diag, backups). Not critical — survives factoryreset and doesn't interfere with operation. Manual cleanup if you want:
 
 ```bash
-ssh root@<host> 'rm -rf /mnt/data/ai/wb-ai-integration'
+ssh root@<host> 'rm -rf /mnt/data/ai/wb-ai-skills'
 ```

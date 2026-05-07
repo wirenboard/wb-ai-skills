@@ -60,8 +60,8 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
    set -e
    DURATION="${1:-120}"
    CONF=/etc/wb-mqtt-serial.conf
-   LOG=/mnt/data/ai/wb-ai-integration/diag/debug-serial.log
-   mkdir -p /mnt/data/ai/wb-ai-integration/diag
+   LOG=/mnt/data/ai/wb-ai-skills/diag/debug-serial.log
+   mkdir -p /mnt/data/ai/wb-ai-skills/diag
 
    # Captured-group regex — preserves original formatting (indents, spaces around :)
    restore_debug_off() {
@@ -91,7 +91,7 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
    Wait for completion (`systemctl is-active wb-ai-job-...` → `inactive`, or `journalctl -u wb-ai-job-... -n 5`). Pick up the log:
    ```bash
-   scp root@<HOST>:/mnt/data/ai/wb-ai-integration/diag/debug-serial.log /tmp/debug-serial.log
+   scp root@<HOST>:/mnt/data/ai/wb-ai-skills/diag/debug-serial.log /tmp/debug-serial.log
    ```
    (Local path — `/tmp/debug-serial.log` or another explicit path, not `./` — you don't have a stable cwd between calls.)
 
@@ -132,7 +132,7 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 7. **Save the report on the controller:**
    ```bash
-   echo '<report text>' | ssh root@<HOST> 'cat > /mnt/data/ai/wb-ai-integration/diag/serial-diag.txt'
+   echo '<report text>' | ssh root@<HOST> 'cat > /mnt/data/ai/wb-ai-skills/diag/serial-diag.txt'
    ```
 
 ## Device firmware version

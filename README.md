@@ -1,4 +1,4 @@
-# wb-ai-integration
+# wb-ai-skills
 
 Integration of [Claude Code](https://claude.ai/code) and [opencode](https://opencode.ai) with [Wiren Board](https://wirenboard.com) controllers — control, diagnostics, automation by voice and text.
 
@@ -25,7 +25,7 @@ See [INSTALL.md](INSTALL.md) — separate paths for bash-only and mcp-flavor + c
 Minimal path for the impatient:
 
 ```bash
-git clone https://github.com/wirenboard/wb-ai-integration.git wb-ai-integration && cd wb-ai-integration
+git clone https://github.com/wirenboard/wb-ai-skills.git wb-ai-skills && cd wb-ai-skills
 
 # Bash-flavor for Claude Code (no MCP server, SSH only)
 ./install-skills.sh bash claude --global
@@ -91,7 +91,7 @@ Usage:
 ## Architectural notes
 
 - **SSH host-key:** the MCP server uses `StrictHostKeyChecking=no` + `UserKnownHostsFile=/dev/null`. This survives factory reset / FIT firmware reflash without manual `ssh-keygen -R`. A controller in the local network is a trusted environment.
-- **Async tasks:** via `systemd-run --collect` + script-file (`/mnt/data/ai/wb-ai-integration/jobs/<id>.sh`) + `StandardOutput=append:`. No shell-redirect tricks, survives SSH disconnect, gc by 24-hour TTL.
+- **Async tasks:** via `systemd-run --collect` + script-file (`/mnt/data/ai/wb-ai-skills/jobs/<id>.sh`) + `StandardOutput=append:`. No shell-redirect tricks, survives SSH disconnect, gc by 24-hour TTL.
 - **MQTT error per WB Conventions:** `wb_mqtt_inventory` parses `<...>/meta/error` into flags `{read, write, periodMiss}`. When `read=true`, the value topic contains the **last-known-good** value (see [WB Conventions](https://github.com/wirenboard/conventions)).
 - **Names with spaces:** WB-MR6C and similar have controls `Input 0`, `Input 0 counter` — spaces are part of the name. Used `mosquitto_sub -F '%t\t%p'` (TAB separator) to avoid clipping the suffix during parsing.
 

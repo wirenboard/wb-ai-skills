@@ -12,7 +12,7 @@ Backup and restore of a WB controller via MCP tools — collect an archive with 
 
 **THERE IS NO BACKUP UTILITY ON THE CONTROLLER.** No `wb-backup`, `wbctl backup`, `backup.sh` exists — don't make them up. The backup is assembled in 3 phases below.
 
-**Backup = tar.gz archive** with files, configs, package lists. All files go to `/mnt/data/ai/wb-ai-integration/backups/`. Don't scatter across `/tmp`, `/root`, `/mnt/data/backups`.
+**Backup = tar.gz archive** with files, configs, package lists. All files go to `/mnt/data/ai/wb-ai-skills/backups/`. Don't scatter across `/tmp`, `/root`, `/mnt/data/backups`.
 
 ## Tool routing
 
@@ -63,7 +63,7 @@ Skip steps that aren't needed (e.g. Docker volumes if no Docker), but mark them 
 
 ### Step 1b: state snapshot
 
-`wb_state_save sn=<SN>` — saves a JSON snapshot (key fields: `fwVersion`, `manualPackages`, `enabledUnits`) to `/mnt/data/ai/wb-ai-integration/snapshots/snapshot-<TS>.json` for later verification via `wb_state_diff`.
+`wb_state_save sn=<SN>` — saves a JSON snapshot (key fields: `fwVersion`, `manualPackages`, `enabledUnits`) to `/mnt/data/ai/wb-ai-skills/snapshots/snapshot-<TS>.json` for later verification via `wb_state_diff`.
 
 ### Step 2: report on deviations from stock
 
@@ -107,10 +107,10 @@ In a single user message: deviations report + "including in archive: ...; skippi
 Run via `wb_ssh_exec_async` (background job). Don't try via synchronous `wb_ssh_exec` — timeout.
 
 ```
-wb_ssh_exec_async sn=<SN> cmd='set -e; TS=$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-integration/backups/$TS; mkdir -p $B; cat /etc/wb-fw-version > $B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release $B/wb-release 2>/dev/null || true; apt-mark showmanual > $B/packages-manual.list; dpkg-query -W -f="\${Package}=\${Version}\n" > $B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk "{print \$1}" > $B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c "T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac" _ {} \; > $B/symlinks-etc.list; tar czf $B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \) -prune -o \( -name "docker-compose.y*ml" -o -name "compose.y*ml" \) -print 2>/dev/null | tar czf $B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=$(ls -t /mnt/data/ai/wb-ai-integration/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n "$SNAP" ] && cp "$SNAP" $B/state-snapshot.json; echo BACKUP_DIR=$B; du -sh $B $B/*'
+wb_ssh_exec_async sn=<SN> cmd='set -e; TS=$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-skills/backups/$TS; mkdir -p $B; cat /etc/wb-fw-version > $B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release $B/wb-release 2>/dev/null || true; apt-mark showmanual > $B/packages-manual.list; dpkg-query -W -f="\${Package}=\${Version}\n" > $B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk "{print \$1}" > $B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c "T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac" _ {} \; > $B/symlinks-etc.list; tar czf $B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \) -prune -o \( -name "docker-compose.y*ml" -o -name "compose.y*ml" \) -print 2>/dev/null | tar czf $B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=$(ls -t /mnt/data/ai/wb-ai-skills/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n "$SNAP" ] && cp "$SNAP" $B/state-snapshot.json; echo BACKUP_DIR=$B; du -sh $B $B/*'
 ```
 
-`wb_job_tail job_id=<id>` — track progress. From the final output take `BACKUP_DIR=...` (e.g. `/mnt/data/ai/wb-ai-integration/backups/20260419-224500`). **Substitute this specific path in all subsequent steps** — the `$B` variable doesn't persist across new invocations.
+`wb_job_tail job_id=<id>` — track progress. From the final output take `BACKUP_DIR=...` (e.g. `/mnt/data/ai/wb-ai-skills/backups/20260419-224500`). **Substitute this specific path in all subsequent steps** — the `$B` variable doesn't persist across new invocations.
 
 ### Step 2: data per audit results
 
@@ -160,18 +160,18 @@ Write specific paths, package names, and commands — not `$variables` and not `
 ### 2. Pack into a single file
 
 ```
-wb_ssh_exec_async sn=<SN> cmd='cd /mnt/data/ai/wb-ai-integration/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz'
+wb_ssh_exec_async sn=<SN> cmd='cd /mnt/data/ai/wb-ai-skills/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz'
 ```
 
 ### 3. Check size and deliver
 
 ```
-wb_ssh_exec sn=<SN> cmd='stat -c%s /mnt/data/ai/wb-ai-integration/backups/backup-<TS>.tar.gz'
+wb_ssh_exec sn=<SN> cmd='stat -c%s /mnt/data/ai/wb-ai-skills/backups/backup-<TS>.tar.gz'
 ```
 
 - < 200 MB → user downloads locally:
   ```bash
-  scp root@wirenboard-<SN>.local:/mnt/data/ai/wb-ai-integration/backups/backup-<TS>.tar.gz ./
+  scp root@wirenboard-<SN>.local:/mnt/data/ai/wb-ai-skills/backups/backup-<TS>.tar.gz ./
   ```
 - > 200 MB → tell the user to copy via `scp` themselves (don't pull through MCP — `wb_read_file` is limited to 64 KB).
 
@@ -222,8 +222,8 @@ FIT rewrites rootfs, does NOT touch `/mnt/data/`.
 
 ## Restore
 
-1. Find the backup: `wb_ssh_exec` `ls -lt /mnt/data/ai/wb-ai-integration/backups/`. The backup survives FIT. Or the user uploads the file with local `scp ./backup-<TS>.tar.gz root@wirenboard-<SN>.local:/mnt/data/ai/wb-ai-integration/backups/`.
-2. Read RESTORE.md: `wb_read_file sn=<SN> path=/mnt/data/ai/wb-ai-integration/backups/<TS>/RESTORE.md`.
+1. Find the backup: `wb_ssh_exec` `ls -lt /mnt/data/ai/wb-ai-skills/backups/`. The backup survives FIT. Or the user uploads the file with local `scp ./backup-<TS>.tar.gz root@wirenboard-<SN>.local:/mnt/data/ai/wb-ai-skills/backups/`.
+2. Read RESTORE.md: `wb_read_file sn=<SN> path=/mnt/data/ai/wb-ai-skills/backups/<TS>/RESTORE.md`.
 3. Execute step by step with user confirmation. Packages — via `wb_ssh_exec_async`.
 4. Verification: `wb_state_diff sn=<SN> snapshot=<BACKUP_DIR>/state-snapshot.json` — what differs from the "before" state.
 
@@ -236,7 +236,7 @@ FIT rewrites rootfs, does NOT touch `/mnt/data/`.
 - Backing up `/etc` or `/mnt/data` entirely — huge and useless.
 - Staying silent about `/mnt/data/.docker/` — warn that it's not in the archive.
 - Dumping raw audit output — show a categorized report.
-- Scattering files across `/tmp`, `/root`, `/mnt/data/backups` — everything in `/mnt/data/ai/wb-ai-integration/backups/`.
+- Scattering files across `/tmp`, `/root`, `/mnt/data/backups` — everything in `/mnt/data/ai/wb-ai-skills/backups/`.
 - Skipping modified configs or custom systemd units — they're also needed in the archive.
 
 ## Documentation

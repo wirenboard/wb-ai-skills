@@ -52,14 +52,14 @@ Package drift and custom files: `wb_audit sn=<SN>`.
 `wb-diag-collect <prefix>` accepts a **filename prefix**, not a directory. The actual file lands in the **parent directory of the prefix** under the name `<prefix>_<SN>_<TS>.zip`.
 
 ```
-wb_ssh_exec sn=<SN> cmd='mkdir -p /mnt/data/ai/wb-ai-integration'
-wb_ssh_exec_async sn=<SN> cmd='wb-diag-collect /mnt/data/ai/wb-ai-integration/diag'
+wb_ssh_exec sn=<SN> cmd='mkdir -p /mnt/data/ai/wb-ai-skills'
+wb_ssh_exec_async sn=<SN> cmd='wb-diag-collect /mnt/data/ai/wb-ai-skills/diag'
 ```
 
 Wait for completion (`wb_job_status job_id=<id>` → `exited`). Find the actual filename:
 
 ```
-wb_ssh_exec sn=<SN> cmd='ls -t /mnt/data/ai/wb-ai-integration/diag_*.zip 2>/dev/null | head -1'
+wb_ssh_exec sn=<SN> cmd='ls -t /mnt/data/ai/wb-ai-skills/diag_*.zip 2>/dev/null | head -1'
 ```
 
 Download **only the latest** archive with local `scp` (it's hundreds of KB — `wb_read_file` will fail on the 64 KB limit):
