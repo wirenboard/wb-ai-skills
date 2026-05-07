@@ -84,9 +84,9 @@ This is a rare case — for self-hosted clouds (own API, compatible with wirenbo
 
 ## Related skills
 
-- `/network` — if cloud is unreachable due to internet.
-- `/services` — `wb-cloud-agent` is a systemd unit.
-- `/controller-backup` — `/etc/wb-cloud-agent.conf` is already in core-tar.
+- `/wb-network` — if cloud is unreachable due to internet.
+- `/wb-services` — `wb-cloud-agent` is a systemd unit.
+- `/wb-controller-backup` — `/etc/wb-cloud-agent.conf` is already in core-tar.
 
 ## Gotchas
 

@@ -65,7 +65,7 @@ Each skill is a directory `skills/<flavor>/<name>/SKILL.md` with YAML frontmatte
 
 **Installation** — via `./install-skills.sh <bash|mcp> <claude|opencode> [--global]`. For Claude Code — symlinks to directories. For opencode — frontmatter conversion (`name` becomes the file name, `allowed-tools` is dropped, `mode: primary` is added) and flat `.md` files in `.opencode/agents/`. The script is the only supported installation method; manual copying risks drifting away from the converter.
 
-Skills in `bash/` — 21, in `mcp/` — 19 (no `diagrams` and `documentation-search`: they don't depend on the controller, MCP adds no value — the user takes them from `bash/` regardless of whether MCP is present).
+Skills in `bash/` — 21, in `mcp/` — 19 (no `wb-diagrams` and `wb-documentation-search`: they don't depend on the controller, MCP adds no value — the user takes them from `bash/` regardless of whether MCP is present).
 
 When editing skills keep the existing style: English-language descriptions, serial `A25NDEMJ` (8 characters). MCP variants are short (~30-50 lines), with an "intent → tool" table and a link to the bash counterpart. Bash variants contain the full domain logic; the largest is `wb-rules/SKILL.md` (635 lines, ES5 subset, `defineRule`, virtual devices).
 

@@ -110,7 +110,7 @@ A custom backend must implement an API compatible with `wirenboard.cloud`. This 
 
 1. **Service active?** `systemctl is-active wb-cloud-agent`. `inactive` → `enable --now`.
 2. **Certificate present?** `ls /var/lib/wb-cloud-agent/device_bundle.crt.pem`. No — controller isn't a Wiren Board or ATECC is broken.
-3. **Internet outbound?** `curl -s -m5 https://wirenboard.cloud >/dev/null && echo ok`. No — see `/network` (failover, DNS).
+3. **Internet outbound?** `curl -s -m5 https://wirenboard.cloud >/dev/null && echo ok`. No — see `/wb-network` (failover, DNS).
 4. **Logs**: `journalctl -u wb-cloud-agent -n 100 --no-pager`. Typical errors:
    - `connection refused` / `timeout` — network issue.
    - `Certificate verification failed` — wrong date on the controller (`date`), sync NTP.
@@ -119,10 +119,10 @@ A custom backend must implement an API compatible with `wirenboard.cloud`. This 
 
 ## Related skills
 
-- `/network` — if cloud is unreachable due to internet.
-- `/services` — `wb-cloud-agent` is a systemd unit, override-conf and mask/unmask are here.
-- `/controller-backup` — `/etc/wb-cloud-agent.conf` is already in core-tar; `/var/lib/wb-cloud-agent/providers/` is generally NOT backed up (a new activation gives new providers state, and that's normal).
-- `/troubleshooting` — general diagnostics, kernel mismatch, disk space.
+- `/wb-network` — if cloud is unreachable due to internet.
+- `/wb-services` — `wb-cloud-agent` is a systemd unit, override-conf and mask/unmask are here.
+- `/wb-controller-backup` — `/etc/wb-cloud-agent.conf` is already in core-tar; `/var/lib/wb-cloud-agent/providers/` is generally NOT backed up (a new activation gives new providers state, and that's normal).
+- `/wb-troubleshooting` — general diagnostics, kernel mismatch, disk space.
 
 ## Pitfalls
 

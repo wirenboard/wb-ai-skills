@@ -1,121 +1,125 @@
 # Installing wb-ai-skills
 
-Two independent installation paths. Pick **one**:
+Two independent setups. **Pick one.** Don't install both — bash and mcp skills share the same `name:` in their frontmatter, the LLM client would only see one of each anyway.
 
-| Variant | When | What's needed |
+| | bash flavor | mcp flavor |
 |---|---|---|
-| **bash-only** | Minimal setup, no Bun, don't want to set up MCP | Only SSH + `mosquitto_*` + `avahi-browse` + `jq` |
-| **mcp-flavor** | Want typed tools, ready to install Bun | Bun 1.3+, MCP server running via `.mcp.json` |
-
-**Don't install both at once** — `bash` and `mcp` skills share the same `name:` in frontmatter, Claude Code/opencode will pick whichever.
+| **What you need on the host** | SSH + a few CLI utils | Same + [Bun](https://bun.sh) 1.3+ |
+| **What you need on the controller** | Stock SSH + mosquitto (already there) | Same |
+| **What the LLM uses** | `Bash` tool only | `wb_*` typed tools through MCP |
+| **Setup time** | 5 min | 10 min |
+| **Best for** | Simple test, no Bun, fully scripted recipes | Daily driver — typed errors, structured outputs, ready-made charts |
 
 ---
 
-## bash-only setup
+## Bash flavor
 
-### 1. Dependencies on the host machine
-
-Linux:
+### 1. Install host CLI tools
 
 ```bash
 sudo apt install avahi-utils mosquitto-clients sshpass jq
 ```
 
-- `avahi-utils` — `avahi-browse` for mDNS controller discovery.
-- `mosquitto-clients` — `mosquitto_sub`/`mosquitto_pub` for MQTT via SSH tunnel to the controller's broker.
-- `sshpass` — if using a password (`wirenboard` by default). Not needed if SSH key is deployed.
-- `jq` — for bash skills with JSON parsing.
+What each is for:
 
-### 2. Cloning and installing skills
+- `avahi-utils` — `avahi-browse` for mDNS discovery (`wirenboard-<SN>.local`).
+- `mosquitto-clients` — `mosquitto_sub` / `mosquitto_pub` for MQTT (the bash skills run them via SSH inside the controller, but having them on the host is sometimes useful for ad-hoc debugging).
+- `sshpass` — only if you use the default password (`wirenboard`). With an SSH key — not needed.
+- `jq` — every bash skill uses it for JSON parsing.
+
+### 2. Clone and install skills
 
 ```bash
-git clone https://github.com/wirenboard/wb-ai-skills.git wb-ai-skills
+git clone https://github.com/wirenboard/wb-ai-skills.git
 cd wb-ai-skills
 
-# Globally for Claude Code:
+# Claude Code (system-wide):
 ./install-skills.sh bash claude --global
-# → into ~/.claude/skills/
+#   → ~/.claude/skills/ (symlinks)
 
-# Per-project (only in current directory):
+# Or per-project:
 ./install-skills.sh bash claude
-# → into ./.claude/skills/
+#   → ./.claude/skills/
 
-# For opencode:
+# opencode:
 ./install-skills.sh bash opencode --global
-# → into ~/.config/opencode/agents/
+#   → ~/.config/opencode/agents/ (flat .md, frontmatter rewritten)
 ```
 
-The script installs skills as symlinks for Claude Code (fresh edits visible immediately), and as flat `.md` files for opencode (with frontmatter conversion).
+Symlinks are used for Claude Code so edits in the repo reflect immediately. opencode wants flat `.md` files with `mode: primary`, the script generates them.
 
-### 3. SSH access to controllers
+### 3. Set up SSH access to controllers
 
-WB controller defaults:
-- **Login**: `root`
-- **Password**: `wirenboard` (factory)
-- **Host**: `wirenboard-<SN>.local` (via mDNS) or direct IP.
-
-**Recommended to deploy an SSH key** (avoids password and `sshpass`):
+Default factory creds: `root` / `wirenboard`. Either use `sshpass` (set `WB_SSH_PASSWORD` env or rely on the default), or push a key — recommended:
 
 ```bash
 ssh-copy-id -o StrictHostKeyChecking=accept-new root@wirenboard-A25NDEMJ.local
 ```
 
-After that SSH works without a password.
+After factoryreset the host key changes and the password is reset to `wirenboard` — the bash skills handle this by passing `-o StrictHostKeyChecking=accept-new` already.
 
-### 4. Verification
+### 4. Verify
 
 In Claude Code:
 
 ```
 > /wiren-board
-> find all controllers on the network
+> find every controller in the network and show release + uptime
 ```
 
-The skill should run `avahi-browse -arp _workstation._tcp` and show the list.
+Expected: a list with `sn`, `host`, `release`, `uptime`. If empty — see [common issues](#common-issues).
+
+In opencode:
+
+```
+> @wiren-board find controllers and show release + uptime
+```
 
 ---
 
-## MCP-flavor setup
+## MCP flavor
 
-### 1. Dependencies
-
-Same as for bash-flavor (`avahi-utils`, `mosquitto-clients`, `sshpass`, `jq`) **plus**:
-
-- **Bun 1.3+** — runtime for the MCP server ([bun.sh](https://bun.sh)).
+### 1. Install host CLI tools and Bun
 
 ```bash
+sudo apt install avahi-utils mosquitto-clients sshpass jq
 curl -fsSL https://bun.sh/install | bash
+# → installs to ~/.bun, adds it to your shell config
+exec $SHELL    # reload PATH
+bun --version  # should print 1.3.x or newer
 ```
 
-### 2. Installing the MCP server
+### 2. Clone and bootstrap
 
 ```bash
-git clone https://github.com/wirenboard/wb-ai-skills.git wb-ai-skills
+git clone https://github.com/wirenboard/wb-ai-skills.git
 cd wb-ai-skills/mcp-server
-bun install
+bun install                  # ~30 seconds, no compile step
 ```
 
-No build step — Bun executes TypeScript directly. `noEmit: true` in `tsconfig.json`.
+No build — Bun runs TypeScript directly (`noEmit: true` in `tsconfig.json`).
 
-### 3. Installing MCP skills
+### 3. Install MCP skills
 
 ```bash
-cd ..
-./install-skills.sh mcp claude --global
-# or
-./install-skills.sh mcp opencode --global
+cd ..   # back to repo root
+./install-skills.sh mcp claude --global       # or opencode --global, or no --global for per-project
 ```
 
-### 4. Connecting the MCP server to Claude Code
+The installer for the mcp flavor also pulls in two controller-independent skills from the bash set: `wb-diagrams` (Mermaid) and `wb-documentation-search` (wiki / GitHub). 21 files total in `~/.claude/skills/` or `~/.config/opencode/agents/`.
 
-In `~/.claude.json` (global) or `.mcp.json` (in project):
+### 4. Connect the MCP server
+
+#### Claude Code
+
+`~/.claude.json` (system-wide) or `<project>/.mcp.json` (per-project):
 
 ```json
 {
   "mcpServers": {
     "wiren-board": {
       "command": "bun",
-      "args": ["run", "/ABS/PATH/wb-ai-skills/mcp-server/src/index.ts"],
+      "args": ["run", "/ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts"],
       "env": {
         "WB_SSH_USER": "root",
         "WB_SSH_PASSWORD": "wirenboard"
@@ -125,22 +129,22 @@ In `~/.claude.json` (global) or `.mcp.json` (in project):
 }
 ```
 
-Or in one command:
+Restart Claude Code so it re-reads the config. Or one-line equivalent:
 
 ```bash
-claude mcp add wiren-board -- bun run /ABS/PATH/wb-ai-skills/mcp-server/src/index.ts
+claude mcp add wiren-board -- bun run /ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts
 ```
 
-### 5. Connecting the MCP server to opencode
+#### opencode
 
-In `~/.config/opencode/opencode.json`:
+`~/.config/opencode/opencode.json` (global) or `./opencode.json` (per-project):
 
 ```json
 {
   "mcp": {
     "wiren-board": {
       "type": "local",
-      "command": ["bun", "run", "/ABS/PATH/wb-ai-skills/mcp-server/src/index.ts"],
+      "command": ["bun", "run", "/ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts"],
       "environment": {
         "WB_SSH_USER": "root",
         "WB_SSH_PASSWORD": "wirenboard"
@@ -151,127 +155,132 @@ In `~/.config/opencode/opencode.json`:
 }
 ```
 
-Differences from Claude Code:
+Note the differences vs Claude Code:
 - top-level key is `mcp`, not `mcpServers`;
-- `command` is an array `[cmd, ...args]`, not a string + `args`;
+- `command` is an array `[cmd, ...args]`, not separate `command` + `args`;
 - env is `environment`, not `env`.
 
-### 6. Environment variables
+### 5. Environment variables
 
 | Variable | Default | Purpose |
-|------------|---------|------------|
-| `WB_SSH_USER` | `root` | SSH login |
-| `WB_SSH_PASSWORD` | `wirenboard` | SSH password (if no key) |
-| `WB_SSH_KEY` | — | path to private key (instead of password) |
-| `WB_DISCOVERY_INTERVAL` | `15000` | mDNS scan period (ms) |
+|---|---|---|
+| `WB_SSH_USER` | `root` | SSH user |
+| `WB_SSH_PASSWORD` | `wirenboard` | SSH password (used if no key) |
+| `WB_SSH_KEY` | — | Path to a private key (preferred over password) |
+| `WB_DISCOVERY_INTERVAL` | `15000` | mDNS scan period in ms |
 
-### 7. Verification
+### 6. Verify
 
-In Claude Code (after restart, so `.mcp.json` gets picked up):
+After Claude Code restart:
 
 ```
 > /wiren-board
-> find controllers via wb_discover
+> wb_discover, then wb_probe each controller it finds
 ```
 
-Records with `sn`, `host`, `addresses`, `reachable: true` should appear.
+Expected output: a list of controllers, then per-controller `uname` / `release` / `fwVersion` / `uptime`.
 
-```
-> wb_probe sn=A25NDEMJ
+If the LLM doesn't see `wb_*` tools — the MCP server didn't start. Check:
+
+```bash
+bun run /ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts
 ```
 
-Returns `uname`, `release`, `fwVersion`.
+Should hang silently waiting for stdio. Errors print to stderr — that's the diagnostic signal.
 
 ---
 
 ## Common issues
 
-### `wb_discover` finds nothing
+### `wb_discover` returns nothing
 
-**Causes and checks** (in decreasing order of likelihood):
+In order of likelihood:
 
-1. **mDNS cache is still empty.** First run of the MCP server — discovery polls the network every 15 sec. Wait ~15 sec after start and retry.
-2. **`avahi-daemon` is not running on the host.** Linux: `systemctl status avahi-daemon`. Start it if it's off.
-3. **Multicast blocked between segments.** mDNS only works within one broadcast domain. If the controller is behind NAT/VPN/in another VLAN — won't see it.
-4. **WB-AP mode.** If the controller is in access point mode (`wb-ap`) and the host isn't connected to it via WiFi — invisible.
+1. **mDNS cache hasn't filled yet.** First scan happens within `WB_DISCOVERY_INTERVAL` (default 15 s) of MCP server start. Wait 15 s and retry.
+2. **`avahi-daemon` isn't running on the host.** `systemctl status avahi-daemon` — start it if needed.
+3. **Multicast is blocked between segments.** mDNS only works in one broadcast domain. If your controller is across NAT / VPN / different VLAN — it won't be visible.
+4. **Controller is in WB-AP mode** (its own WiFi access point) and your host isn't connected to that WiFi.
 
-**Workaround:** `wb_add_controller host=192.168.x.y` — manual addition by IP, bypassing mDNS.
+Workaround: add by IP manually — `wb_add_controller host=192.168.x.y`. Bypasses mDNS entirely.
 
-### SSH timeout / handshake failure
+### SSH timeout / "handshake failure"
 
-1. **Controller just booted** (uptime < 1 min) — sshd is still initializing crypto. Wait 30-60 sec and retry.
-2. **`StrictHostKeyChecking` is blocking** (although ours is off) — if you use bash-flavor with system `ssh`, fix `~/.ssh/known_hosts`: `ssh-keygen -R wirenboard-A25NDEMJ.local`. After factory reset the host-key changes.
-3. **Password changed** — after `factoryreset` the root password reverts to `wirenboard`. If you set your own before — the previous WB_SSH_PASSWORD won't work anymore.
+1. **Controller just booted** (uptime < 1 min). `sshd` is still bringing up crypto. Wait 30-60 s.
+2. **Stale `~/.ssh/known_hosts` entry** (only relevant for bash flavor — MCP disables host-key checking). After factoryreset the host key changes:
+   ```bash
+   ssh-keygen -R wirenboard-A25NDEMJ.local
+   ```
+3. **Password changed.** After factoryreset root's password is back to `wirenboard`. If you had something custom — `WB_SSH_PASSWORD` no longer matches.
 
 ### `bun: command not found`
 
-Bun is not in `PATH`. After install:
+PATH issue. After `curl ... bun.sh/install | bash`:
 
 ```bash
 echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
 echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
+exec $SHELL
 ```
 
-Or specify the full path in `.mcp.json`: `"command": "/home/<user>/.bun/bin/bun"`.
+Or use the absolute path in `.mcp.json`: `"command": "/home/<you>/.bun/bin/bun"`.
 
-### MCP server isn't picked up by Claude Code
+### MCP server doesn't appear in Claude Code
 
-1. Restart Claude Code after editing `.mcp.json` / `~/.claude.json`.
-2. Check the logs: Claude Code writes MCP startup errors to its log (`/help` → diagnostics section).
-3. Test by hand: `bun run /ABS/PATH/wb-ai-skills/mcp-server/src/index.ts` — should output nothing (stdio transport waits for messages); if it outputs an error — that's the problem.
+1. **Restart Claude Code** after editing `.mcp.json` or `~/.claude.json` — it caches MCP configs at startup.
+2. **Check Claude Code logs** (`/help` shows the diagnostics path). Errors from `bun` show up there.
+3. **Run the server directly to validate:**
+   ```bash
+   bun run /ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts
+   ```
+   Should hang silently. Any output to stderr is the error.
 
-### `Invalid subscription topic` in `wb_mqtt_list`
+### `Invalid subscription topic` from `wb_mqtt_list`
 
-In MQTT, wildcards `+`/`#` occupy **the entire level between `/`**, not part of a name. Invalid example: `/devices/system__wb-cloud-agent__+/...` (`+` inside a level).
+MQTT wildcards `+` and `#` must occupy a **whole level** between `/`. Examples:
 
-Correct: `/devices/+/controls/+` or `/devices/<exact_name>/#`.
+- ✅ `/devices/+/controls/+`
+- ✅ `/devices/wb-mr6c_2/#`
+- ❌ `/devices/system__wb-cloud-agent__+/controls/+` — `+` inside a name segment is invalid; mosquitto rejects it.
 
-### Controller doesn't update via apt
+### `apt-get update` returns 403 on a fresh-from-factory controller
 
-After factoryreset on old firmware (e.g. wb-2410) the `deb.wirenboard.com` repository may temporarily return **403** (CDN cache). Check:
+`deb.wirenboard.com` is behind a CDN that occasionally caches a stale 403 for some edges. The TTL is 24 h. Workarounds:
 
-```bash
-ssh root@<host> 'curl -sI http://deb.wirenboard.com/wb7/bullseye/dists/stable/InRelease | head -3'
-```
-
-If 403 — wait 24 hours (CDN TTL) or use `wb-release -t <fresh-release>` to switch the repository.
+- Wait for the cache to expire.
+- Switch to a newer release: `wb-release -t wb-2602` (or whatever's current — see <https://wirenboard.com/wiki/WB_Software_Releases>).
+- Force HTTPS in `/etc/apt/sources.list.d/wirenboard.list` (sometimes only HTTP is poisoned).
 
 ---
 
-## Uninstalling
+## Uninstall
 
-### Bash/MCP skills
-
-Delete the created files/symlinks in the directory that `install-skills.sh` prints at the end.
+### Skills
 
 ```bash
-# Claude Code (global) — install-skills.sh places symlinks to directories:
-unlink ~/.claude/skills/wiren-board   # each by name
-# or in bulk:
+# Claude Code (skills are symlinks):
+unlink ~/.claude/skills/wiren-board    # one at a time
+# or remove all wb-ai-skills symlinks at once:
 find ~/.claude/skills -maxdepth 1 -type l -lname '*wb-ai-skills/skills/*' -delete
 
-# opencode (global) — these are flat .md files:
-rm ~/.config/opencode/agents/wiren-board.md   # each by name
+# opencode (flat .md files):
+rm ~/.config/opencode/agents/wiren-board.md     # one at a time
 ```
 
 ### MCP server
 
 ```bash
-# Claude Code
 claude mcp remove wiren-board
-
-# or manually: remove the block from ~/.claude.json / .mcp.json
-
-# The server itself leaves nothing on the host — Bun doesn't install global binaries.
-# Delete the project clone:
-rm -rf wb-ai-skills
+# or hand-edit ~/.claude.json / .mcp.json
 ```
+
+The server itself doesn't install anything global — Bun is per-user, and `~/.wb-mcp/controllers.json` stores manually added controllers (small JSON, safe to keep or `rm`).
 
 ### Artifacts on controllers
 
-Skills write to `/mnt/data/ai/wb-ai-skills/` (snapshots, jobs, diag, backups). Not critical — survives factoryreset and doesn't interfere with operation. Manual cleanup if you want:
+Skills write under `/mnt/data/ai/wb-ai-skills/`: backups, snapshots, async-job logs, diag captures. None of it is required by the controller; cleanup if you want:
 
 ```bash
 ssh root@<host> 'rm -rf /mnt/data/ai/wb-ai-skills'
 ```
+
+This survives factoryreset (it's user data on `/mnt/data`); only a FIT firmware reflash wipes it.

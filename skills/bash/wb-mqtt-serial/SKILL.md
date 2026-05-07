@@ -8,7 +8,7 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 Modbus/RS-485 driver. Config `/etc/wb-mqtt-serial.conf`, templates `/usr/share/wb-mqtt-serial/templates/` (packaged, don't touch) and `/etc/wb-mqtt-serial.conf.d/templates/` (your own). Access via MQTT RPC `wb-mqtt-serial/...`, not via files. Load this on: "channel not publishing", "don't see device on the bus", "polling stalled", "enable channel X", "scan the bus", "slave_id / holding / coil / input register", enabling/disabling channels, adding/removing/editing devices in the wb-mqtt-serial config, "add a Modbus device", "remove a device", "clear device list", "edit serial config", "wb-mqtt-serial.conf", editing ports/devices in the config.
 
-**Skill boundary:** if a template needs to be created for a device that isn't among the built-ins — that's the `wb-mqtt-serial-template` skill. If the issue is signal/CRC/timeouts — `troubleshooting-serial`.
+**Skill boundary:** if a template needs to be created for a device that isn't among the built-ins — that's the `wb-mqtt-serial-template` skill. If the issue is signal/CRC/timeouts — `wb-troubleshooting-serial`.
 
 **HOST variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
 

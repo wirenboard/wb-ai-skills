@@ -36,8 +36,8 @@ First public release. Tested on A25NDEMJ (wb7, wb-2410/wb-2602) and A2V6W7I6 (wb
 ### Skills
 
 **21 bash skills** + **19 mcp skills**:
-- Common domain stack: `wiren-board`, `wb-mqtt-serial`, `serial-templates`, `wb-rules`, `scenarios`, `notifications`, `troubleshooting`, `troubleshooting-serial`, `services`, `network`, `wb-cloud`, `mqtt-broker`, `controller-backup`, `controller-update`, `hardware-modules`, `software-install`, `zigbee`, `history`, `bugreport`.
-- Bash-only (controller-independent): `diagrams` (Mermaid), `documentation-search` (search across wiki/GitHub).
+- Common domain stack: `wiren-board`, `wb-mqtt-serial`, `wb-serial-templates`, `wb-rules`, `wb-scenarios`, `wb-notifications`, `wb-troubleshooting`, `wb-troubleshooting-serial`, `wb-services`, `wb-network`, `wb-cloud`, `wb-mqtt-broker`, `wb-controller-backup`, `wb-controller-update`, `wb-hardware-modules`, `wb-software-install`, `wb-zigbee`, `wb-history`, `wb-bugreport`.
+- Bash-only (controller-independent): `wb-diagrams` (Mermaid), `wb-documentation-search` (search across wiki/GitHub).
 - Compatible with Claude Code and opencode (via `install-skills.sh`).
 
 ### Architectural decisions

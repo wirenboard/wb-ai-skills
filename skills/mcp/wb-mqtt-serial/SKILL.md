@@ -10,7 +10,7 @@ Modbus/RS-485 driver. Config `/etc/wb-mqtt-serial.conf`, templates `/usr/share/w
 
 Load this on: "channel isn't published", "don't see device on the bus", "polling froze", "enable channel X", "scan the bus", "slave_id / holding / coil / input register", enabling/disabling channels, adding/removing/editing devices in the wb-mqtt-serial config, "add a Modbus device", "remove a device", "clear the device list", "change serial config", "wb-mqtt-serial.conf", editing ports/devices in the config.
 
-**Skill boundary:** signal/CRC/timeout problems — `/troubleshooting-serial`. Authoring a template for a device that isn't in the built-ins — separate skill (you don't do that here).
+**Skill boundary:** signal/CRC/timeout problems — `/wb-troubleshooting-serial`. Authoring a template for a device that isn't in the built-ins — separate skill (you don't do that here).
 
 ## Tool routing
 
@@ -54,7 +54,7 @@ Load this on: "channel isn't published", "don't see device on the bus", "polling
 2. `wb_modbus_scan` on each port with the right baud/parity/stop. Shows what the driver sees. **Finds only WB and Onokom (Fast Modbus).** Third-party — won't see.
 3. Compare with `wb_confed_load` — what's already described, what to add.
 
-> `wb_modbus_scan` (this skill) — driver management tool. `wb-device-manager` (the `troubleshooting-serial` skill) — diagnostic tool. Different services, different goals — don't confuse.
+> `wb_modbus_scan` (this skill) — driver management tool. `wb-device-manager` (the `wb-troubleshooting-serial` skill) — diagnostic tool. Different services, different goals — don't confuse.
 
 ## Tool parameters
 

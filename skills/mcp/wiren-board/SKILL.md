@@ -1,6 +1,6 @@
 ---
 name: wiren-board
-description: Managing Wiren Board controllers via the wiren-board MCP server. Connect for any work with WB controllers.
+description: Master skill for Wiren Board controllers via wb_* MCP tools. Load on any mention of WB, MQTT topics, Modbus devices on the bus, wb-rules automation, or hardware config. Routes intents to the right wb_* tool, plus mDNS discovery, serial-number conventions, and safety rules.
 allowed-tools: Bash Read Write Grep Glob WebFetch WebSearch
 ---
 
@@ -171,7 +171,7 @@ For writing many small configs (e.g. on backup restore) use `wb_write_file` in a
 ### FORBIDDEN
 
 - **Do NOT run FIT firmware** (`wb-fw-update`, `swupdate`, `wb-run-update`, `fit-update`) — firmware only via the controller's web UI. FIT rewrites the rootfs entirely, an error can brick the controller.
-- **`wb-factoryreset` — only with explicit user confirmation and a mandatory backup before.** Wipes all user data (configs, rules, templates, Docker images), root password reverts to `wirenboard`, custom SSH keys are gone. Full scenario — in `/controller-update` (Scenario D). Don't run on ambiguous wording ("clean", "reset").
+- **`wb-factoryreset` — only with explicit user confirmation and a mandatory backup before.** Wipes all user data (configs, rules, templates, Docker images), root password reverts to `wirenboard`, custom SSH keys are gone. Full scenario — in `/wb-controller-update` (Scenario D). Don't run on ambiguous wording ("clean", "reset").
 
 ### Backup before editing configs — MANDATORY
 
@@ -226,25 +226,25 @@ Available skills for specific tasks — call `/skill-name` when the task falls i
 | Skill | Area |
 |-------|------|
 | `/wb-mqtt-serial` | Modbus device configuration, channel enable/disable, device addition |
-| `/serial-templates` | Authoring custom Modbus templates (when there's no native one) |
+| `/wb-serial-templates` | Authoring custom Modbus templates (when there's no native one) |
 | `/wb-rules` | JS automation rules (defineRule, virtual devices, timers, cron) |
-| `/scenarios` | Declarative Web UI scenarios (devicesControl, lightControl, thermostat, schedule) |
-| `/notifications` | Telegram/Email/SMS from rules (`Notify.*`), `alarms.conf` |
-| `/troubleshooting` | General diagnostics: failed services, disk space, kernel mismatch, Docker |
-| `/troubleshooting-serial` | RS-485/Modbus: CRC errors, timeouts, signal issues |
-| `/services` | systemd: override-conf, drop-ins, custom units/timers, mask/unmask |
-| `/network` | NetworkManager + wb-connection-manager: ethernet/wifi/4G/OpenVPN, failover |
+| `/wb-scenarios` | Declarative Web UI scenarios (devicesControl, lightControl, thermostat, schedule) |
+| `/wb-notifications` | Telegram/Email/SMS from rules (`Notify.*`), `alarms.conf` |
+| `/wb-troubleshooting` | General diagnostics: failed services, disk space, kernel mismatch, Docker |
+| `/wb-troubleshooting-serial` | RS-485/Modbus: CRC errors, timeouts, signal issues |
+| `/wb-services` | systemd: override-conf, drop-ins, custom units/timers, mask/unmask |
+| `/wb-network` | NetworkManager + wb-connection-manager: ethernet/wifi/4G/OpenVPN, failover |
 | `/wb-cloud` | Wiren Board Cloud agent: activation, status, unbinding |
-| `/mqtt-broker` | mosquitto admin: users, ACL, bridges, TLS |
-| `/controller-backup` | Full backup: configs, packages, data, Docker volumes |
-| `/controller-update` | Firmware and package updates |
-| `/hardware-modules` | Expansion modules (MOD1-MOD4): Zigbee, CAN, RS-485, relay |
-| `/software-install` | Software installation: Docker, Zigbee2MQTT, Home Assistant, Node-RED, Grafana |
-| `/zigbee` | Zigbee devices: pairing, control, groups, OTA |
-| `/history` | Data history, charts (`wb_history_chart`), export |
-| `/bugreport` | Composing a bug report with diagnostic archive |
+| `/wb-mqtt-broker` | mosquitto admin: users, ACL, bridges, TLS |
+| `/wb-controller-backup` | Full backup: configs, packages, data, Docker volumes |
+| `/wb-controller-update` | Firmware and package updates |
+| `/wb-hardware-modules` | Expansion modules (MOD1-MOD4): Zigbee, CAN, RS-485, relay |
+| `/wb-software-install` | Software installation: Docker, Zigbee2MQTT, Home Assistant, Node-RED, Grafana |
+| `/wb-zigbee` | Zigbee devices: pairing, control, groups, OTA |
+| `/wb-history` | Data history, charts (`wb_history_chart`), export |
+| `/wb-bugreport` | Composing a bug report with diagnostic archive |
 
-`/diagrams` (Mermaid) and `/documentation-search` exist only in bash flavor — they don't depend on the controller, the MCP twin makes no sense. If installed in parallel from `skills/bash/` — they'll be available.
+`/wb-diagrams` (Mermaid) and `/wb-documentation-search` exist only in bash flavor — they don't depend on the controller, the MCP twin makes no sense. If installed in parallel from `skills/bash/` — they'll be available.
 
 ## Operating principles
 

@@ -33,7 +33,7 @@ src="$REPO/skills/$flavor"
 
 # Skills that don't depend on MCP being present (Mermaid rendering, wiki search):
 # for the mcp flavor we additionally install them from the bash set so cross-references resolve.
-SHARED_FROM_BASH=(diagrams documentation-search)
+SHARED_FROM_BASH=(wb-diagrams wb-documentation-search)
 
 if [[ "$scope" == "--global" ]]; then
   case "$target" in
