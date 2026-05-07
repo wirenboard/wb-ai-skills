@@ -13,7 +13,7 @@ Data history from Wiren Board controllers. The `wb-mqtt-db` service logs MQTT ch
 | Intent | Tool |
 |--------|------|
 | Points per channel for a period | `wb_history` (sn, channels — array of pairs, time-range, min_interval, limit) |
-| **Ready-made SVG chart** | `wb_history_chart` (line/bar/area/point/histogram/heatmap/boxplot, 1/2/3+ units with dual axis or normalization) |
+| **Chart** | `wb_history_chart` — by default returns inline Mermaid `xychart-beta` (line, single Y-axis); switch to `format="svg"` (or pass `outputPath`) for Vega-Lite SVG with bar/area/point/histogram/heatmap/boxplot, dual Y-axis, normalization |
 | min/max/avg for a period | aggregate received `min`/`max`/`value` of buckets locally |
 | List of devices | `wb_mqtt_devices` |
 | List of device controls | `wb_mqtt_controls` |
@@ -68,22 +68,32 @@ This is **not pointless** — it just needs to be drawn correctly. Standard stra
 | 2 (`°C` + `%`) | Dual Y scale: left axis for one unit, right for the other |
 | 3+ | Normalize each channel into `[0;1]` (by its own `min..max`), with original ranges in the legend. Alternative: faceted (subplot per unit) |
 
-Render options:
-- **`wb_history_chart` (recommended)** — built into the MCP server using Vega-Lite. One call: fetches data via `db_logger/history/get_values`, builds SVG. Supports: `line` (default), `bar`, `area`, `point`, `histogram`, `heatmap`, `boxplot`. Axis logic:
+Render options — use `wb_history_chart` for both:
+
+- **Default — Mermaid `xychart-beta`.** Inline in chat. Linear, single Y-axis (Mermaid limitation), downsampled to ~30 points for readability. **Start with this.**
+  ```
+  wb_history_chart sn=<SN> channels=[["hwmon","CPU Temperature"]] period=24h title="CPU temp, last 24h" ylabel="°C"
+  # → returns {format:"mermaid", mermaid: "xychart-beta\n  title ...", totalPoints, ...}
+  # the `mermaid` string can be wrapped in ```mermaid ... ``` and rendered inline in Claude Code chat
+  ```
+
+- **Vega-Lite SVG** — only when the user asks for a richer chart, a non-line type, dual Y-axis, or wants to save to a file. Pass `format="svg"` or set `outputPath`. Supports `line`, `bar`, `area`, `point`, `histogram`, `heatmap`, `boxplot`. Axis logic:
    - 1 unit → one Y scale.
    - 2 units → dual axis (`resolve.scale.y: independent`, left+right).
    - 3+ units → normalization to [0;1], original ranges in legend.
 
   ```
-  wb_history_chart sn=<SN> channels=[["hwmon","CPU Temperature"],["hwmon","Board Temperature"]] period=1h chartType=line title="Temps last hour"
-  # → returns {svg, svgBytes, totalPoints, channels, from, to}; SVG inline (if <200 KB)
-  wb_history_chart sn=<SN> channels=[...] period=24h chartType=heatmap outputPath=/tmp/cpu.svg
-  # → writes to file, response only contains {ok, outputPath, ...}
+  wb_history_chart sn=<SN> channels=[["hwmon","CPU Temperature"],["hwmon","Board Temperature"]] period=1h format=svg chartType=line title="Temps last hour"
+  # → returns {format:"svg", svg, svgBytes, totalPoints, ...}; SVG inline (if <200 KB)
+  wb_history_chart sn=<SN> channels=[...] period=24h format=svg chartType=heatmap outputPath=/tmp/cpu.svg
+  # → writes to file, response only contains {ok, format:"svg", outputPath, ...}
   ```
 
-  **When to use `outputPath`:** if a day/week passed across 3+ channels, the SVG can be >200 KB — the MCP server will refuse inline response. Save to file and give the user the path.
+  **When to use `outputPath`:** if a day/week passed across 3+ channels, the SVG can be >200 KB — the MCP server will refuse the inline response. Save to file and give the user the path.
 
-- **Mermaid `xychart-beta`** (since v10) — renders in Markdown (Claude Code, GitHub, Mermaid-compatible viewers). **Single Y scale only** — for one series or series with the same unit. Suitable when you don't want to generate an SVG file.
+- **Conversation flow.** Render Mermaid first; only when the user asks for "pretty"/"save as SVG"/"heatmap"/"two units side-by-side" — switch to `format="svg"`. Don't dump SVG by default.
+
+Mermaid format reference (rendered by Claude Code automatically when wrapped in ```mermaid```):
   ```mermaid
   xychart-beta
       title "CPU Temperature, °C"
