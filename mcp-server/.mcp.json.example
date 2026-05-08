@@ -2,7 +2,7 @@
   "mcpServers": {
     "wiren-board": {
       "command": "bun",
-      "args": ["run", "/ABSOLUTE/PATH/TO/wb-mcp-server/src/index.ts"],
+      "args": ["run", "/ABSOLUTE/PATH/TO/wb-ai-skills/mcp-server/src/index.ts"],
       "env": {
         "WB_SSH_USER": "root",
         "WB_SSH_PASSWORD": "wirenboard",

@@ -1,9 +1,8 @@
 # wb-ai-skills
 
 **Talk to your [Wiren Board](https://wirenboard.com) controllers from an AI assistant.**
-Drop the chat box into [Claude Code](https://claude.ai/code) or [opencode](https://opencode.ai),
-type a question or a request — the assistant figures out which controller, runs SSH/MQTT/Modbus
-commands, reads logs, edits configs, and reports back.
+
+Drop the chat box into [Claude Code](https://claude.ai/code) or [opencode](https://opencode.ai), type a question — the assistant figures out which controller, runs SSH/MQTT/Modbus commands, reads logs, edits configs, and reports back.
 
 ```
 > /wiren-board
@@ -14,70 +13,58 @@ commands, reads logs, edits configs, and reports back.
 → explanation in plain English + suggested override-conf to fix it
 ```
 
-```
-> scan the bus on A25NDEMJ and add everything you find to the config
-
-→ wb_modbus_scan → 8 devices on /dev/ttyRS485-1 (Fast Modbus)
-→ wb_modbus_add_devices dryRun=true → preview the change
-→ wait for confirmation → write /etc/wb-mqtt-serial.conf
-→ wb_mqtt_inventory → all 8 devices appear in MQTT, polling, no errors
-```
-
-No new desktop app. No vendor lock-in. The assistant you already use, plus a typed
-toolbox for WB plus skill files telling it *how* to use them well.
+No new desktop app. No vendor lock-in. The assistant you already use, plus a typed toolbox for WB plus skill files telling it *how* to use them well.
 
 ---
 
-## What you get
+## What is this and why
 
-| | |
-|---|---|
-| 🧰 **MCP server** | Bun-based service exposing **43 typed tools** (`wb_discover`, `wb_ssh_exec`, `wb_mqtt_rpc`, `wb_modbus_scan`, `wb_history_chart`, `wb_systemd_unit`, ...). The LLM calls them directly through the [Model Context Protocol](https://modelcontextprotocol.io). Structured input/output, type checking, no shell-quoting accidents. |
-| 📚 **Skill packs** | **21 bash skills** (no MCP needed) and **19 mcp skills** (route intents to the typed tools). Domain knowledge: how to enable a Modbus channel, when `port/Scan` lies, what `meta/error` flags mean per [WB Conventions](https://github.com/wirenboard/conventions), how to write a wb-rules JS rule, how to back up before factoryreset, ... |
-| 🔌 **Pure-client** | Nothing runs **on** the controller. SSH + stock `mosquitto` + `avahi` is all the controller needs. Survives factoryreset and FIT firmware reflash without ssh-key churn. |
+The package contains **skills** (Markdown files telling the LLM how to work with WB) and an optional **MCP server** (43 typed tools the LLM calls instead of raw shell). Two ways to use them:
+
+- **Bash flavor** — skills only. The LLM uses its built-in `Bash` tool to run `ssh`, `mosquitto_*` and `avahi-browse` directly. Setup ≈5 min, no dependencies beyond the host CLI utilities.
+- **MCP flavor** — skills + a Bun-based MCP server. The LLM calls structured tools like `wb_modbus_scan`, `wb_history_chart`, `wb_systemd_unit`. Typed input/output, no shell-quoting accidents, ready-made charts. Setup ≈10 min.
+
+Pick one — never both. The two skill sets share the same names; the LLM client would only see one of each anyway. **MCP flavor is recommended for daily use**; bash flavor is the no-Bun fallback.
+
+Nothing runs **on** the controller. Stock SSH + mosquitto + avahi is all the controller needs. Survives factoryreset and FIT firmware reflash without ssh-key churn.
 
 ---
 
 ## What you can ask
 
-A fresh assistant session, after loading the master skill `/wiren-board`, can do all of this without further hand-holding:
+After loading the master skill `/wiren-board`, a fresh assistant session can do all of this without further hand-holding:
 
-- **Discovery & status:** "find all WB controllers in the LAN", "what firmware does A25NDEMJ run?", "show me load and disk on every controller"
-- **Diagnostics:** "why is wb-mqtt-serial unhappy on A25NDEMJ?", "any failed services?", "errors in the journal in the last hour"
-- **Modbus:** "scan the bus, list devices", "WB-MAI6 has channels in1..in6 — turn them all on", "show me the WB-MR6C template"
-- **MQTT:** "what's the value of `/devices/wb-mr6c_2/controls/K1`?", "publish ON to `K1/on`", "list every device with its controls"
-- **Rules & scenarios:** "make a rule: when motion sensor fires, turn on the light for 60 seconds", "create a thermostat scenario for the living room"
-- **History:** "plot CPU temperature for the last 24 hours as SVG", "average current draw last week"
-- **Backup & update:** "make a full backup before I do `apt upgrade`", "what packages will be upgraded?", "factoryreset this test controller"
-- **Network & cloud:** "is internet working?", "switch the uplink to sim2", "is wb-cloud-agent connected?"
+- **Discovery & status** — "find all WB controllers in the LAN", "what firmware does A25NDEMJ run?", "show load and disk on every controller"
+- **Diagnostics** — "why is wb-mqtt-serial unhappy?", "any failed services?", "errors in the journal in the last hour"
+- **Modbus** — "scan the bus, list devices", "WB-MAI6 channels in1..in6 — turn them all on", "show me the WB-MR6C template"
+- **MQTT** — "what's `/devices/wb-mr6c_2/controls/K1`?", "publish ON to `K1/on`", "list every device with its controls"
+- **Rules & scenarios** — "make a rule: when motion fires, turn on the light for 60 s", "create a thermostat scenario for the living room"
+- **History** — "plot CPU temperature for the last 24 h as SVG", "average current draw last week"
+- **Backup & update** — "make a full backup before `apt upgrade`", "what packages will be upgraded?", "factoryreset this test controller"
+- **Network & cloud** — "is internet working?", "switch the uplink to sim2", "is wb-cloud-agent connected?"
 
-Each of those is one sentence to the LLM. The LLM picks tools, runs them, reads outputs, asks for confirmation on destructive ops, and reports.
+Each is one sentence to the LLM. The LLM picks tools, runs them, asks for confirmation on destructive ops, reports back.
 
 ---
 
-## Two flavors — pick **one**
+## Quick install
 
-| | bash skills only | bash skills + MCP server |
+The repo is the only thing you clone. Run **one** of the two install scripts below. Both end with the same one-liner you type in your AI client.
+
+### Prerequisites
+
+| | Bash flavor | MCP flavor |
 |---|---|---|
-| **What runs** | LLM calls `Bash` and runs `ssh root@<host>` / `mosquitto_*` directly | LLM calls typed `wb_*` tools; the MCP server runs them and returns structured JSON |
-| **Setup** | Just SSH access + a few CLI utilities on the host | Same + Bun 1.3+ + a `.mcp.json` config |
-| **Quoting / errors** | LLM constructs shell strings — occasionally trips on quotes | Server validates input via Zod, returns typed errors |
-| **Discovery** | LLM runs `avahi-browse` itself | `wb_discover` keeps a 15-second mDNS cache, merges manual entries |
-| **History charts** | LLM emits Mermaid or asks for python | `wb_history_chart` returns a Vega-Lite SVG ready to view |
-| **Surface** | 21 skills | Same 21 skills (mcp-flavor variants) + 43 tools |
+| **Host packages** | `avahi-utils`, `jq`, `sshpass` (only with password auth) | `avahi-utils`, [Bun](https://bun.sh) 1.3+, `sshpass` (only with password auth) |
+| **On the controller** | Stock SSH + mosquitto (already there) | Same |
+| **Setup time** | 5 min | 10 min |
 
-The skill files share the same `name:`, so **install only one of the two flavors** — Claude Code / opencode would otherwise pick whichever loads first.
+`mosquitto_sub` / `mosquitto_pub` run **on the controller** (over SSH) in both flavors — no `mosquitto-clients` needed on the host.
 
-`skills/bash/` is the **source of domain knowledge** (RPC formats, Modbus quirks, wb-rules ES5 limits). `skills/mcp/` variants are thin and reference bash for deep details.
-
----
-
-## Quick start
-
-### Bash flavor (5 minutes, no Bun)
+### Bash flavor
 
 ```bash
-sudo apt install avahi-utils mosquitto-clients sshpass jq
+sudo apt install avahi-utils jq sshpass
 
 git clone https://github.com/wirenboard/wb-ai-skills.git
 cd wb-ai-skills
@@ -87,26 +74,28 @@ cd wb-ai-skills
 ./install-skills.sh bash opencode --global     # for opencode
 ```
 
-In Claude Code:
+That's it. Open Claude Code / opencode and try `/wiren-board` (see [Try it](#try-it)).
 
-```
-> /wiren-board
-> find controllers in the network and show their firmware versions
-```
-
-### MCP flavor (10 minutes, with Bun)
+### MCP flavor
 
 ```bash
-sudo apt install avahi-utils mosquitto-clients sshpass jq
+sudo apt install avahi-utils sshpass
 curl -fsSL https://bun.sh/install | bash
+exec $SHELL    # reload PATH so `bun` is found
 
 git clone https://github.com/wirenboard/wb-ai-skills.git
 cd wb-ai-skills/mcp-server && bun install && cd ..
 
-./install-skills.sh mcp claude --global
+./install-skills.sh mcp claude --global        # or: mcp opencode --global
 ```
 
-Add to `~/.claude.json`:
+Then register the MCP server with your client. **Claude Code:**
+
+```bash
+claude mcp add wiren-board -- bun run "$(pwd)/mcp-server/src/index.ts"
+```
+
+Or hand-edit `~/.claude.json`:
 
 ```json
 {
@@ -114,24 +103,62 @@ Add to `~/.claude.json`:
     "wiren-board": {
       "command": "bun",
       "args": ["run", "/ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts"],
-      "env": { "WB_SSH_USER": "root", "WB_SSH_PASSWORD": "wirenboard", "WB_CHART_FORMAT": "svg" }
+      "env": {
+        "WB_SSH_USER": "root",
+        "WB_SSH_PASSWORD": "wirenboard",
+        "WB_CHART_FORMAT": "svg"
+      }
     }
   }
 }
 ```
 
-Restart Claude Code. Then:
+**opencode** uses a slightly different shape — `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "mcp": {
+    "wiren-board": {
+      "type": "local",
+      "command": ["bun", "run", "/ABS/PATH/TO/wb-ai-skills/mcp-server/src/index.ts"],
+      "environment": { "WB_SSH_USER": "root", "WB_SSH_PASSWORD": "wirenboard" },
+      "enabled": true
+    }
+  }
+}
+```
+
+Restart the client so it re-reads the config.
+
+### SSH access to controllers
+
+Default factory creds are `root` / `wirenboard`. Two ways:
+
+1. **SSH key (recommended)** — `ssh-copy-id -o StrictHostKeyChecking=accept-new root@wirenboard-A25NDEMJ.local`. Then no `sshpass` and no env vars needed.
+2. **Password** — leave `WB_SSH_PASSWORD=wirenboard` (the default). `sshpass` package required.
+
+Both flavors disable strict host-key checking, so factoryreset and firmware reflash don't break SSH access.
+
+### Try it
+
+In Claude Code:
 
 ```
 > /wiren-board
-> wb_discover then wb_probe each one
+> find every controller in the network and show release + uptime
 ```
 
-Detailed setup, opencode config, troubleshooting — see [INSTALL.md](INSTALL.md).
+In opencode:
+
+```
+> @wiren-board find controllers and show release + uptime
+```
+
+Expected: a list with `sn`, `host`, `release`, `uptime`. If it's empty, see [Troubleshooting](#troubleshooting).
 
 ---
 
-## Skills (21 bash + 19 mcp)
+## Skills (21)
 
 | Skill | Bash | MCP | Ask the assistant for... |
 |---|:---:|:---:|---|
@@ -152,34 +179,120 @@ Detailed setup, opencode config, troubleshooting — see [INSTALL.md](INSTALL.md
 | `wb-hardware-modules` | ✓ | ✓ | Configure MOD1-4 / WBIO / Zigbee / CAN slots |
 | `wb-software-install` | ✓ | ✓ | Docker-by-default install of Node-RED / HA / Grafana / Z2M |
 | `wb-zigbee` | ✓ | ✓ | Pairing, control, OTA via zigbee2mqtt |
-| `wb-history` | ✓ | ✓ | Query wb-mqtt-db, render SVG charts |
+| `wb-history` | ✓ | ✓ | Query wb-mqtt-db, render SVG / Mermaid charts |
 | `wb-bugreport` | ✓ | ✓ | Compose a bug report for support, gather diag archive |
-| `wb-diagrams` | ✓ | — | Mermaid diagrams of automation logic |
-| `wb-documentation-search` | ✓ | — | Search wirenboard.com/wiki and GitHub |
+| `wb-diagrams` | ✓ | — | Mermaid diagrams of automation logic (controller-independent) |
+| `wb-documentation-search` | ✓ | — | Search wirenboard.com/wiki and GitHub (controller-independent) |
 
-`wb-diagrams` and `wb-documentation-search` are controller-independent — the installer always pulls them from `skills/bash/` even when you choose mcp-flavor.
-
----
-
-## MCP tools (43 across 11 groups)
-
-Full table with parameters in [`mcp-server/README.md`](mcp-server/README.md). Brief map:
-
-- **Discovery:** `wb_discover`, `wb_probe`, `wb_add_controller`
-- **SSH & files:** `wb_ssh_exec`, `wb_ssh_exec_async`, `wb_read_file`, `wb_write_file`
-- **Async jobs:** `wb_job_status`, `wb_job_tail`, `wb_job_cancel` — survive SSH disconnect
-- **MQTT:** `wb_mqtt_read`, `wb_mqtt_write` (with `retain`/`qos`), `wb_mqtt_list`, `wb_mqtt_rpc`
-- **Devices:** `wb_mqtt_devices`, `wb_mqtt_controls`, **`wb_mqtt_inventory`** (combined view, error flags per [WB Conventions](https://github.com/wirenboard/conventions))
-- **Confed:** `wb_confed_load`, `wb_confed_save` (JSON validation + atomic restart)
-- **wb-rules:** `wb_rules_list`, `wb_rules_load`, `wb_rules_save`, `wb_rules_disable`, `wb_rules_delete`
-- **History:** `wb_history`, `wb_history_chart` (Vega-Lite SVG)
-- **Audit/state:** `wb_audit`, `wb_state_save`, `wb_state_diff`
-- **Modbus/serial:** `wb_modbus_template`, `wb_modbus_templates_list`, `wb_modbus_device_info`, `wb_modbus_probe`, `wb_modbus_ports`, **`wb_modbus_scan`** (via `wb-device-manager`), **`wb_modbus_add_devices`**
-- **Diagnostics:** `wb_metrics`, `wb_logs` (with `since`/`grep`), `wb_failed`, `wb_serial_debug`, `wb_systemd_unit`, `wb_network_status`, `wb_cloud_status`
+`wb-diagrams` and `wb-documentation-search` work without a controller; the installer pulls them from `skills/bash/` even when you choose mcp-flavor.
 
 ---
 
-## How it works
+## MCP tools (43, mcp flavor only)
+
+### Discovery (3)
+
+| Tool | Purpose |
+|---|---|
+| `wb_discover` | List controllers seen via mDNS + manual entries |
+| `wb_probe` | Reachability + uname/release/fwVersion/uptime for one SN |
+| `wb_add_controller` | Manually register by hostname/IP (when mDNS is blocked) |
+
+### SSH & files (4)
+
+| Tool | Purpose |
+|---|---|
+| `wb_ssh_exec` | Synchronous shell command, up to 2 min |
+| `wb_ssh_exec_async` | Background task via `systemd-run --collect`, survives SSH disconnect |
+| `wb_read_file` | Read up to 64 KB |
+| `wb_write_file` | Write via SFTP, any size |
+
+### Async jobs (3)
+
+| Tool | Purpose |
+|---|---|
+| `wb_job_status` | Active state, exit code, log line count, label |
+| `wb_job_tail` | Incremental log reader (`fromLine`/`maxLines`) |
+| `wb_job_cancel` | SIGTERM the unit |
+
+Job script and log live in `/mnt/data/ai/wb-ai-skills/jobs/<id>.{sh,log}` (24-hour TTL gc).
+
+### MQTT (4)
+
+| Tool | Purpose |
+|---|---|
+| `wb_mqtt_read` | Read one retained topic (any, not only WB) |
+| `wb_mqtt_write` | Publish to any topic; optional `retain`/`qos` |
+| `wb_mqtt_list` | Subscribe by prefix for `timeout` seconds, collect topic→payload |
+| `wb_mqtt_rpc` | One-shot RPC over MQTT (wb-mqtt-serial, confed, wbrules, db_logger, wb-device-manager, ...) |
+
+### Devices (3)
+
+| Tool | Purpose |
+|---|---|
+| `wb_mqtt_devices` | Compact `{id: human-name}` map |
+| `wb_mqtt_controls` | Raw topic→payload list for one device |
+| `wb_mqtt_inventory` | **Combined view**: devices + driver + parsed error + controls with unpacked meta. Error flags follow [WB Conventions](https://github.com/wirenboard/conventions): `r` / `w` / `p` |
+
+### Confed (2)
+
+| Tool | Purpose |
+|---|---|
+| `wb_confed_load` | Load `/etc/wb-mqtt-serial.conf`, `/etc/wb-hardware.conf` etc. with schema |
+| `wb_confed_save` | Save with validation + atomic restart. Accepts `content` as object or JSON-string |
+
+### wb-rules (5)
+
+| Tool | Purpose |
+|---|---|
+| `wb_rules_list` | All rule files with enabled/disabled state |
+| `wb_rules_load` | Read one rule's source |
+| `wb_rules_save` | Save (JS validated by the engine, hot reload) |
+| `wb_rules_disable` | Rename `<name>.js` → `<name>.js.disabled` (reversible) |
+| `wb_rules_delete` | `Editor/Remove` (irreversible) |
+
+### History (2)
+
+| Tool | Purpose |
+|---|---|
+| `wb_history` | Query `db_logger/history/get_values`: points + min/max/avg per channel |
+| `wb_history_chart` | Render Mermaid (default) or Vega-Lite SVG. Types: line, bar, area, point, histogram, heatmap, boxplot |
+
+### Audit & state (3)
+
+| Tool | Purpose |
+|---|---|
+| `wb_audit` | Packages, services, cron, opt/usr-local, symlinks, /mnt/data dirs, dpkg-modified files |
+| `wb_state_save` | JSON snapshot to `/mnt/data/ai/wb-ai-skills/snapshots/snapshot-<ts>.json` |
+| `wb_state_diff` | Compare a saved snapshot to current state |
+
+### Modbus / wb-mqtt-serial (7)
+
+| Tool | Purpose |
+|---|---|
+| `wb_modbus_templates_list` | Templates from RPC `config/Load.types`. Without `filter` — group summary; with — flat list |
+| `wb_modbus_template` | One template's content (channels, parameters, groups). Views: `summary`, `full`, `channels-only`, `meta-only` |
+| `wb_modbus_device_info` | Firmware parameters for a configured device (fw, model, debounce/modes/mappings) |
+| `wb_modbus_probe` | Quick ping for one slave on a port |
+| `wb_modbus_ports` | RS-485 port parameters from the driver config |
+| `wb_modbus_scan` | Bus scan via `wb-device-manager`. Default `extended` (Fast Modbus, seconds); `standard` for third-party. Auto-detects ports and baud |
+| `wb_modbus_add_devices` | Add discovered devices to wb-mqtt-serial config; copies template parameter defaults so schema validation passes (e.g. WB-MAI6 `in1_type..in6_type`). `dryRun=true` for preview |
+
+### Diagnostics (7)
+
+| Tool | Purpose |
+|---|---|
+| `wb_metrics` | Load avg, RAM, disk free for `/` and `/mnt/data` |
+| `wb_logs` | `journalctl` wrapper with `since`/`until`/`grep`/`grepInvert`/`priority`/`unit`/`lines` |
+| `wb_failed` | `systemctl --failed` |
+| `wb_serial_debug` | Atomic enable→capture→disable cycle for `wb-mqtt-serial` debug=true; `trap`-protected |
+| `wb_systemd_unit` | Manage and inspect a unit: `status`/`start`/`stop`/`restart`/`reload`/`enable`/`disable`/`mask`/`unmask`/`cat`/`list-deps` |
+| `wb_network_status` | Interfaces (`ip -j`) + NetworkManager connections + default route + optional ping |
+| `wb_cloud_status` | wb-cloud-agent: service activity, certificate, providers, MQTT controls |
+
+---
+
+## Under the hood
 
 ```
                        ┌──────────────────┐
@@ -187,12 +300,12 @@ Full table with parameters in [`mcp-server/README.md`](mcp-server/README.md). Br
        you ──────────► │  / opencode      │
        (chat)          │                  │
                        └────┬─────────────┘
-                            │ MCP protocol (stdio)
+                            │ MCP protocol (stdio)         ← only with mcp flavor
                             ▼
               ┌─────────────────────────────┐
               │  mcp-server (Bun)           │
               │  43 typed tools (Zod)       │
-              │  ssh / mosquitto / avahi    │
+              │  spawns: ssh, avahi-browse  │
               │  vega-lite for SVG charts   │
               └────┬────────────────────────┘
                    │ ssh / mqtt over local network
@@ -204,35 +317,104 @@ Full table with parameters in [`mcp-server/README.md`](mcp-server/README.md). Br
               └─────────────────────┘
 ```
 
-If MCP isn't installed, the LLM uses bash skills directly: same flow, just `Bash` instead of `wb_*` tools — every shell command spelled out by the skill files.
+With **bash flavor** the LLM uses its `Bash` tool instead of `wb_*` — same flow, every shell command spelled out by the skill files.
 
-### What's MCP?
+The MCP server runs `mosquitto_sub` / `mosquitto_pub` on the controller via SSH (not locally). Locally it only spawns `ssh`/`sshpass` and `avahi-browse`.
 
-[Model Context Protocol](https://modelcontextprotocol.io/) — a small standard for plugging tools into LLM clients. Each tool has a name, a JSON-Schema for input, and returns structured output. The LLM picks one, fills params, gets the result. Works with Claude Code, opencode, and any other MCP-aware client.
+[Model Context Protocol](https://modelcontextprotocol.io/) is a small standard for plugging tools into LLM clients. Our server uses TypeScript on Bun, no native bindings, no SQLite — only `@modelcontextprotocol/sdk`, `zod`, `vega`/`vega-lite`. State (manual-controllers list) lives in `~/.wb-mcp/controllers.json`.
 
-This repo's MCP server is implemented in TypeScript on Bun, no native bindings, no SQLite — only `@modelcontextprotocol/sdk`, `zod`, `vega`/`vega-lite`. State (the manual-controllers list) lives in `~/.wb-mcp/controllers.json`.
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `WB_SSH_USER` | `root` | SSH user |
+| `WB_SSH_PASSWORD` | `wirenboard` | SSH password (used if `WB_SSH_KEY` is unset) |
+| `WB_SSH_KEY` | — | Path to a private key (preferred over password) |
+| `WB_DISCOVERY_INTERVAL` | `15000` | mDNS scan period in ms |
+| `WB_CHART_FORMAT` | — | `svg` forces `wb_history_chart` to write an SVG file under `/tmp/wb-charts/` instead of inline Mermaid. Useful for TUI clients (Claude Code CLI, opencode TUI). Unset / `mermaid` / `auto` keeps Mermaid as default for browser clients |
+
+### Things to know
+
+- **SSH host key.** Both flavors use `StrictHostKeyChecking=no` + `UserKnownHostsFile=/dev/null`. After factoryreset / FIT reflash the controller's host key changes; we don't fight it. Local-network controllers are a trusted environment.
+- **Async jobs survive SSH disconnect** via `systemd-run --collect`. Long things (`apt upgrade`, full bus scan, FIT-collect) just keep running.
+- **MQTT errors are typed.** `<...>/meta/error` is parsed into `{read, write, periodMiss}` per WB Conventions. When `read=true` the value topic still holds the **last-known-good** value — `wb_mqtt_inventory` shows it as such.
+- **Names with spaces work.** WB-MR6C exposes controls named `Input 0`, `Input 0 counter`. We use `mosquitto_sub -F '%t\t%p'` so spaces inside names don't get clipped.
+- **factoryreset is one tool call.** `wb-factoryreset --force` via `wb_ssh_exec_async` + a backup-first scenario in `/wb-controller-update`. Tested: full reset round-trip without ssh-key reload.
+
+### Repo layout
+
+- `mcp-server/` — TypeScript MCP server (Bun). Self-contained `src/lib/` (no npm bindings to native libs).
+- `skills/bash/` — 21 skills with shell recipes. Source of truth for domain knowledge (RPC formats, Modbus quirks, wb-rules ES5 limits).
+- `skills/mcp/` — 19 thin skills mapping intents to `wb_*` tools. Reference bash counterparts for deep details.
+- `install-skills.sh` — installer for both flavors, both clients.
+- `VERSION` — single source of truth; printed by the master skill and reported in the MCP `initialize` handshake.
 
 ---
 
-## Things you should know
+## Troubleshooting
 
-- **SSH host key.** The MCP server uses `StrictHostKeyChecking=no` + `UserKnownHostsFile=/dev/null`. After factoryreset / FIT reflash the controller's host key changes; we don't fight it. A controller in your local network is a trusted environment.
-- **Async jobs** survive SSH disconnect via `systemd-run --collect`. Long things (`apt upgrade`, full bus scan, FIT-collect) just keep running. The script and log live in `/mnt/data/ai/wb-ai-skills/jobs/<id>.{sh,log}`, garbage-collected after 24 hours.
-- **MQTT errors are typed.** `<...>/meta/error` is parsed into `{read, write, periodMiss}` per WB Conventions. When `read=true` the value topic still holds the **last-known-good** value — `wb_mqtt_inventory` shows it as such.
-- **Names with spaces work.** WB-MR6C exposes controls named `Input 0`, `Input 0 counter`. We use `mosquitto_sub -F '%t\t%p'` (TAB separator) so spaces inside names don't get clipped.
-- **factoryreset is one tool call.** `wb-factoryreset --force` via `wb_ssh_exec_async` + a sane backup-first scenario in `/wb-controller-update`. Tested in CI: full reset round-trip without ssh-key reload.
+**`wb_discover` returns nothing.** In order of likelihood:
+
+1. mDNS cache hasn't filled yet — first scan happens within `WB_DISCOVERY_INTERVAL` (default 15 s) of MCP server start. Wait and retry.
+2. `avahi-daemon` isn't running on the host — `systemctl status avahi-daemon`, start if needed.
+3. Multicast is blocked between segments — mDNS only works in one broadcast domain (no NAT, no VPN, same VLAN).
+4. Controller is in WB-AP mode and host isn't on its WiFi.
+
+Workaround: add manually — `wb_add_controller host=192.168.x.y`. Bypasses mDNS.
+
+**SSH timeout / "handshake failure".**
+
+1. Controller just booted (uptime < 1 min) — `sshd` is still bringing up crypto, wait 30-60 s.
+2. Stale `~/.ssh/known_hosts` (bash flavor only — MCP disables host-key checking) — `ssh-keygen -R wirenboard-A25NDEMJ.local`.
+3. Password changed — after factoryreset root's password is back to `wirenboard`. Custom password no longer matches.
+
+**`bun: command not found`.** PATH issue after the install script. Either:
+
+```bash
+echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
+echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.bashrc
+exec $SHELL
+```
+
+…or use the absolute path in your client config: `"command": "/home/<you>/.bun/bin/bun"`.
+
+**MCP server doesn't appear in the client.**
+
+1. Restart the client after editing `.mcp.json` / `~/.claude.json` / `opencode.json` — they cache MCP configs at startup.
+2. Run the server directly to validate: `bun run /ABS/PATH/.../mcp-server/src/index.ts`. Should hang silently on stdio. Errors print to stderr.
+
+**`Invalid subscription topic` from `wb_mqtt_list`.** MQTT wildcards `+` and `#` must occupy a whole level between `/`. `+` inside a name segment (`/devices/system__wb-cloud-agent__+/...`) is invalid; mosquitto rejects it.
+
+**`apt-get update` returns 403 on a fresh-from-factory controller.** `deb.wirenboard.com` is behind a CDN that occasionally caches a stale 403 (24 h TTL). Wait it out, or `wb-release -t wb-2602` to switch to a fresher release (see <https://wirenboard.com/wiki/WB_Software_Releases>).
+
+---
+
+## Uninstall
+
+```bash
+# Skills (Claude Code — they're symlinks):
+find ~/.claude/skills -maxdepth 1 -type l -lname '*wb-ai-skills/skills/*' -delete
+
+# Skills (opencode — flat .md files):
+ls ~/.config/opencode/agents/    # remove relevant files
+
+# MCP server registration:
+claude mcp remove wiren-board
+# or hand-edit ~/.claude.json / opencode.json
+
+# Artifacts on a controller (jobs, snapshots, backups, diag captures):
+ssh root@<host> 'rm -rf /mnt/data/ai/wb-ai-skills'
+```
+
+The MCP server itself doesn't install anything global. `~/.wb-mcp/controllers.json` keeps manually added entries — small JSON, safe to delete.
 
 ---
 
 ## Requirements
 
-- **Host machine:** Linux (Debian/Ubuntu tested). macOS — not tested; mDNS would need a `dns-sd` shim instead of `avahi-browse`. Windows — no.
-- **For the bash flavor:** `avahi-utils`, `mosquitto-clients`, `sshpass` (or pre-deployed SSH key), `jq`.
-- **For the MCP flavor:** all of the above + Bun 1.3+.
+- **Host:** Linux (Debian/Ubuntu tested). macOS — not tested; mDNS would need a `dns-sd` shim instead of `avahi-browse`. Windows — no.
 - **Client:** Claude Code CLI or opencode.
 - **Controllers:** anything reachable over SSH on stock firmware. Tested on wb7 (wb-2410, wb-2602) and wb8 (wb-2507).
-
----
 
 ## License
 
