@@ -2,38 +2,31 @@
 # Install wb-ai-skills skills into Claude Code or opencode.
 #
 # Usage:
-#   ./install-skills.sh <flavor> <target> [--global]
-#     flavor: bash | mcp
+#   ./install-skills.sh <target> [--global]
 #     target: claude | opencode
 #     --global: system-wide (~/.claude or ~/.config/opencode); otherwise into .claude/.opencode of the current dir
 #
 # Examples:
-#   ./install-skills.sh bash claude --global
-#   ./install-skills.sh mcp opencode
-#   ./install-skills.sh mcp claude     # into ./.claude/skills/
+#   ./install-skills.sh claude --global
+#   ./install-skills.sh opencode
+#   ./install-skills.sh claude     # into ./.claude/skills/
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
 
-flavor="${1:-}"
-target="${2:-}"
-scope="${3:-}"
+target="${1:-}"
+scope="${2:-}"
 
 usage() {
   sed -n '2,11p' "$0" >&2
   exit 1
 }
 
-[[ "$flavor" =~ ^(bash|mcp)$ ]] || usage
 [[ "$target" =~ ^(claude|opencode)$ ]] || usage
 
-src="$REPO/skills/$flavor"
+src="$REPO/skills/bash"
 [[ -d "$src" ]] || { echo "Source dir not found: $src" >&2; exit 1; }
-
-# Skills that don't depend on MCP being present (Mermaid rendering, wiki search):
-# for the mcp flavor we additionally install them from the bash set so cross-references resolve.
-SHARED_FROM_BASH=(wb-diagrams wb-documentation-search)
 
 if [[ "$scope" == "--global" ]]; then
   case "$target" in
@@ -49,14 +42,8 @@ fi
 
 mkdir -p "$dst"
 
-# Source dirs: primary flavor + (for mcp) the shared bash skills above.
 declare -a sources=()
 for d in "$src"/*/; do sources+=("$d"); done
-if [[ "$flavor" == "mcp" ]]; then
-  for shared in "${SHARED_FROM_BASH[@]}"; do
-    [[ -d "$REPO/skills/bash/$shared" ]] && sources+=("$REPO/skills/bash/$shared/")
-  done
-fi
 
 if [[ "$target" == "claude" ]]; then
   # Claude Code: <skill>/SKILL.md directories, installed as symlinks.
@@ -89,4 +76,4 @@ else
 fi
 
 echo
-echo "Done. flavor=$flavor target=$target dst=$dst"
+echo "Done. target=$target dst=$dst"

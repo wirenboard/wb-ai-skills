@@ -4,6 +4,11 @@ Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning 
 
 ## [Unreleased]
 
+### Removed
+
+- **MCP server** (`mcp-server/`) and the **mcp-flavor skills** (`skills/mcp/`, 19 skills). Repository now ships only the bash flavor (21 skills under `skills/bash/`); the LLM drives controllers via its built-in `Bash` tool. The MCP implementation stays in git history for reference while a Python `wb-cli` replacement is being built.
+- `install-skills.sh` no longer takes a `flavor` argument: `./install-skills.sh <claude|opencode> [--global]`.
+
 ## [0.1.0] — 2026-05-08
 
 First public release. Tested on A25NDEMJ (wb7, wb-2410/wb-2602) and A2V6W7I6 (wb8, wb-2507).
