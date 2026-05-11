@@ -86,9 +86,9 @@ class ProgressBar:
             return
         percent = max(0, min(100, percent))
         filled = int(self._WIDTH * percent / 100)
-        bar = "#" * filled + "-" * (self._WIDTH - filled)
+        bar_render = "#" * filled + "-" * (self._WIDTH - filled)
         tail = f"  {suffix}" if suffix else ""
-        _stream().write(f"\r{self._label} [{bar}] {percent:3d}%{tail}")
+        _stream().write(f"\r{self._label} [{bar_render}] {percent:3d}%{tail}")
         _stream().flush()
 
     def close(self) -> None:

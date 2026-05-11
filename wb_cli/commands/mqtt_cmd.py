@@ -51,7 +51,7 @@ class MqttPlugin(BasePlugin):
         if "+" in topic or "#" in topic:
             raise WbCliError(
                 code="MQTT_INVALID_TOPIC",
-                message=f"'mqtt read' expects a concrete topic; use 'mqtt list' for wildcards (got '{topic}')",
+                message=f"'mqtt read' needs a concrete topic; use 'mqtt list' for wildcards: '{topic}'",
                 details={"topic": topic},
                 exit_code=ExitCode.USAGE,
             )
