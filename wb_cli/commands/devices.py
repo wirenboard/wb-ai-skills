@@ -22,6 +22,12 @@ class DevicesPlugin(BasePlugin):
         sub = parser.add_subparsers(dest="subcmd", metavar="<action>")
 
         p = sub.add_parser("list", help="list all devices")
+        p.add_argument(
+            "--all",
+            dest="show_all",
+            action="store_true",
+            help="include system_* devices (network/cloud-agent/time wrappers); hidden by default",
+        )
         p.add_argument("-q", "--quiet", action="store_true")
 
         p = sub.add_parser("controls", help="list controls with types and values")
@@ -59,6 +65,9 @@ class DevicesPlugin(BasePlugin):
     def _list_devices(self, ctx) -> dict:
         meta = ctx.mqtt.subscribe("/devices/+/meta/+", timeout=5.0)
         devices = _build_device_list(meta)
+        show_all = getattr(ctx.args, "show_all", False)
+        if not show_all:
+            devices = [d for d in devices if not d["id"].startswith("system_")]
         return {"devices": devices, "count": len(devices)}
 
     def _controls(self, ctx) -> dict:

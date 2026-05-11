@@ -1,3 +1,16 @@
+wb-cli (0.2.1) stable; urgency=medium
+
+  * MQTT subscribe is now ~10x faster. Previously `-W <timeout>` kept the
+    connection open for the full timeout even after every retained message
+    had arrived (so `devices list` blocked for 5 seconds, `devices inventory`
+    for 15). We now stream mosquitto_sub via a Popen and exit after a 300 ms
+    idle window once the first message has been received. On the test
+    controller: inventory dropped from ~15 s to ~1 s, list from ~5 s to ~1 s.
+  * `devices list` now hides `system_*` wrappers (per-network connections,
+    cloud-agent state, system_time) by default. Pass `--all` to keep them.
+
+ -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 19:50:00 +0000
+
 wb-cli (0.2.0) stable; urgency=medium
 
   * Human-mode output. By default `wb-cli` now picks between JSON and a
