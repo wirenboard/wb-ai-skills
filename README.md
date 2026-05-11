@@ -2,11 +2,11 @@
 
 [![CI](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml)
 
-Command-line interface to a [Wiren Board](https://wirenboard.com) controller.
+Command-line interface to a [Wiren Board](https://wirenboard.com) controller, plus a set of methodology skills for LLM agents that drive it over SSH.
 
 Runs **on the controller**. Designed for two audiences:
 
-1. **LLM agents** — SSH to the controller, call `wb-cli <command>`, get structured JSON back.
+1. **LLM agents** — SSH in, call `wb-cli <command>`, get a structured JSON envelope back.
 2. **Humans** — same commands, `--human` flag for readable output.
 
 ```bash
@@ -27,14 +27,14 @@ ssh root@wirenboard-A25NDEMJ wb-cli devices set wb-mr6c_52 K1 1
 | `devices set <dev> <ctrl> <val>` | Set a control value (turn on/off, write) |
 | `devices inventory` | Full device tree with metadata |
 | `mqtt read <topic>` | Read retained MQTT value |
-| `mqtt write <topic> <val>` | Publish MQTT message |
+| `mqtt write <topic> <val>` | Publish MQTT message (`-r` to retain) |
 | `mqtt list [topic]` | List retained topics |
 | `confed load <path>` | Load config via wb-mqtt-confed |
 | `confed save <path> <json>` | Save config via wb-mqtt-confed |
 | `rules list\|load\|save\|disable\|delete` | Manage wb-rules automation scripts |
 | `history get <dev/ctrl>` | Time-series data from wb-mqtt-db |
 | `history chart <dev/ctrl>` | Mermaid chart of historical data |
-| `modbus scan\|probe\|templates\|ports\|add-devices` | RS-485 / Modbus operations |
+| `modbus scan\|probe\|templates\|template\|ports\|device-info\|add-devices` | RS-485 / Modbus |
 | `cloud` | Cloud agent status |
 | `serial-debug --port <path>` | RS-485 debug capture with auto-restore |
 | `audit` | Quick health check |
@@ -42,61 +42,121 @@ ssh root@wirenboard-A25NDEMJ wb-cli devices set wb-mr6c_52 K1 1
 | `job run\|status\|tail\|cancel\|wait\|list` | Managed background tasks |
 | `plugins` | List installed plugins |
 
-Every command outputs a `{"data": {...}}` or `{"error": {...}}` JSON envelope on stdout. Exit codes: 0 (success), 1 (domain error), 2 (usage), 3 (environment).
+## Output contract
+
+Every command writes a single JSON object to stdout:
+
+- **Success:** `{"data": { ... }}` — `snake_case` keys, arrays are always arrays.
+- **Error:** `{"error": {"code": "SCREAMING_SNAKE", "message": "...", "hint": "...", "details": { ... }}}`.
+
+Exit codes: **0** success · **1** domain error · **2** usage · **3** environment · **130** SIGINT.
+
+Error codes are stable across releases.
 
 ## Install on a controller
 
-Once published to the Wiren Board apt repository:
+Once `wb-cli` is published to the Wiren Board apt repository:
 
 ```bash
 apt-get update && apt-get install -y wb-cli
 ```
 
-Otherwise install the latest `.deb` from [GitHub Releases](https://github.com/wirenboard/wb-ai-skills/releases/latest):
+Until then, install the latest `.deb` from [GitHub Releases](https://github.com/wirenboard/wb-ai-skills/releases/latest):
 
 ```bash
 URL=$(curl -fsSL https://api.github.com/repos/wirenboard/wb-ai-skills/releases/latest \
       | grep -oE 'https://[^"]+wb-cli_[^"]+\.deb' | head -1)
 curl -fsSL -o /tmp/wb-cli.deb "$URL"
-apt-get install -y /tmp/wb-cli.deb     # resolves python3-mqttrpc / python3-wb-common from wirenboard repo
+apt-get install -y /tmp/wb-cli.deb     # resolves python3-mqttrpc / python3-wb-common from the wirenboard repo
 ```
 
-## Development
+The `.deb` is `Architecture: all` and works on any wb6/wb7 running Debian ≥ bullseye.
 
-Requires Python 3.9+ and [wirenboard/codestyle](https://github.com/wirenboard/codestyle) as a sibling clone.
+## Skills for LLM agents
+
+The `skills/` directory holds ten methodology guides for LLM agents working with Wiren Board over SSH:
+
+| Skill | What it covers |
+|---|---|
+| `wiren-board` | Master entry: discovery, SSH conventions, wb-cli, install fallback. **Load first.** |
+| `wb-troubleshooting` | Failed units, disk, kernel mismatch, Docker, general diagnostics. |
+| `wb-troubleshooting-serial` | RS-485 / Modbus bus debugging (CRC, timeouts, debug capture). |
+| `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron). |
+| `wb-scenarios` | Declarative scenarios (thermostat, lighting, schedule). |
+| `wb-serial-templates` | Custom Modbus device templates. |
+| `wb-mqtt-broker` | MQTT broker config: auth, ACL, TLS, bridges. |
+| `wb-network` | WiFi, 4G/GSM, VPN, failover, modem diagnostics. |
+| `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
+| `wb-controller-backup` | Full controller backup and restore. |
+
+Install for your agent runtime:
 
 ```bash
-git clone https://github.com/wirenboard/codestyle ../codestyle
-python3 -m venv .venv && .venv/bin/pip install -e . -r requirements-dev.txt
-
-make test      # run pytest
-make lint      # black + isort + pylint
-make fmt       # auto-format
-make registry  # regenerate plugin registry
+./install-skills.sh claude              # → ./.claude/commands/   (symlinks)
+./install-skills.sh claude --global     # → ~/.claude/commands/
+./install-skills.sh opencode            # → ./.opencode/agents/   (frontmatter rewritten)
+./install-skills.sh opencode --global   # → ~/.config/opencode/agents/
+./install-skills.sh manual --dest <dir> # → <dir>                 (flat copy, no rewrites)
 ```
+
+The `.deb` also installs the skills into `/usr/share/wb-cli/skills/` on the controller, so an LLM agent can read them over SSH.
 
 ## Architecture
 
 ```
 wb_cli/
-  cli.py              entry point, argparse, dispatch
-  context.py           CliContext with handles (mqtt, rpc, systemd, ...)
-  plugin.py            CommandPlugin protocol, BasePlugin
-  errors.py            error codes and exit codes
-  output.py            JSON envelope rendering
-  _registry.py         generated plugin list (make registry)
-  lib/                 subsystem handles (controller, mqtt, rpc, shell, ...)
-  commands/            one plugin per command group
-    modbus/            subpackage for >4 subcommands
-tests/
-  conftest.py          controller_root fixture from captured data
-  test_*.py            52 tests via FakeContext
-skills/                10 LLM-facing methodology SKILL.md files
-debian/                .deb packaging for wb7/bullseye
-.github/workflows/     CI (lint + tests on py3.9/3.11, .deb build) + release on tag v*
+  cli.py              argparse root, lazy-imports the plugin module
+  context.py          CliContext with lazy handles (mqtt, rpc, systemd, ...)
+  plugin.py           BasePlugin
+  errors.py           error codes and exit codes
+  output.py           JSON envelope rendering
+  _registry.py        generated plugin list (make registry)
+  lib/                subsystem handles (controller, mqtt, rpc, shell, systemd, journal, job)
+  commands/           one plugin per command group; modbus/ is a subpackage
+tests/                pytest with FakeContext + a captured wb7 snapshot in tests/fixtures/
+skills/               LLM-facing SKILL.md guides (see above)
+debian/               .deb packaging (Architecture: all)
+.github/workflows/    CI (lint + tests on py3.9/3.11, .deb build) and release on tag v*
 ```
 
-See [DECISIONS.md](DECISIONS.md) for architectural rationale.
+Background-job state lives at `/mnt/data/ai/wb-cli/jobs/<unit>.{sh,log,label,started}` — `wb-cli job` wraps `systemd-run --collect` and writes logs there.
+
+## Development
+
+Requires Python 3.9 (controller target) and [wirenboard/codestyle](https://github.com/wirenboard/codestyle) cloned as `../codestyle`.
+
+```bash
+git clone https://github.com/wirenboard/codestyle ../codestyle
+python3 -m venv .venv && .venv/bin/pip install -e . -r requirements-dev.txt
+
+make test      # pytest (52 tests via FakeContext)
+make lint      # black --check + isort --check + pylint (must be 10.00)
+make fmt       # auto-format
+make registry  # regenerate wb_cli/_registry.py after adding/removing a plugin
+```
+
+Conventions:
+
+- Python 3.9 target — no `tomllib`, no PEP 695, no `match`.
+- Double quotes, line length 110.
+- Files ≤ 250 lines (`max-module-lines` in pylint).
+- MQTT subscribe: `mosquitto_sub -F '%t\t%p'` (TAB separator, never `-v`); parse with `line.partition("\t")`.
+- RPC: subprocess `mqtt-rpc-client -d <driver> -s <service> -m <method> -a <json>` (direct `python3-mqttrpc` is a future optimisation).
+
+Adding a new command? Drop `wb_cli/commands/<name>.py` with `PLUGIN = MyPlugin()`, run `make registry`, write a test.
+
+## Release
+
+`debian/changelog` is the single source of version truth. To cut a release:
+
+```bash
+dch -i             # bump version (or edit debian/changelog by hand)
+git commit -am "release X.Y.Z"
+git tag -a vX.Y.Z -m "wb-cli vX.Y.Z"
+git push && git push origin vX.Y.Z
+```
+
+The `release.yml` workflow checks that the tag matches the changelog version, builds the `.deb`, and publishes a GitHub Release with the package attached.
 
 ## License
 

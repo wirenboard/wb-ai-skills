@@ -1,6 +1,7 @@
 """MqttClient — thin wrapper over mosquitto_sub / mosquitto_pub.
 
-Uses TAB-separated format (``-F '%t\\t%p'``) per DECISIONS.md §12.
+Uses TAB-separated output format (``-F '%t\\t%p'``); never ``-v``,
+because control names may contain spaces.
 """
 
 from __future__ import annotations

@@ -1,7 +1,8 @@
 """JobManager — managed background tasks via systemd-run.
 
-Jobs live under ``/mnt/data/ai/wb-cli/jobs/<unit>.{sh,log,label,started}``.
-See DECISIONS.md §13.
+Jobs live under ``/mnt/data/ai/wb-cli/jobs/<unit>.{sh,log,label,started}``;
+``run`` wraps ``systemd-run --collect`` and garbage-collects entries older
+than 24 hours.
 """
 
 from __future__ import annotations

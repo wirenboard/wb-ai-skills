@@ -91,15 +91,29 @@ def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
 def _scan(ctx) -> dict:
     devices: list = []
     completed = False
+    # Cancel any previous scan and let the broker quiesce so we don't pick
+    # up its tail state messages.
+    try:
+        ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=2.0)
+    except WbCliError:
+        pass
+    time.sleep(1.0)
+
     with subprocess.Popen(
-        ["mosquitto_sub", "-t", "/wb-device-manager/state", "-F", "%p"],
+        # -R: drop retained ("stale") state from a prior scan so we wait
+        # for fresh progress updates triggered by our own Start call.
+        ["mosquitto_sub", "-R", "-t", "/wb-device-manager/state", "-F", "%p"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
     ) as proc:
         try:
+            # Let mosquitto_sub connect and subscribe before triggering Start,
+            # otherwise early state updates can be missed.
+            time.sleep(0.5)
             ctx.rpc.call("wb-device-manager/bus-scan/Start", {})
             deadline = time.monotonic() + ctx.args.timeout
+            saw_progress = False
             while time.monotonic() < deadline:
                 line = proc.stdout.readline()
                 if not line:
@@ -115,7 +129,13 @@ def _scan(ctx) -> dict:
                         details={"port": ctx.args.port, "state": state},
                         exit_code=ExitCode.DOMAIN,
                     )
-                if state.get("progress", 0) >= 100:
+                progress = state.get("progress", 0)
+                # Only treat progress=100 as "done" after we've seen the
+                # scan ramp up — otherwise we may catch a stale terminal
+                # state published just before our subscription attached.
+                if 0 < progress < 100:
+                    saw_progress = True
+                if progress >= 100 and saw_progress:
                     devices = state.get("devices", [])
                     completed = True
                     break
@@ -157,11 +177,14 @@ def _probe(ctx) -> dict:
             "found": False,
             "error": exc.message,
         }
+    # device/Probe returns `{}` when nothing answers on that address —
+    # treat an empty result as "no device", not a successful probe.
+    found = bool(result) and bool(result.get("device_signature") or result.get("sn"))
     return {
         "port": ctx.args.port,
         "address": ctx.args.address,
-        "found": True,
-        "result": result,
+        "found": found,
+        "result": result if found else None,
     }
 
 

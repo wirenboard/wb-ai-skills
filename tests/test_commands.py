@@ -415,6 +415,8 @@ def test_modbus_scan(monkeypatch):
     )
     ctx.rpc.call.return_value = "Ok"
     final_state = (
+        '{"progress": 10, "scanning": true, "devices": []}\n'
+        '{"progress": 50, "scanning": true, "devices": []}\n'
         '{"progress": 100, "scanning": true, "devices": ['
         '{"slave_id": 52, "title": "WB-MR6C", "port": {"path": "/dev/ttyRS485-1"}}'
         "]}\n"

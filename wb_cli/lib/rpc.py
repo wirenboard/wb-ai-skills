@@ -1,9 +1,8 @@
-"""RpcClient — MQTT-RPC calls via mosquitto_pub/sub one-shot pattern.
+"""RpcClient — MQTT-RPC calls via the ``mqtt-rpc-client`` helper.
 
-On a real controller we'd use ``mqttrpc.client.TMQTTRPCClient`` directly
-(see DECISIONS.md §18 "MQTT-RPC client choice").  This implementation
-shells out so it works without the Python mqttrpc library installed on
-the dev machine; the in-process variant is a future optimisation.
+Shells out so that no Python ``mqttrpc`` dependency is required on the
+development machine.  A direct ``mqttrpc.client.TMQTTRPCClient`` call is
+a future optimisation.
 """
 
 from __future__ import annotations

@@ -27,7 +27,7 @@ class WbCliError(Exception):  # pylint: disable=too-many-arguments
     ----------
     code:
         Stable SCREAMING_SNAKE_CASE identifier with subsystem prefix
-        (e.g. ``MQTT_BROKER_DOWN``). See DECISIONS.md §17 for the full list.
+        (e.g. ``MQTT_BROKER_DOWN``). Codes are stable across releases.
     message:
         One-line, imperative, English. ≤80 chars where possible.
     hint:
