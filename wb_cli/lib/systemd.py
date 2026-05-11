@@ -1,5 +1,9 @@
 """SystemdManager — systemctl / systemd-run wrapper."""
 
+# pylint: disable=duplicate-code
+# `wait_for_state` here and `JobHandle.wait` in wb_cli.lib.job share a
+# systemctl-is-active polling shape but have different exit semantics.
+
 from __future__ import annotations
 
 import json

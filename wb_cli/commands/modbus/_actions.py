@@ -89,46 +89,42 @@ def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
 
 
 def _scan(ctx) -> dict:
-    proc = subprocess.Popen(
+    devices: list = []
+    completed = False
+    with subprocess.Popen(
         ["mosquitto_sub", "-t", "/wb-device-manager/state", "-F", "%p"],
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
-    )
-    try:
-        ctx.rpc.call("wb-device-manager/bus-scan/Start", {})
-        deadline = time.monotonic() + ctx.args.timeout
-        devices = []
-        completed = False
-        while time.monotonic() < deadline:
-            line = proc.stdout.readline()
-            if not line:
-                break
+    ) as proc:
+        try:
+            ctx.rpc.call("wb-device-manager/bus-scan/Start", {})
+            deadline = time.monotonic() + ctx.args.timeout
+            while time.monotonic() < deadline:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                try:
+                    state = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if state.get("error"):
+                    raise WbCliError(
+                        code="MODBUS_SCAN_FAILED",
+                        message=f"Bus scan reported error: {state['error']}",
+                        details={"port": ctx.args.port, "state": state},
+                        exit_code=ExitCode.DOMAIN,
+                    )
+                if state.get("progress", 0) >= 100:
+                    devices = state.get("devices", [])
+                    completed = True
+                    break
+        finally:
             try:
-                state = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if state.get("error"):
-                raise WbCliError(
-                    code="MODBUS_SCAN_FAILED",
-                    message=f"Bus scan reported error: {state['error']}",
-                    details={"port": ctx.args.port, "state": state},
-                    exit_code=ExitCode.DOMAIN,
-                )
-            if state.get("progress", 0) >= 100:
-                devices = state.get("devices", [])
-                completed = True
-                break
-    finally:
-        try:
-            ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=2.0)
-        except WbCliError:
-            pass
-        proc.terminate()
-        try:
-            proc.wait(timeout=2.0)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+                ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=2.0)
+            except WbCliError:
+                pass
+            proc.terminate()
 
     if not completed:
         raise WbCliError(
