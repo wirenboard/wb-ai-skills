@@ -52,5 +52,19 @@ class AuditPlugin(BasePlugin):
             "checks": checks,
         }
 
+    def render(self, result):
+        verdict = "OK" if result.get("ok") else "FAIL"
+        lines = [f"audit: {verdict}"]
+        for chk in result.get("checks", []):
+            mark = "ok" if chk.get("ok") else "fail"
+            extras = []
+            if chk["check"] == "failed_units" and chk.get("units"):
+                extras.append(", ".join(chk["units"]))
+            if chk["check"] == "controller_identity" and chk.get("serial_number"):
+                extras.append(f"SN {chk['serial_number']}, fw {chk.get('fw_version', '?')}")
+            tail = f" — {' | '.join(extras)}" if extras else ""
+            lines.append(f"  [{mark}] {chk['check']}{tail}")
+        return "\n".join(lines)
+
 
 PLUGIN = AuditPlugin()

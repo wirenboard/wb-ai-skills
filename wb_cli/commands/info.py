@@ -26,5 +26,13 @@ class InfoPlugin(BasePlugin):
     def dispatch(self, ctx) -> dict:
         return ctx.controller.to_dict()
 
+    def render(self, result):
+        fields = ["serial_number", "release_name", "fw_version", "hostname", "uptime_seconds"]
+        rows = [(f, result.get(f, "")) for f in fields if f in result]
+        if not rows:
+            return None
+        width = max(len(k) for k, _ in rows)
+        return "\n".join(f"{k.ljust(width)}  {v}" for k, v in rows)
+
 
 PLUGIN = InfoPlugin()

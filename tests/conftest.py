@@ -4,8 +4,35 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
+from wb_cli.errors import WbCliError
+
+
+@pytest.fixture()
+def shell_returning():
+    """Factory: build a ShellRunner mock whose .run() returns (rc, stdout, stderr)."""
+
+    def _make(rc: int, stdout: str = "", stderr: str = "") -> MagicMock:
+        shell = MagicMock()
+        shell.run.return_value = (rc, stdout, stderr)
+        return shell
+
+    return _make
+
+
+@pytest.fixture()
+def shell_raising():
+    """Factory: build a ShellRunner mock whose .run() raises WbCliError(code)."""
+
+    def _make(code: str) -> MagicMock:
+        shell = MagicMock()
+        shell.run.side_effect = WbCliError(code=code, message="x", exit_code=3)
+        return shell
+
+    return _make
+
 
 # Root of captured controller fixtures
 _FIXTURES = Path(__file__).parent / "fixtures" / "controller"

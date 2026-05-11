@@ -1,12 +1,17 @@
 """Stderr-only progress indicators for long-running operations.
 
 JSON envelopes always go to stdout; these indicators write to stderr so they
-never corrupt machine-readable output.  When stderr is not a TTY (logs, CI,
-pipes) the indicators stay silent.
+never corrupt machine-readable output.  The indicator is silent unless stderr
+is a TTY *and* the operator hasn't opted out via ``WB_CLI_NO_SPINNER``.
+
+LLM-agent contract: an interactive shell user gets the spinner; an LLM that
+SSHes in without ``-t`` (or pipes stdout/stderr to a file) gets no spinner
+because stderr won't be a TTY, so ``stdout`` remains a clean JSON stream.
 """
 
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
@@ -18,6 +23,8 @@ def _stream() -> TextIO:
 
 
 def _enabled() -> bool:
+    if os.environ.get("WB_CLI_NO_SPINNER"):
+        return False
     return _stream().isatty()
 
 

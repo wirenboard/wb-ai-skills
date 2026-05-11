@@ -134,6 +134,17 @@ class DevicesPlugin(BasePlugin):
         devices = _build_inventory(dev_meta, ctrl_vals, ctrl_meta)
         return {"devices": devices, "count": len(devices)}
 
+    def render(self, result):
+        # `devices set`: terse OK line.
+        if "ok" in result and "value" in result:
+            return f"ok  {result['device']}/{result['control']} := {result['value']}"
+        # `devices get`: value + flags.
+        if "value" in result and "device" in result:
+            flags = "ro" if result.get("readonly") else "rw"
+            ctype = result.get("type") or "?"
+            return f"{result['value']}  ({ctype}, {flags})"
+        return None
+
 
 def _raise_control_not_found(device: str, control: str) -> None:
     raise WbCliError(

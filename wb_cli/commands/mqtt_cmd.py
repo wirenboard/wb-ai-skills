@@ -81,5 +81,17 @@ class MqttPlugin(BasePlugin):
         topics = [{"topic": t, "payload": p} for t, p in msgs]
         return {"topics": topics, "count": len(topics)}
 
+    def render(self, result):
+        # `mqtt read`: just print the payload.
+        if "payload" in result and "topic" in result and "topics" not in result:
+            return str(result["payload"])
+        # `mqtt write`: confirm.
+        if "ok" in result:
+            return f"ok  {result.get('topic', '')}"
+        # `mqtt list`: line per topic.
+        if "topics" in result:
+            return "\n".join(f"{t['topic']}\t{t['payload']}" for t in result["topics"])
+        return None
+
 
 PLUGIN = MqttPlugin()

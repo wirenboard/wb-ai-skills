@@ -69,5 +69,14 @@ class JobPlugin(BasePlugin):
             return {"jobs": jobs, "count": len(jobs)}
         return {}
 
+    def render(self, result):
+        # `job tail`: print the raw log.
+        if set(result) == {"unit", "log"}:
+            return result["log"].rstrip("\n")
+        # `job run`: "started <unit>\nlog: <path>"
+        if {"unit", "log"} <= set(result) and "label" in result:
+            return f"started {result['unit']}\nlog: {result['log']}"
+        return None
+
 
 PLUGIN = JobPlugin()

@@ -59,9 +59,19 @@ Notes:
 
 ### Output contract
 
+`wb-cli` picks JSON vs. human-friendly output by `stdout.isatty()`. **Always pass `--json` (or set `WB_CLI_OUTPUT=json`)** when calling from an agent / script:
+
+```bash
+ssh root@<HOST> wb-cli --json devices list
+```
+
+Through `ssh host wb-cli ...` without `-t` stdout is already a pipe → JSON automatically, but `--json` is the explicit contract; never depend on luck.
+
 - Success: `{"data": {...}}` — object, `snake_case` keys.
 - Error: `{"error": {"code": "SCREAMING_SNAKE", "message": "...", "hint": "...", "details": {...}}}`.
 - Exit codes: 0 success, 1 domain, 2 usage, 3 environment.
+
+In human mode a stderr spinner / progress bar is drawn during long operations; it never touches stdout, so even mixed-mode output stays parseable.
 
 ### Key commands
 

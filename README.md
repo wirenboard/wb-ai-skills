@@ -39,16 +39,28 @@ ssh root@wirenboard-A25NDEMJ wb-cli devices set wb-mr6c_52 K1 1
 | `job run\|status\|tail\|cancel\|wait\|list` | Managed background tasks |
 | `plugins` | List installed plugins |
 
-## Output contract
+## Output modes
 
-Every command writes a single JSON object to stdout:
+`wb-cli` picks between **JSON** and **human** output based on `stdout.isatty()`:
+
+- Interactive terminal → compact tables / key-value lines, plus a stderr spinner during long calls.
+- Pipe, redirect, SSH without `-t` (typical for LLM agents and scripts) → JSON envelope.
+
+Override anywhere:
+
+```bash
+wb-cli --json devices list      # force JSON
+wb-cli --human modbus ports     # force human view
+WB_CLI_OUTPUT=json wb-cli info  # same via env (good for shells)
+WB_CLI_NO_SPINNER=1 wb-cli ...  # silence the spinner regardless of mode
+```
+
+The JSON envelope is the stable, machine-readable contract:
 
 - **Success:** `{"data": { ... }}` — `snake_case` keys, arrays are always arrays.
 - **Error:** `{"error": {"code": "SCREAMING_SNAKE", "message": "...", "hint": "...", "details": { ... }}}`.
 
-Exit codes: **0** success · **1** domain error · **2** usage · **3** environment · **130** SIGINT.
-
-Error codes are stable across releases.
+Exit codes: **0** success · **1** domain error · **2** usage · **3** environment · **130** SIGINT. Error codes are stable across releases.
 
 ## Install on a controller
 
