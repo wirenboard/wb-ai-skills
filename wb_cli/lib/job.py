@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from wb_cli.errors import ExitCode, WbCliError
+from wb_cli.lib.progress import Spinner
 from wb_cli.lib.shell import ShellRunner
 
 _JOBS_DIR = Path("/mnt/data/ai/wb-cli/jobs")
@@ -130,8 +131,6 @@ class JobManager:
         poll_interval: float = 2.0,
     ) -> Dict[str, Any]:
         """Poll until job finishes or timeout expires."""
-        from wb_cli.lib.progress import Spinner  # pylint: disable=import-outside-toplevel
-
         deadline = time.time() + timeout
         with Spinner(f"waiting for {unit}"):
             while time.time() < deadline:
