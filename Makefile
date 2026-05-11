@@ -1,5 +1,6 @@
 CODESTYLE ?= $(firstword $(wildcard codestyle ../codestyle))
-PYTHON_FILES := $(shell $(CODESTYLE)/python/ci/find-python-files)
+# Vendored controller snapshots under tests/fixtures/ are not ours to lint.
+PYTHON_FILES := $(shell WB_PYTHON_FILES_EXCLUDE=tests/fixtures/ $(CODESTYLE)/python/ci/find-python-files)
 
 .PHONY: fmt lint test cov clean registry
 
