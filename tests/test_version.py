@@ -28,9 +28,7 @@ def _pyproject_version() -> str:
 def test_versions_agree():
     changelog = _changelog_version()
     pyproject = _pyproject_version()
-    assert (
-        changelog == pyproject == wb_cli.__version__
-    ), (
+    assert changelog == pyproject == wb_cli.__version__, (
         "Version drift: "
         f"debian/changelog={changelog}, pyproject.toml={pyproject}, "
         f"wb_cli.__version__={wb_cli.__version__}. "
