@@ -8,6 +8,11 @@ import subprocess
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
+from wb_cli.lib.progress import ProgressBar
+
+_BROKER_SETTLE_S = 1.0
+_SUB_CONNECT_S = 0.5
+_SCAN_STOP_TIMEOUT_S = 2.0
 
 
 def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=too-many-statements
@@ -94,26 +99,35 @@ def _scan(ctx) -> dict:
     # Cancel any previous scan and let the broker quiesce so we don't pick
     # up its tail state messages.
     try:
-        ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=2.0)
+        ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
     except WbCliError:
         pass
-    time.sleep(1.0)
+    time.sleep(_BROKER_SETTLE_S)
 
-    with subprocess.Popen(
-        # -R: drop retained ("stale") state from a prior scan so we wait
-        # for fresh progress updates triggered by our own Start call.
-        ["mosquitto_sub", "-R", "-t", "/wb-device-manager/state", "-F", "%p"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=True,
-    ) as proc:
+    spinner_label = f"scanning {ctx.args.port}" if ctx.args.port else "scanning RS-485 bus"
+    try:
+        proc = subprocess.Popen(
+            # -R: drop retained ("stale") state from a prior scan so we wait
+            # for fresh progress updates triggered by our own Start call.
+            ["mosquitto_sub", "-R", "-t", "/wb-device-manager/state", "-F", "%p"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise WbCliError(
+            code="MQTT_BROKER_DOWN",
+            message="mosquitto_sub not found; is mosquitto-clients installed?",
+            exit_code=ExitCode.ENVIRONMENT,
+        ) from exc
+    with proc, ProgressBar(spinner_label) as bar:
         try:
-            # Let mosquitto_sub connect and subscribe before triggering Start,
-            # otherwise early state updates can be missed.
-            time.sleep(0.5)
+            time.sleep(_SUB_CONNECT_S)
             ctx.rpc.call("wb-device-manager/bus-scan/Start", {})
             deadline = time.monotonic() + ctx.args.timeout
-            saw_progress = False
+            # wb-device-manager first replays the previous *extended* scan
+            # result, then runs the regular bus scan.  Wait for the regular
+            # scan (is_ext_scan == False) to reach progress=100.
             while time.monotonic() < deadline:
                 line = proc.stdout.readline()
                 if not line:
@@ -130,21 +144,24 @@ def _scan(ctx) -> dict:
                         exit_code=ExitCode.DOMAIN,
                     )
                 progress = state.get("progress", 0)
-                # Only treat progress=100 as "done" after we've seen the
-                # scan ramp up — otherwise we may catch a stale terminal
-                # state published just before our subscription attached.
-                if 0 < progress < 100:
-                    saw_progress = True
-                if progress >= 100 and saw_progress:
+                is_ext = state.get("is_ext_scan", False)
+                dev_count = len(state.get("devices", []))
+                phase = "extended" if is_ext else "regular"
+                bar.update(progress, suffix=f"{phase}, {dev_count} device(s)")
+                if progress >= 100 and not is_ext:
                     devices = state.get("devices", [])
                     completed = True
                     break
         finally:
             try:
-                ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=2.0)
+                ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
             except WbCliError:
                 pass
             proc.terminate()
+            try:
+                proc.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
     if not completed:
         raise WbCliError(
@@ -156,7 +173,10 @@ def _scan(ctx) -> dict:
 
     if ctx.args.port:
         devices = [d for d in devices if d.get("port", {}).get("path") == ctx.args.port]
-    return {"port": ctx.args.port, "devices": devices, "count": len(devices)}
+    result: dict = {"devices": devices, "count": len(devices)}
+    if ctx.args.port:
+        result["port"] = ctx.args.port
+    return result
 
 
 def _probe(ctx) -> dict:

@@ -130,15 +130,18 @@ class JobManager:
         poll_interval: float = 2.0,
     ) -> Dict[str, Any]:
         """Poll until job finishes or timeout expires."""
+        from wb_cli.lib.progress import Spinner  # pylint: disable=import-outside-toplevel
+
         deadline = time.time() + timeout
-        while time.time() < deadline:
-            rc, _, _ = self._sh.run(
-                ["systemctl", "is-active", "--quiet", unit],
-                timeout=5.0,
-            )
-            if rc != 0:
-                return self.status(unit)
-            time.sleep(poll_interval)
+        with Spinner(f"waiting for {unit}"):
+            while time.time() < deadline:
+                rc, _, _ = self._sh.run(
+                    ["systemctl", "is-active", "--quiet", unit],
+                    timeout=5.0,
+                )
+                if rc != 0:
+                    return self.status(unit)
+                time.sleep(poll_interval)
         raise WbCliError(
             code="JOB_WAIT_TIMEOUT",
             message=f"Job '{unit}' still running after {timeout}s",

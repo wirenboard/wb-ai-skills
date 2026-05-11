@@ -1,3 +1,25 @@
+wb-cli (0.1.2) stable; urgency=medium
+
+  * `wb-cli` with no arguments now prints the top-level help (was silent).
+  * modbus scan: wait for the *regular* bus scan to finish — wb-device-manager
+    replays the previous *extended* scan first, which used to make us return
+    a stale 3-device snapshot instead of the full 8+ device list. Also shows
+    a progress bar on TTY, drops `"port": null` from the envelope, and turns
+    a missing `mosquitto_sub` into MQTT_BROKER_DOWN instead of a stack trace.
+  * mqtt read: reject wildcards (`+`, `#`) — use `mqtt list` for those.
+  * rules load <name>: raise RULES_NOT_FOUND when the file is missing, not
+    a generic RPC_ERROR_RESPONSE.
+  * serial-debug: actually wait `--seconds` before reading the journal
+    (previously returned the last 500 unrelated lines instantly); show
+    a count-up timer while waiting.
+  * job wait: show a spinner so it doesn't look frozen.
+  * cloud: hint points to `systemctl start ...`, not a non-existent
+    `wb-cli systemd` subcommand.
+  * Internals: clean up dead `if ctx.controller` branches, extract scan
+    timing constants, ensure the scan subprocess is reaped after terminate.
+
+ -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 18:30:00 +0000
+
 wb-cli (0.1.1) stable; urgency=medium
 
   * modbus scan: drop retained "stale" state from a prior scan, stop and

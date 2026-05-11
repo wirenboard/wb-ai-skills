@@ -47,15 +47,20 @@ class MqttPlugin(BasePlugin):
         return {}
 
     def _read(self, ctx) -> dict:
-        msgs = ctx.mqtt.subscribe(
-            ctx.args.topic,
-            timeout=ctx.args.timeout,
-        )
+        topic = ctx.args.topic
+        if "+" in topic or "#" in topic:
+            raise WbCliError(
+                code="MQTT_INVALID_TOPIC",
+                message=f"'mqtt read' expects a concrete topic; use 'mqtt list' for wildcards (got '{topic}')",
+                details={"topic": topic},
+                exit_code=ExitCode.USAGE,
+            )
+        msgs = ctx.mqtt.subscribe(topic, timeout=ctx.args.timeout)
         if not msgs:
             raise WbCliError(
                 code="MQTT_TIMEOUT",
-                message=f"No retained value on '{ctx.args.topic}'",
-                details={"topic": ctx.args.topic},
+                message=f"No retained value on '{topic}'",
+                details={"topic": topic},
                 exit_code=ExitCode.DOMAIN,
             )
         return {"topic": msgs[0][0], "payload": msgs[0][1]}

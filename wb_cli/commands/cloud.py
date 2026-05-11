@@ -29,7 +29,7 @@ class CloudPlugin(BasePlugin):
             raise WbCliError(
                 code="CLOUD_AGENT_DOWN",
                 message="wb-cloud-agent service not found or not running",
-                hint="Run: wb-cli systemd start wb-cloud-agent@wirenboard.cloud",
+                hint=f"Run: systemctl start {_CLOUD_UNIT}",
                 exit_code=ExitCode.ENVIRONMENT,
             ) from exc
 
@@ -38,7 +38,7 @@ class CloudPlugin(BasePlugin):
             raise WbCliError(
                 code="CLOUD_AGENT_DOWN",
                 message=f"wb-cloud-agent is {active}",
-                hint="Run: wb-cli systemd start wb-cloud-agent@wirenboard.cloud",
+                hint=f"Run: systemctl start {_CLOUD_UNIT}",
                 details={"active_state": active},
                 exit_code=ExitCode.ENVIRONMENT,
             )

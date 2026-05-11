@@ -76,10 +76,20 @@ class RulesPlugin(BasePlugin):
 
     def _load(self, ctx) -> dict:
         _validate_name(ctx.args.name)
-        result = ctx.rpc.call(
-            "wbrules/Editor/Load",
-            {"path": ctx.args.name + ".js"},
-        )
+        try:
+            result = ctx.rpc.call(
+                "wbrules/Editor/Load",
+                {"path": ctx.args.name + ".js"},
+            )
+        except WbCliError as exc:
+            if exc.code == "RPC_ERROR_RESPONSE" and "not found" in exc.message.lower():
+                raise WbCliError(
+                    code="RULES_NOT_FOUND",
+                    message=f"Rule '{ctx.args.name}' not found",
+                    details={"name": ctx.args.name},
+                    exit_code=ExitCode.DOMAIN,
+                ) from exc
+            raise
         return {"name": ctx.args.name, "content": result}
 
     def _save(self, ctx) -> dict:

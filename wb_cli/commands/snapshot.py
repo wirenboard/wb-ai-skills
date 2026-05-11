@@ -81,11 +81,10 @@ class SnapshotPlugin(BasePlugin):
         }
 
     def _collect_state(self, ctx) -> dict:
-        state: dict = {}
-        if ctx.controller:
-            state["controller"] = ctx.controller.to_dict()
-        state["failed_units"] = ctx.systemd.list_failed()
-        return state
+        return {
+            "controller": ctx.controller.to_dict(),
+            "failed_units": ctx.systemd.list_failed(),
+        }
 
 
 def _compute_diff(old: dict, new: dict) -> list:

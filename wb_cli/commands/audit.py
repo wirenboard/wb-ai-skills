@@ -35,7 +35,7 @@ class AuditPlugin(BasePlugin):
         )
 
         # Controller identity
-        info = ctx.controller.to_dict() if ctx.controller else {}
+        info = ctx.controller.to_dict()
         checks.append(
             {
                 "check": "controller_identity",

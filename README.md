@@ -4,10 +4,7 @@
 
 Command-line interface to a [Wiren Board](https://wirenboard.com) controller, plus a set of methodology skills for LLM agents that drive it over SSH.
 
-Runs **on the controller**. Designed for two audiences:
-
-1. **LLM agents** — SSH in, call `wb-cli <command>`, get a structured JSON envelope back.
-2. **Humans** — same commands, `--human` flag for readable output.
+Runs **on the controller**. Built for LLM agents and operators: SSH in, call `wb-cli <command>`, get a structured JSON envelope back. Long-running commands draw a progress bar on stderr when the terminal is a TTY; JSON on stdout stays clean either way.
 
 ```bash
 ssh root@wirenboard-A25NDEMJ wb-cli info

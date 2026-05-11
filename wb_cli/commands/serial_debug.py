@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import time
 
 from wb_cli.errors import ExitCode, WbCliError
+from wb_cli.lib.progress import countdown
 from wb_cli.plugin import BasePlugin
 
 
@@ -35,12 +37,8 @@ class SerialDebugPlugin(BasePlugin):
         port = ctx.args.port
         seconds = ctx.args.seconds
 
-        # Enable debug via MQTT
         try:
-            ctx.mqtt.publish(
-                "/devices/wb-mqtt-serial/controls/Debug/on",
-                "1",
-            )
+            ctx.mqtt.publish("/devices/wb-mqtt-serial/controls/Debug/on", "1")
         except WbCliError as exc:
             raise WbCliError(
                 code="SERIAL_DEBUG_BUSY",
@@ -49,22 +47,17 @@ class SerialDebugPlugin(BasePlugin):
                 exit_code=ExitCode.ENVIRONMENT,
             ) from exc
 
-        ctx.log.info(f"Capturing debug on {port} for {seconds}s...")
-
-        # Capture journal for wb-mqtt-serial
+        start_ts = time.time()
         try:
+            countdown(f"capturing {port}", seconds)
             entries = ctx.journal.read(
                 unit="wb-mqtt-serial",
-                lines=500,
-                timeout=float(seconds + 5),
+                since=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_ts)),
+                timeout=10.0,
             )
         finally:
-            # Restore debug off
             try:
-                ctx.mqtt.publish(
-                    "/devices/wb-mqtt-serial/controls/Debug/on",
-                    "0",
-                )
+                ctx.mqtt.publish("/devices/wb-mqtt-serial/controls/Debug/on", "0")
             except WbCliError:
                 ctx.log.warning("Failed to restore debug=false")
 
