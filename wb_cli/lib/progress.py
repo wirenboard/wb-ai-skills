@@ -116,9 +116,7 @@ def countdown(label: str, seconds: float) -> None:
     i = 0
     while time.monotonic() < deadline:
         elapsed = time.monotonic() - start
-        _stream().write(
-            f"\r{spinner[i % len(spinner)]} {label} ({elapsed:0.1f}s / {seconds:0.0f}s)"
-        )
+        _stream().write(f"\r{spinner[i % len(spinner)]} {label} ({elapsed:0.1f}s / {seconds:0.0f}s)")
         _stream().flush()
         i += 1
         time.sleep(0.1)
