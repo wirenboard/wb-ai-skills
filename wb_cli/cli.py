@@ -79,7 +79,9 @@ def _resolve_output_mode(flag_override: Optional[str]) -> str:
     return "human" if sys.stdout.isatty() else "json"
 
 
-def main(argv: Optional[list[str]] = None) -> int:  # pylint: disable=too-many-return-statements,too-many-locals
+def main(
+    argv: Optional[list[str]] = None,
+) -> int:  # pylint: disable=too-many-return-statements,too-many-locals
     argv = list(sys.argv[1:] if argv is None else argv)
     argv, output_override = _pop_global_flags(argv)
     output_mode = _resolve_output_mode(output_override)
