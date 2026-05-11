@@ -1,0 +1,24 @@
+● NetworkManager.service - Network Manager
+     Loaded: loaded (/lib/systemd/system/NetworkManager.service; enabled; vendor preset: enabled)
+    Drop-In: /etc/systemd/system/NetworkManager.service.d
+             └─override.conf
+     Active: active (running) since Fri 2026-05-08 15:38:54 UTC; 1 day 18h ago
+       Docs: man:NetworkManager(8)
+   Main PID: 18078 (NetworkManager)
+      Tasks: 4 (limit: 4790)
+     Memory: 2.8M
+        CPU: 14min 31.342s
+     CGroup: /system.slice/NetworkManager.service
+             ├─18078 /usr/sbin/NetworkManager --no-daemon
+             └─18352 /usr/sbin/dnsmasq --conf-file=/dev/null --no-hosts --keep-in-foreground --bind-interfaces --except-interface=lo --clear-on-reload --strict-order --listen-address=192.168.42.1 --dhcp-range=192.168.42.10,192.168.42.254,60m --dhcp-leasefile=/var/lib/NetworkManager/dnsmasq-wlan0.leases --pid-file=/run/nm-dnsmasq-wlan0.pid --conf-dir=/etc/NetworkManager/dnsmasq-shared.d
+
+May 08 15:39:00 wirenboard-A25NDEMJ NetworkManager[18078]: <info>  [1778254740.8768] device (wlan0): state change: ip-check -> secondaries (reason 'none', sys-iface-state: 'managed')
+May 08 15:39:00 wirenboard-A25NDEMJ NetworkManager[18078]: <info>  [1778254740.8784] device (wlan0): state change: secondaries -> activated (reason 'none', sys-iface-state: 'managed')
+May 08 15:39:00 wirenboard-A25NDEMJ NetworkManager[18078]: <info>  [1778254740.8839] device (wlan0): Activation: successful, device activated.
+May 08 15:39:00 wirenboard-A25NDEMJ dnsmasq[18352]: started, version 2.85 cachesize 150
+May 08 15:39:00 wirenboard-A25NDEMJ dnsmasq[18352]: compile time options: IPv6 GNU-getopt DBus no-UBus i18n IDN2 DHCP DHCPv6 no-Lua TFTP conntrack ipset auth cryptohash DNSSEC loop-detect inotify dumpfile
+May 08 15:39:00 wirenboard-A25NDEMJ dnsmasq-dhcp[18352]: DHCP, IP range 192.168.42.10 -- 192.168.42.254, lease time 1h
+May 08 15:39:00 wirenboard-A25NDEMJ dnsmasq[18352]: reading /etc/resolv.conf
+May 08 15:39:00 wirenboard-A25NDEMJ dnsmasq[18352]: using nameserver 192.168.2.1#53
+May 08 15:39:00 wirenboard-A25NDEMJ dnsmasq[18352]: cleared cache
+May 08 15:39:01 wirenboard-A25NDEMJ NetworkManager[18078]: <info>  [1778254741.8500] manager: startup complete

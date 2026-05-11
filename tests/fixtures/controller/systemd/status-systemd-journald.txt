@@ -1,0 +1,20 @@
+● systemd-journald.service - Journal Service
+     Loaded: loaded (/lib/systemd/system/systemd-journald.service; static)
+     Active: active (running) since Fri 2026-05-08 15:38:53 UTC; 1 day 18h ago
+TriggeredBy: ● systemd-journald.socket
+             ● systemd-journald-dev-log.socket
+             ● systemd-journald-audit.socket
+       Docs: man:systemd-journald.service(8)
+             man:journald.conf(5)
+   Main PID: 17999 (systemd-journal)
+     Status: "Processing requests..."
+      Tasks: 1 (limit: 4790)
+     Memory: 3.6M
+        CPU: 8.335s
+     CGroup: /system.slice/systemd-journald.service
+             └─17999 /lib/systemd/systemd-journald
+
+May 08 15:38:53 wirenboard-A25NDEMJ systemd-journald[17999]: Journal started
+May 08 15:38:53 wirenboard-A25NDEMJ systemd-journald[17999]: Runtime Journal (/run/log/journal/63e42403176d4a43922c5f41ef916dbe) is 5.0M, max 40.2M, 35.2M free.
+May 08 15:38:53 wirenboard-A25NDEMJ systemd-journald[17999]: Time spent on flushing to /var/log/journal/63e42403176d4a43922c5f41ef916dbe is 18.569ms for 14 entries.
+May 08 15:38:53 wirenboard-A25NDEMJ systemd-journald[17999]: System Journal (/var/log/journal/63e42403176d4a43922c5f41ef916dbe) is 64.0M, max 1.4G, 1.4G free.

@@ -1,0 +1,5 @@
+total 16
+drwxr-xr-x  2 root root 4096 May  7 18:32 .
+drwxr-xr-x 11 root root 4096 May  8 15:38 ..
+-rw-r--r--  1 root root   92 Oct 24  2024 alarms.conf
+-rw-r--r--  1 root root  106 Oct 24  2024 rules.js

@@ -1,0 +1,3 @@
+deb http://debian-mirror.wirenboard.com/debian bullseye main
+deb http://debian-mirror.wirenboard.com/debian bullseye-updates main
+deb http://debian-mirror.wirenboard.com/debian-security bullseye-security main

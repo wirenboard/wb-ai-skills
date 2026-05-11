@@ -1,0 +1,10 @@
+DEVICE         TYPE      STATE                   CONNECTION 
+wlan0          wifi      connected               wb-ap      
+eth0           ethernet  connected               wb-eth0    
+lo             loopback  connected (externally)  lo         
+wlan1          wifi      disconnected            --         
+p2p-dev-wlan0  wifi-p2p  disconnected            --         
+p2p-dev-wlan1  wifi-p2p  disconnected            --         
+dbg0           ethernet  unavailable             --         
+eth1           ethernet  unavailable             --         
+sit0           iptunnel  unmanaged               --         

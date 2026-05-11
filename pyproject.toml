@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wb-cli"
+version = "0.1.0"
+description = "Command-line interface to a Wiren Board controller"
+requires-python = ">=3.9"
+authors = [{name = "Wiren Board Team", email = "info@wirenboard.com"}]
+license = {text = "MIT"}
+
+[project.scripts]
+wb-cli = "wb_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["wb_cli*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

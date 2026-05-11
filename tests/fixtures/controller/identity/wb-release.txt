@@ -1,0 +1,4 @@
+RELEASE_NAME=wb-2602
+SUITE=stable
+TARGET=wb7/bullseye
+REPO_PREFIX=

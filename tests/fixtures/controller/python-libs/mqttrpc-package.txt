@@ -1,0 +1,1 @@
+python3-mqttrpc: /usr/lib/python3/dist-packages/mqttrpc

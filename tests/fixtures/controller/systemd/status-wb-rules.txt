@@ -1,0 +1,20 @@
+● wb-rules.service - MQTT Rule engine for Wiren Board
+     Loaded: loaded (/lib/systemd/system/wb-rules.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-05-08 13:13:13 UTC; 1 day 20h ago
+   Main PID: 24224 (wb-rules)
+      Tasks: 22 (limit: 4790)
+     Memory: 14.1M
+        CPU: 5h 2min 1.846s
+     CGroup: /system.slice/wb-rules.service
+             └─24224 /usr/bin/wb-rules -http 127.0.0.1:9090 -syslog -editdir /etc/wb-rules/ /usr/share/wb-rules-system/rules/ /etc/wb-rules/ /usr/share/wb-rules/
+
+May 08 15:38:56 wirenboard-A25NDEMJ wb-rules[24224]: INFO: [wbgo_mqtt] wb-rules-engine-wirenboard-A25NDEMJ-24224: MQTT connection established
+May 08 15:38:56 wirenboard-A25NDEMJ wb-rules[24224]: INFO: [wbgo_mqtt] rules-wirenboard-A25NDEMJ-24224: MQTT connection established
+May 08 15:39:15 wirenboard-A25NDEMJ wb-rules[24224]: WARNING: [wbgo_mqtt] MQTT connection lost: EOF
+May 08 15:39:15 wirenboard-A25NDEMJ wb-rules[24224]: WARNING: [wbgo_mqtt] Cleaning up token queue
+May 08 15:39:15 wirenboard-A25NDEMJ wb-rules[24224]: WARNING: [wbgo_mqtt] MQTT connection lost: EOF
+May 08 15:39:15 wirenboard-A25NDEMJ wb-rules[24224]: WARNING: [wbgo_mqtt] Cleaning up token queue
+May 08 15:39:17 wirenboard-A25NDEMJ wb-rules[24224]: INFO: [wbgo_mqtt] wb-rules-engine-wirenboard-A25NDEMJ-24224: MQTT connection established
+May 08 15:39:17 wirenboard-A25NDEMJ wb-rules[24224]: INFO: [wbgo_mqtt] rules-wirenboard-A25NDEMJ-24224: MQTT connection established
+May 09 05:58:46 wirenboard-A25NDEMJ wb-rules[24224]: WARNING: converting value '2' to boolean 'true'
+May 10 04:43:04 wirenboard-A25NDEMJ wb-rules[24224]: WARNING: converting value '2' to boolean 'true'

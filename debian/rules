@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=wb-cli
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_build:
+	python3 -m wb_cli._gen_registry
+	dh_auto_build
+
+override_dh_auto_test:
+	@echo "Tests run in CI, skipping during package build"
+
+override_dh_builddeb:
+	dh_builddeb -- -Zxz

@@ -1,0 +1,1730 @@
+/devices/wb-adc/controls/Vin	24.1
+/devices/wb-adc/controls/Vin/meta	{"order":3,"readonly":true,"type":"voltage"}
+/devices/wb-adc/controls/Vin/meta/readonly	1
+/devices/wb-adc/controls/Vin/meta/type	voltage
+/devices/wb-adc/controls/Vin/meta/order	3
+/devices/wb-adc/controls/A3	0.1
+/devices/wb-adc/controls/A3/meta	{"order":2,"readonly":true,"type":"voltage"}
+/devices/wb-adc/controls/A3/meta/type	voltage
+/devices/wb-adc/controls/A3/meta/order	2
+/devices/wb-adc/controls/A3/meta/readonly	1
+/devices/wb-adc/controls/A1	0.1
+/devices/wb-adc/controls/A1/meta	{"order":0,"readonly":true,"type":"voltage"}
+/devices/wb-adc/controls/A1/meta/order	0
+/devices/wb-adc/controls/A1/meta/readonly	1
+/devices/wb-adc/controls/A1/meta/type	voltage
+/devices/wb-adc/controls/A2	0.1
+/devices/wb-adc/controls/A2/meta	{"order":1,"readonly":true,"type":"voltage"}
+/devices/wb-adc/controls/A2/meta/order	1
+/devices/wb-adc/controls/A2/meta/readonly	1
+/devices/wb-adc/controls/A2/meta/type	voltage
+/devices/wb-adc/meta	{"driver":"wb-adc","title":{"en":"ADCs"}}
+/devices/wb-adc/meta/driver	wb-adc
+/devices/wb-adc/meta/name	ADCs
+/devices/wb-w1/meta	{"driver":"wb-w1","title":{"en":"1-wire Thermometers","ru":"\u0422\u0435\u0440\u043c\u043e\u043c\u0435\u0442\u0440\u044b 1-wire"}}
+/devices/wb-w1/meta/name	1-wire Thermometers
+/devices/wb-w1/meta/driver	wb-w1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/meta/name	Network Connection lo
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/meta/driver	wb-nm-helper
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Name	lo
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/UUID	b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Type	loopback
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Active	1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Device	lo
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/State	activated
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Address	127.0.0.1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Connectivity	1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Down"}, "order": 12}
+/devices/knx/controls/data	i:0/0/0 i:0/0/0 GroupValueRead 0x00
+/devices/knx/controls/data/meta	{"order":0,"readonly":false,"title":{"en":"Message","ru":"\u0421\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435"},"type":"text"}
+/devices/knx/controls/data/meta/type	text
+/devices/knx/controls/data/meta/readonly	0
+/devices/knx/controls/data/meta/order	0
+/devices/knx/meta	{"driver":"wb-mqtt-knx","title":{"en":"KNX gateway","ru":"\u0428\u043b\u044e\u0437 KNX"}}
+/devices/knx/meta/name	KNX gateway
+/devices/knx/meta/driver	wb-mqtt-knx
+/devices/wb-gpio/controls/V_OUT	1
+/devices/wb-gpio/controls/V_OUT/meta	{"order":10,"readonly":false,"type":"switch"}
+/devices/wb-gpio/controls/V_OUT/meta/readonly	0
+/devices/wb-gpio/controls/V_OUT/meta/order	10
+/devices/wb-gpio/controls/V_OUT/meta/type	switch
+/devices/wb-gpio/controls/5V_OUT	1
+/devices/wb-gpio/controls/5V_OUT/meta	{"order":9,"readonly":false,"type":"switch"}
+/devices/wb-gpio/controls/5V_OUT/meta/type	switch
+/devices/wb-gpio/controls/5V_OUT/meta/order	9
+/devices/wb-gpio/controls/5V_OUT/meta/readonly	0
+/devices/wb-gpio/controls/D1_IN	0
+/devices/wb-gpio/controls/D1_IN/meta	{"order":8,"readonly":true,"type":"switch"}
+/devices/wb-gpio/controls/D1_IN/meta/order	8
+/devices/wb-gpio/controls/D1_IN/meta/readonly	1
+/devices/wb-gpio/controls/D1_IN/meta/type	switch
+/devices/wb-gpio/controls/A3_IN	0
+/devices/wb-gpio/controls/A3_IN/meta	{"order":7,"readonly":true,"type":"switch"}
+/devices/wb-gpio/controls/A3_IN/meta/type	switch
+/devices/wb-gpio/controls/A3_IN/meta/order	7
+/devices/wb-gpio/controls/A3_IN/meta/readonly	1
+/devices/wb-gpio/controls/A2_IN	0
+/devices/wb-gpio/controls/A2_IN/meta	{"order":6,"readonly":true,"type":"switch"}
+/devices/wb-gpio/controls/A2_IN/meta/type	switch
+/devices/wb-gpio/controls/A2_IN/meta/readonly	1
+/devices/wb-gpio/controls/A2_IN/meta/order	6
+/devices/wb-gpio/controls/A2_OUT	0
+/devices/wb-gpio/controls/A2_OUT/meta	{"order":2,"readonly":false,"type":"switch"}
+/devices/wb-gpio/controls/A2_OUT/meta/readonly	0
+/devices/wb-gpio/controls/A2_OUT/meta/order	2
+/devices/wb-gpio/controls/A2_OUT/meta/type	switch
+/devices/wb-gpio/controls/D1_OUT	0
+/devices/wb-gpio/controls/D1_OUT/meta	{"order":4,"readonly":false,"type":"switch"}
+/devices/wb-gpio/controls/D1_OUT/meta/readonly	0
+/devices/wb-gpio/controls/D1_OUT/meta/order	4
+/devices/wb-gpio/controls/D1_OUT/meta/type	switch
+/devices/wb-gpio/controls/A1_IN	0
+/devices/wb-gpio/controls/A1_IN/meta	{"order":5,"readonly":true,"type":"switch"}
+/devices/wb-gpio/controls/A1_IN/meta/type	switch
+/devices/wb-gpio/controls/A1_IN/meta/order	5
+/devices/wb-gpio/controls/A1_IN/meta/readonly	1
+/devices/wb-gpio/controls/A1_OUT	0
+/devices/wb-gpio/controls/A1_OUT/meta	{"order":1,"readonly":false,"type":"switch"}
+/devices/wb-gpio/controls/A1_OUT/meta/readonly	0
+/devices/wb-gpio/controls/A1_OUT/meta/order	1
+/devices/wb-gpio/controls/A1_OUT/meta/type	switch
+/devices/wb-gpio/controls/A3_OUT	0
+/devices/wb-gpio/controls/A3_OUT/meta	{"order":3,"readonly":false,"type":"switch"}
+/devices/wb-gpio/controls/A3_OUT/meta/readonly	0
+/devices/wb-gpio/controls/A3_OUT/meta/order	3
+/devices/wb-gpio/controls/A3_OUT/meta/type	switch
+/devices/wb-gpio/meta	{"driver":"wb-gpio","title":{"en":"Discrete I/O"}}
+/devices/wb-gpio/meta/name	Discrete I/O
+/devices/wb-gpio/meta/driver	wb-gpio
+/devices/system__wb-cloud-agent__default/meta/name	cloud status
+/devices/system__wb-cloud-agent__default/meta/driver	wb-cloud-agent
+/devices/system__wb-cloud-agent__default/controls/status	ok
+/devices/system__wb-cloud-agent__default/controls/status/meta	{"type": "text", "readonly": true, "order": 1, "title": {"en": "Status"}}
+/devices/system__wb-cloud-agent__default/controls/activation_link	unknown
+/devices/system__wb-cloud-agent__default/controls/activation_link/meta	{"type": "text", "readonly": true, "order": 2, "title": {"en": "Link"}}
+/devices/system__wb-cloud-agent__default/controls/cloud_base_url	https://wirenboard.cloud
+/devices/system__wb-cloud-agent__default/controls/cloud_base_url/meta	{"type": "text", "readonly": true, "order": 3, "title": {"en": "URL"}}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/meta/name	Network Connection wb-gsm-sim1
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/meta/driver	wb-nm-helper
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Name	wb-gsm-sim1
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/UUID	5d4297ba-c319-4c05-a153-17cb42e6e196
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Type	gsm
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Active	0
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/State	deactivated
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Connectivity	0
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Up"}, "order": 12}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Operator/meta	{"type": "text", "readonly": true, "order": 9}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/SignalQuality/meta	{"type": "text", "readonly": true, "title": {"en": "Signal Quality"}, "order": 10}
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/AccessTechnologies/meta	{"type": "text", "readonly": true, "title": {"en": "Access Technologies"}, "order": 11}
+/devices/wb-map6s_34/controls/Ipeak 4	0
+/devices/wb-map6s_34/controls/Ipeak 4/meta	{"order":35,"precision":0.01,"readonly":true,"type":"value","units":"A"}
+/devices/wb-map6s_34/controls/Ipeak 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 4/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 4/meta/order	35
+/devices/wb-map6s_34/controls/Ipeak 4/meta/error	r
+/devices/wb-map6s_34/controls/Serial	12352670
+/devices/wb-map6s_34/controls/Serial/meta	{"order":70,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-map6s_34/controls/Serial/meta/type	text
+/devices/wb-map6s_34/controls/Serial/meta/order	70
+/devices/wb-map6s_34/controls/Serial/meta/readonly	1
+/devices/wb-map6s_34/controls/Frequency	50.01
+/devices/wb-map6s_34/controls/Frequency/meta	{"order":69,"precision":0.01,"readonly":true,"title":{"ru":"\u0427\u0430\u0441\u0442\u043e\u0442\u0430"},"type":"value"}
+/devices/wb-map6s_34/controls/Frequency/meta/type	value
+/devices/wb-map6s_34/controls/Frequency/meta/precision	0.01
+/devices/wb-map6s_34/controls/Frequency/meta/readonly	1
+/devices/wb-map6s_34/controls/Frequency/meta/order	69
+/devices/wb-map6s_34/controls/Upeak	0
+/devices/wb-map6s_34/controls/Upeak/meta	{"order":68,"precision":0.01,"readonly":true,"type":"value","units":"V"}
+/devices/wb-map6s_34/controls/Upeak/meta/type	value
+/devices/wb-map6s_34/controls/Upeak/meta/readonly	1
+/devices/wb-map6s_34/controls/Upeak/meta/precision	0.01
+/devices/wb-map6s_34/controls/Upeak/meta/order	68
+/devices/wb-map6s_34/controls/Upeak/meta/error	r
+/devices/wb-map6s_34/controls/Urms	235.08
+/devices/wb-map6s_34/controls/Urms/meta	{"order":67,"precision":0.01,"readonly":true,"type":"value","units":"V"}
+/devices/wb-map6s_34/controls/Urms/meta/type	value
+/devices/wb-map6s_34/controls/Urms/meta/precision	0.01
+/devices/wb-map6s_34/controls/Urms/meta/order	67
+/devices/wb-map6s_34/controls/Urms/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 6	0
+/devices/wb-map6s_34/controls/Phase angle 6/meta	{"order":66,"precision":0.01,"readonly":true,"title":{"ru":"\u0423\u0433\u043e\u043b \u043c\u0435\u0436\u0434\u0443 I6 \u0438 U"},"type":"value"}
+/devices/wb-map6s_34/controls/Phase angle 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 6/meta/order	66
+/devices/wb-map6s_34/controls/Phase angle 6/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 6	0.00042
+/devices/wb-map6s_34/controls/RN energy 6/meta	{"order":65,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RN 6"},"type":"value"}
+/devices/wb-map6s_34/controls/RN energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 6/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 6/meta/order	65
+/devices/wb-map6s_34/controls/RN energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 6	0.00905
+/devices/wb-map6s_34/controls/RP energy 6/meta	{"order":64,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RP 6"},"type":"value"}
+/devices/wb-map6s_34/controls/RP energy 6/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 6/meta/order	64
+/devices/wb-map6s_34/controls/AN energy 6	0
+/devices/wb-map6s_34/controls/AN energy 6/meta	{"order":63,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AN 6"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AN energy 6/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 6/meta/order	63
+/devices/wb-map6s_34/controls/AN energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 6	0.40029
+/devices/wb-map6s_34/controls/AP energy 6/meta	{"order":62,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AP 6"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AP energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 6/meta/order	62
+/devices/wb-map6s_34/controls/AP energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 6/meta/type	power_consumption
+/devices/wb-map6s_34/controls/S 6	6.81
+/devices/wb-map6s_34/controls/S 6/meta	{"order":60,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/S 6/meta/order	60
+/devices/wb-map6s_34/controls/S 6/meta/type	value
+/devices/wb-map6s_34/controls/S 6/meta/readonly	1
+/devices/wb-map6s_34/controls/S 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 6	0
+/devices/wb-map6s_34/controls/Q 6/meta	{"order":59,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/Q 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 6/meta/type	value
+/devices/wb-map6s_34/controls/Q 6/meta/order	59
+/devices/wb-map6s_34/controls/Q 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 6	0
+/devices/wb-map6s_34/controls/P 6/meta	{"order":58,"precision":0.01,"readonly":true,"type":"power"}
+/devices/wb-map6s_34/controls/P 6/meta/readonly	1
+/devices/wb-map6s_34/controls/P 6/meta/order	58
+/devices/wb-map6s_34/controls/P 6/meta/type	power
+/devices/wb-map6s_34/controls/P 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 6	0
+/devices/wb-map6s_34/controls/PF 6/meta	{"order":61,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/PF 6/meta/order	61
+/devices/wb-map6s_34/controls/PF 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 6/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 6/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 6	0
+/devices/wb-map6s_34/controls/Ipeak 6/meta	{"order":57,"precision":0.01,"readonly":true,"type":"value","units":"A"}
+/devices/wb-map6s_34/controls/Ipeak 6/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 6/meta/order	57
+/devices/wb-map6s_34/controls/Ipeak 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 6/meta/error	r
+/devices/wb-map6s_34/controls/Irms 6	0.0289
+/devices/wb-map6s_34/controls/Irms 6/meta	{"order":56,"precision":0.0001,"readonly":true,"type":"current"}
+/devices/wb-map6s_34/controls/Irms 6/meta/type	current
+/devices/wb-map6s_34/controls/Irms 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 6/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 6/meta/order	56
+/devices/wb-map6s_34/controls/Phase angle 5	0
+/devices/wb-map6s_34/controls/Phase angle 5/meta	{"order":55,"precision":0.01,"readonly":true,"title":{"ru":"\u0423\u0433\u043e\u043b \u043c\u0435\u0436\u0434\u0443 I5 \u0438 U"},"type":"value"}
+/devices/wb-map6s_34/controls/Phase angle 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 5/meta/order	55
+/devices/wb-map6s_34/controls/Phase angle 5/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 5	0.00042
+/devices/wb-map6s_34/controls/RN energy 5/meta	{"order":54,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RN 5"},"type":"value"}
+/devices/wb-map6s_34/controls/RN energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 5/meta/order	54
+/devices/wb-map6s_34/controls/RN energy 5/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 5	0.00928
+/devices/wb-map6s_34/controls/RP energy 5/meta	{"order":53,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RP 5"},"type":"value"}
+/devices/wb-map6s_34/controls/RP energy 5/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 5/meta/order	53
+/devices/wb-map6s_34/controls/RP energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 5	0
+/devices/wb-map6s_34/controls/AN energy 5/meta	{"order":52,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AN 5"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AN energy 5/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 5/meta/order	52
+/devices/wb-map6s_34/controls/AP energy 5	0.40046
+/devices/wb-map6s_34/controls/AP energy 5/meta	{"order":51,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AP 5"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AP energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 5/meta/order	51
+/devices/wb-map6s_34/controls/AP energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 5/meta/type	power_consumption
+/devices/wb-map6s_34/controls/PF 5	0
+/devices/wb-map6s_34/controls/PF 5/meta	{"order":50,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/PF 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 5/meta/type	value
+/devices/wb-map6s_34/controls/PF 5/meta/order	50
+/devices/wb-map6s_34/controls/PF 5/meta/readonly	1
+/devices/wb-map6s_34/controls/S 5	6.81
+/devices/wb-map6s_34/controls/S 5/meta	{"order":49,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/S 5/meta/type	value
+/devices/wb-map6s_34/controls/S 5/meta/readonly	1
+/devices/wb-map6s_34/controls/S 5/meta/order	49
+/devices/wb-map6s_34/controls/S 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 5	0
+/devices/wb-map6s_34/controls/Q 5/meta	{"order":48,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/Q 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 5/meta/order	48
+/devices/wb-map6s_34/controls/Q 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 5/meta/type	value
+/devices/wb-map6s_34/controls/P 5	0
+/devices/wb-map6s_34/controls/P 5/meta	{"order":47,"precision":0.01,"readonly":true,"type":"power"}
+/devices/wb-map6s_34/controls/P 5/meta/type	power
+/devices/wb-map6s_34/controls/P 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 5/meta/order	47
+/devices/wb-map6s_34/controls/P 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 5	0
+/devices/wb-map6s_34/controls/Ipeak 5/meta	{"order":46,"precision":0.01,"readonly":true,"type":"value","units":"A"}
+/devices/wb-map6s_34/controls/Ipeak 5/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 5/meta/order	46
+/devices/wb-map6s_34/controls/Ipeak 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 5/meta/error	r
+/devices/wb-map6s_34/controls/Phase angle 4	0
+/devices/wb-map6s_34/controls/Phase angle 4/meta	{"order":44,"precision":0.01,"readonly":true,"title":{"ru":"\u0423\u0433\u043e\u043b \u043c\u0435\u0436\u0434\u0443 I4 \u0438 U"},"type":"value"}
+/devices/wb-map6s_34/controls/Phase angle 4/meta/order	44
+/devices/wb-map6s_34/controls/Phase angle 4/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 4	0.0004
+/devices/wb-map6s_34/controls/RN energy 4/meta	{"order":43,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RN 4"},"type":"value"}
+/devices/wb-map6s_34/controls/RN energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 4/meta/order	43
+/devices/wb-map6s_34/controls/RN energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 4/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 4	0.00916
+/devices/wb-map6s_34/controls/RP energy 4/meta	{"order":42,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RP 4"},"type":"value"}
+/devices/wb-map6s_34/controls/RP energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 4/meta/order	42
+/devices/wb-map6s_34/controls/RP energy 4/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 4	0
+/devices/wb-map6s_34/controls/AN energy 4/meta	{"order":41,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AN 4"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AN energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 4/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 4/meta/order	41
+/devices/wb-map6s_34/controls/AP energy 4	0.4006
+/devices/wb-map6s_34/controls/AP energy 4/meta	{"order":40,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AP 4"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AP energy 4/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 4/meta/order	40
+/devices/wb-map6s_34/controls/PF 4	0
+/devices/wb-map6s_34/controls/PF 4/meta	{"order":39,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/PF 4/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 4/meta/type	value
+/devices/wb-map6s_34/controls/PF 4/meta/order	39
+/devices/wb-map6s_34/controls/S 4	6.81
+/devices/wb-map6s_34/controls/S 4/meta	{"order":38,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/S 4/meta/type	value
+/devices/wb-map6s_34/controls/S 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/S 4/meta/order	38
+/devices/wb-map6s_34/controls/S 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 4	0
+/devices/wb-map6s_34/controls/Q 4/meta	{"order":37,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/Q 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 4/meta/order	37
+/devices/wb-map6s_34/controls/Q 4/meta/type	value
+/devices/wb-map6s_34/controls/Q 4/meta/readonly	1
+/devices/wb-map6s_34/controls/P 4	0
+/devices/wb-map6s_34/controls/P 4/meta	{"order":36,"precision":0.01,"readonly":true,"type":"power"}
+/devices/wb-map6s_34/controls/P 4/meta/order	36
+/devices/wb-map6s_34/controls/P 4/meta/type	power
+/devices/wb-map6s_34/controls/P 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 4	0.0289
+/devices/wb-map6s_34/controls/Irms 4/meta	{"order":34,"precision":0.0001,"readonly":true,"type":"current"}
+/devices/wb-map6s_34/controls/Irms 4/meta/type	current
+/devices/wb-map6s_34/controls/Irms 4/meta/order	34
+/devices/wb-map6s_34/controls/Irms 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 4/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Phase angle 3	0
+/devices/wb-map6s_34/controls/Phase angle 3/meta	{"order":33,"precision":0.01,"readonly":true,"title":{"ru":"\u0423\u0433\u043e\u043b \u043c\u0435\u0436\u0434\u0443 I3 \u0438 U"},"type":"value"}
+/devices/wb-map6s_34/controls/Phase angle 3/meta/order	33
+/devices/wb-map6s_34/controls/Phase angle 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 3/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 3	0.00042
+/devices/wb-map6s_34/controls/RN energy 3/meta	{"order":32,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RN 3"},"type":"value"}
+/devices/wb-map6s_34/controls/RN energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 3/meta/order	32
+/devices/wb-map6s_34/controls/RN energy 3/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 3	0.01004
+/devices/wb-map6s_34/controls/RP energy 3/meta	{"order":31,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RP 3"},"type":"value"}
+/devices/wb-map6s_34/controls/RP energy 3/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 3/meta/order	31
+/devices/wb-map6s_34/controls/RP energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 3	0
+/devices/wb-map6s_34/controls/AN energy 3/meta	{"order":30,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AN 3"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AN energy 3/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 3/meta/order	30
+/devices/wb-map6s_34/controls/AN energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 3	0.39979
+/devices/wb-map6s_34/controls/AP energy 3/meta	{"order":29,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AP 3"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AP energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 3/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 3/meta/order	29
+/devices/wb-map6s_34/controls/PF 3	0
+/devices/wb-map6s_34/controls/PF 3/meta	{"order":28,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/PF 3/meta/type	value
+/devices/wb-map6s_34/controls/PF 3/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 3/meta/order	28
+/devices/wb-map6s_34/controls/S 3	6.81
+/devices/wb-map6s_34/controls/S 3/meta	{"order":27,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/S 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/S 3/meta/order	27
+/devices/wb-map6s_34/controls/S 3/meta/readonly	1
+/devices/wb-map6s_34/controls/S 3/meta/type	value
+/devices/wb-map6s_34/controls/Q 3	0
+/devices/wb-map6s_34/controls/Q 3/meta	{"order":26,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/Q 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 3/meta/order	26
+/devices/wb-map6s_34/controls/Q 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 3/meta/type	value
+/devices/wb-map6s_34/controls/P 3	0
+/devices/wb-map6s_34/controls/P 3/meta	{"order":25,"precision":0.01,"readonly":true,"type":"power"}
+/devices/wb-map6s_34/controls/P 3/meta/readonly	1
+/devices/wb-map6s_34/controls/P 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 3/meta/order	25
+/devices/wb-map6s_34/controls/P 3/meta/type	power
+/devices/wb-map6s_34/controls/Irms 5	0.0289
+/devices/wb-map6s_34/controls/Irms 5/meta	{"order":45,"precision":0.0001,"readonly":true,"type":"current"}
+/devices/wb-map6s_34/controls/Irms 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 5/meta/order	45
+/devices/wb-map6s_34/controls/Irms 5/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 5/meta/type	current
+/devices/wb-map6s_34/controls/Ipeak 3	0
+/devices/wb-map6s_34/controls/Ipeak 3/meta	{"order":24,"precision":0.01,"readonly":true,"type":"value","units":"A"}
+/devices/wb-map6s_34/controls/Ipeak 3/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 3/meta/order	24
+/devices/wb-map6s_34/controls/Ipeak 3/meta/error	r
+/devices/wb-map6s_34/controls/Phase angle 2	0
+/devices/wb-map6s_34/controls/Phase angle 2/meta	{"order":22,"precision":0.01,"readonly":true,"title":{"ru":"\u0423\u0433\u043e\u043b \u043c\u0435\u0436\u0434\u0443 I2 \u0438 U"},"type":"value"}
+/devices/wb-map6s_34/controls/Phase angle 2/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 2/meta/order	22
+/devices/wb-map6s_34/controls/Phase angle 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/Phase angle 2/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 2	0.00042
+/devices/wb-map6s_34/controls/RN energy 2/meta	{"order":21,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RN 2"},"type":"value"}
+/devices/wb-map6s_34/controls/RN energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 2/meta/order	21
+/devices/wb-map6s_34/controls/RN energy 2/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 2	0.01023
+/devices/wb-map6s_34/controls/RP energy 2/meta	{"order":20,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RP 2"},"type":"value"}
+/devices/wb-map6s_34/controls/RP energy 2/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 2/meta/order	20
+/devices/wb-map6s_34/controls/RP energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 2	0
+/devices/wb-map6s_34/controls/AN energy 2/meta	{"order":19,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AN 2"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AN energy 2/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 2/meta/order	19
+/devices/wb-map6s_34/controls/Irms 3	0.0289
+/devices/wb-map6s_34/controls/Irms 3/meta	{"order":23,"precision":0.0001,"readonly":true,"type":"current"}
+/devices/wb-map6s_34/controls/Irms 3/meta/order	23
+/devices/wb-map6s_34/controls/Irms 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 3/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 3/meta/type	current
+/devices/wb-map6s_34/controls/AP energy 2	0.3998
+/devices/wb-map6s_34/controls/AP energy 2/meta	{"order":18,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AP 2"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AP energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 2/meta/order	18
+/devices/wb-map6s_34/controls/AP energy 2/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/PF 2	0
+/devices/wb-map6s_34/controls/PF 2/meta	{"order":17,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/PF 2/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 2/meta/order	17
+/devices/wb-map6s_34/controls/PF 2/meta/type	value
+/devices/wb-map6s_34/controls/S 2	6.81
+/devices/wb-map6s_34/controls/S 2/meta	{"order":16,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/S 2/meta/readonly	1
+/devices/wb-map6s_34/controls/S 2/meta/order	16
+/devices/wb-map6s_34/controls/S 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/S 2/meta/type	value
+/devices/wb-map6s_34/controls/Q 2	0
+/devices/wb-map6s_34/controls/Q 2/meta	{"order":15,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/Q 2/meta/type	value
+/devices/wb-map6s_34/controls/Q 2/meta/order	15
+/devices/wb-map6s_34/controls/Q 2/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 2	0
+/devices/wb-map6s_34/controls/P 2/meta	{"order":14,"precision":0.01,"readonly":true,"type":"power"}
+/devices/wb-map6s_34/controls/P 2/meta/type	power
+/devices/wb-map6s_34/controls/P 2/meta/readonly	1
+/devices/wb-map6s_34/controls/P 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 2/meta/order	14
+/devices/wb-map6s_34/controls/Ipeak 2	0
+/devices/wb-map6s_34/controls/Ipeak 2/meta	{"order":13,"precision":0.01,"readonly":true,"type":"value","units":"A"}
+/devices/wb-map6s_34/controls/Ipeak 2/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 2/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 2/meta/order	13
+/devices/wb-map6s_34/controls/Ipeak 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 2/meta/error	r
+/devices/wb-map6s_34/controls/Irms 2	0.0289
+/devices/wb-map6s_34/controls/Irms 2/meta	{"order":12,"precision":0.0001,"readonly":true,"type":"current"}
+/devices/wb-map6s_34/controls/Irms 2/meta/type	current
+/devices/wb-map6s_34/controls/Irms 2/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 2/meta/order	12
+/devices/wb-map6s_34/controls/Irms 2/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Phase angle 1	-31.7
+/devices/wb-map6s_34/controls/Phase angle 1/meta	{"order":11,"precision":0.01,"readonly":true,"title":{"ru":"\u0423\u0433\u043e\u043b \u043c\u0435\u0436\u0434\u0443 I1 \u0438 U"},"type":"value"}
+/devices/wb-map6s_34/controls/Phase angle 1/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Phase angle 1/meta/order	11
+/devices/wb-map6s_34/controls/Phase angle 1/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 1	26.8232
+/devices/wb-map6s_34/controls/RN energy 1/meta	{"order":10,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RN 1"},"type":"value"}
+/devices/wb-map6s_34/controls/RN energy 1/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 1/meta/order	10
+/devices/wb-map6s_34/controls/RN energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 1	125.83847
+/devices/wb-map6s_34/controls/RP energy 1/meta	{"order":9,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f RP 1"},"type":"value"}
+/devices/wb-map6s_34/controls/RP energy 1/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 1/meta/order	9
+/devices/wb-map6s_34/controls/RP energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 1	155.45367
+/devices/wb-map6s_34/controls/AN energy 1/meta	{"order":8,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AN 1"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AN energy 1/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 1/meta/order	8
+/devices/wb-map6s_34/controls/AP energy 1	38.1708
+/devices/wb-map6s_34/controls/AP energy 1/meta	{"order":7,"precision":1e-06,"readonly":true,"title":{"ru":"\u042d\u043d\u0435\u0440\u0433\u0438\u044f AP 1"},"type":"power_consumption"}
+/devices/wb-map6s_34/controls/AP energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 1/meta/order	7
+/devices/wb-map6s_34/controls/AP energy 1/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 1	0.53
+/devices/wb-map6s_34/controls/PF 1/meta	{"order":6,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/PF 1/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 1/meta/order	6
+/devices/wb-map6s_34/controls/PF 1/meta/type	value
+/devices/wb-map6s_34/controls/S 1	18.13
+/devices/wb-map6s_34/controls/S 1/meta	{"order":5,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/S 1/meta/type	value
+/devices/wb-map6s_34/controls/S 1/meta/readonly	1
+/devices/wb-map6s_34/controls/S 1/meta/order	5
+/devices/wb-map6s_34/controls/S 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 1	-6.31
+/devices/wb-map6s_34/controls/Q 1/meta	{"order":4,"precision":0.01,"readonly":true,"type":"value"}
+/devices/wb-map6s_34/controls/Q 1/meta/order	4
+/devices/wb-map6s_34/controls/Q 1/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 1/meta/type	value
+/devices/wb-map6s_34/controls/Q 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 1	9.5
+/devices/wb-map6s_34/controls/P 1/meta	{"order":3,"precision":0.01,"readonly":true,"type":"power"}
+/devices/wb-map6s_34/controls/P 1/meta/type	power
+/devices/wb-map6s_34/controls/P 1/meta/readonly	1
+/devices/wb-map6s_34/controls/P 1/meta/order	3
+/devices/wb-map6s_34/controls/P 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 1	0
+/devices/wb-map6s_34/controls/Ipeak 1/meta	{"order":2,"precision":0.01,"readonly":true,"type":"value","units":"A"}
+/devices/wb-map6s_34/controls/Ipeak 1/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 1/meta/order	2
+/devices/wb-map6s_34/controls/Ipeak 1/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 1/meta/error	r
+/devices/wb-map6s_34/controls/Irms 1	0.0773
+/devices/wb-map6s_34/controls/Irms 1/meta	{"order":1,"precision":0.0001,"readonly":true,"type":"current"}
+/devices/wb-map6s_34/controls/Irms 1/meta/type	current
+/devices/wb-map6s_34/controls/Irms 1/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 1/meta/order	1
+/devices/wb-map6s_34/controls/Irms 1/meta/readonly	1
+/devices/wb-map6s_34/meta	{"driver":"wb-modbus","title":{"en":"WB-MAP6S fw2 34"}}
+/devices/wb-map6s_34/meta/name	WB-MAP6S fw2 34
+/devices/wb-map6s_34/meta/driver	wb-modbus
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/meta/name	Network Connection wb-eth1
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/meta/driver	wb-nm-helper
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Name	wb-eth1
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/UUID	c3e38405-9c17-4155-ad70-664311b49066
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Type	802-3-ethernet
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Active	0
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/State	deactivated
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Connectivity	0
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Up"}, "order": 12}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/meta/name	Network Connection wb-gsm-sim2
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/meta/driver	wb-nm-helper
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Name	wb-gsm-sim2
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/UUID	8b9964d4-b8dd-34d3-a3ed-481840bcf8c9
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Type	gsm
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Active	0
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/State	deactivated
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Connectivity	0
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Up"}, "order": 12}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Operator/meta	{"type": "text", "readonly": true, "order": 9}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/SignalQuality/meta	{"type": "text", "readonly": true, "title": {"en": "Signal Quality"}, "order": 10}
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/AccessTechnologies/meta	{"type": "text", "readonly": true, "title": {"en": "Access Technologies"}, "order": 11}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/meta/name	Network Connection wb-eth0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/meta/driver	wb-nm-helper
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Name	wb-eth0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/UUID	91f1c71d-2d97-4675-886f-ecbe52b8451e
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Type	802-3-ethernet
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Active	1
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Device	eth0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/State	activated
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Address	192.168.2.106
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Connectivity	1
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Down"}, "order": 12}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/meta/name	Network Connection wb-debug
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/meta/driver	wb-nm-helper
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Name	wb-debug
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/UUID	0f098677-2b49-4167-a534-207567b1751b
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Type	802-3-ethernet
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Active	0
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/State	deactivated
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Connectivity	0
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Up"}, "order": 12}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/meta/name	Network Connection wb-ap
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/meta/driver	wb-nm-helper
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Name	wb-ap
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Name/meta	{"type": "text", "readonly": true, "order": 1}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/UUID	d12c8d3c-1abe-4832-9b71-4ed6e3c20885
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/UUID/meta	{"type": "text", "readonly": true, "order": 2}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Type	802-11-wireless
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Type/meta	{"type": "text", "readonly": true, "order": 3}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Active	1
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Active/meta	{"type": "switch", "readonly": true, "order": 4}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Device	wlan0
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Device/meta	{"type": "text", "readonly": true, "order": 5}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/State	activated
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/State/meta	{"type": "text", "readonly": true, "order": 6}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Address	192.168.42.1
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Address/meta	{"type": "text", "readonly": true, "order": 7}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Connectivity	1
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Connectivity/meta	{"type": "switch", "readonly": true, "order": 8}
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/UpDown/meta	{"type": "pushbutton", "readonly": false, "title": {"en": "Down"}, "order": 12}
+/devices/wb-mcm8_201/controls/Reset all counters/meta	{"order":17,"readonly":false,"title":{"ru":"\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c \u0432\u0441\u0435 \u0441\u0447\u0435\u0442\u0447\u0438\u043a\u0438"},"type":"pushbutton"}
+/devices/wb-mcm8_201/controls/Reset all counters/meta/type	pushbutton
+/devices/wb-mcm8_201/controls/Reset all counters/meta/readonly	0
+/devices/wb-mcm8_201/controls/Reset all counters/meta/order	17
+/devices/wb-mcm8_201/controls/Input 8 counter	0
+/devices/wb-mcm8_201/controls/Input 8 counter/meta	{"order":16,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 8"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 8 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 8 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 8 counter/meta/order	16
+/devices/wb-mcm8_201/controls/Input 8	0
+/devices/wb-mcm8_201/controls/Input 8/meta	{"order":15,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 8"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 8/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 8/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 8/meta/order	15
+/devices/wb-mcm8_201/controls/Input 7 counter	0
+/devices/wb-mcm8_201/controls/Input 7 counter/meta	{"order":14,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 7"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 7 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 7 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 7 counter/meta/order	14
+/devices/wb-mcm8_201/controls/Serial	4265607340
+/devices/wb-mcm8_201/controls/Serial/meta	{"order":18,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mcm8_201/controls/Serial/meta/type	text
+/devices/wb-mcm8_201/controls/Serial/meta/order	18
+/devices/wb-mcm8_201/controls/Serial/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 7	0
+/devices/wb-mcm8_201/controls/Input 7/meta	{"order":13,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 7"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 7/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 7/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 7/meta/order	13
+/devices/wb-mcm8_201/controls/Input 6 counter	0
+/devices/wb-mcm8_201/controls/Input 6 counter/meta	{"order":12,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 6"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 6 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 6 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 6 counter/meta/order	12
+/devices/wb-mcm8_201/controls/Input 6	0
+/devices/wb-mcm8_201/controls/Input 6/meta	{"order":11,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 6"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 6/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 6/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 6/meta/order	11
+/devices/wb-mcm8_201/controls/Input 5	0
+/devices/wb-mcm8_201/controls/Input 5/meta	{"order":9,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 5"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 5/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 5/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 5/meta/order	9
+/devices/wb-mcm8_201/controls/Input 4 counter	0
+/devices/wb-mcm8_201/controls/Input 4 counter/meta	{"order":8,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 4"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 4 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 4 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 4 counter/meta/order	8
+/devices/wb-mcm8_201/controls/Input 4	0
+/devices/wb-mcm8_201/controls/Input 4/meta	{"order":7,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 4"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 4/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 4/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 4/meta/order	7
+/devices/wb-mcm8_201/controls/Input 3 counter	5
+/devices/wb-mcm8_201/controls/Input 3 counter/meta	{"order":6,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 3"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 3 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 3 counter/meta/order	6
+/devices/wb-mcm8_201/controls/Input 3	0
+/devices/wb-mcm8_201/controls/Input 3/meta	{"order":5,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 3"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 3/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 3/meta/order	5
+/devices/wb-mcm8_201/controls/Input 3/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 2 counter	3
+/devices/wb-mcm8_201/controls/Input 2 counter/meta	{"order":4,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 2"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 2 counter/meta/order	4
+/devices/wb-mcm8_201/controls/Input 2 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 2	0
+/devices/wb-mcm8_201/controls/Input 2/meta	{"order":3,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 2"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 2/meta/order	3
+/devices/wb-mcm8_201/controls/Input 2/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 2/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 1 counter	475
+/devices/wb-mcm8_201/controls/Input 1 counter/meta	{"order":2,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 1"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 1 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 1 counter/meta/order	2
+/devices/wb-mcm8_201/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 1	0
+/devices/wb-mcm8_201/controls/Input 1/meta	{"order":1,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 1"},"type":"switch"}
+/devices/wb-mcm8_201/controls/Input 1/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 1/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 1/meta/order	1
+/devices/wb-mcm8_201/controls/Input 5 counter	37
+/devices/wb-mcm8_201/controls/Input 5 counter/meta	{"order":10,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 5"},"type":"value"}
+/devices/wb-mcm8_201/controls/Input 5 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 5 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 5 counter/meta/order	10
+/devices/wb-mcm8_201/meta	{"driver":"wb-modbus","title":{"en":"WB-MCM8 201"}}
+/devices/wb-mcm8_201/meta/driver	wb-modbus
+/devices/wb-mcm8_201/meta/name	WB-MCM8 201
+/devices/wb-mdm3_5/controls/Overcurrent	0
+/devices/wb-mdm3_5/controls/Overcurrent/meta	{"order":33,"readonly":true,"title":{"ru":"\u041f\u0435\u0440\u0435\u0433\u0440\u0443\u0437\u043a\u0430 \u043f\u043e \u0442\u043e\u043a\u0443"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Overcurrent/meta/type	switch
+/devices/wb-mdm3_5/controls/Overcurrent/meta/readonly	1
+/devices/wb-mdm3_5/controls/Overcurrent/meta/order	33
+/devices/wb-mdm3_5/controls/AC on L-N	1
+/devices/wb-mdm3_5/controls/AC on L-N/meta	{"order":32,"readonly":true,"title":{"ru":"\u041d\u0430\u043f\u0440\u044f\u0436\u0435\u043d\u0438\u0435 \u043d\u0430 \u043a\u043b\u0435\u043c\u043c\u0430\u0445 L-N"},"type":"switch"}
+/devices/wb-mdm3_5/controls/AC on L-N/meta/type	switch
+/devices/wb-mdm3_5/controls/AC on L-N/meta/readonly	1
+/devices/wb-mdm3_5/controls/AC on L-N/meta/order	32
+/devices/wb-mdm3_5/controls/Serial	4264828885
+/devices/wb-mdm3_5/controls/Serial/meta	{"order":31,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mdm3_5/controls/Serial/meta/type	text
+/devices/wb-mdm3_5/controls/Serial/meta/readonly	1
+/devices/wb-mdm3_5/controls/Serial/meta/order	31
+/devices/wb-mdm3_5/controls/Channel 3	100
+/devices/wb-mdm3_5/controls/Channel 3/meta	{"max":100.0,"order":30,"readonly":false,"title":{"ru":"\u041a\u0430\u043d\u0430\u043b 3"},"type":"range"}
+/devices/wb-mdm3_5/controls/Channel 3/meta/readonly	0
+/devices/wb-mdm3_5/controls/Channel 3/meta/order	30
+/devices/wb-mdm3_5/controls/Channel 3/meta/type	range
+/devices/wb-mdm3_5/controls/Channel 3/meta/max	100
+/devices/wb-mdm3_5/controls/K3	0
+/devices/wb-mdm3_5/controls/K3/meta	{"order":29,"readonly":false,"type":"switch"}
+/devices/wb-mdm3_5/controls/K3/meta/readonly	0
+/devices/wb-mdm3_5/controls/K3/meta/order	29
+/devices/wb-mdm3_5/controls/K3/meta/type	switch
+/devices/wb-mdm3_5/controls/Channel 2	100
+/devices/wb-mdm3_5/controls/Channel 2/meta	{"max":100.0,"order":28,"readonly":false,"title":{"ru":"\u041a\u0430\u043d\u0430\u043b 2"},"type":"range"}
+/devices/wb-mdm3_5/controls/Channel 2/meta/type	range
+/devices/wb-mdm3_5/controls/Channel 2/meta/max	100
+/devices/wb-mdm3_5/controls/Channel 2/meta/readonly	0
+/devices/wb-mdm3_5/controls/Channel 2/meta/order	28
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta	{"order":20,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 5"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta/order	20
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta	{"order":16,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 4"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta/order	16
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta	{"order":23,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 6"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta/order	23
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 6 counter	0
+/devices/wb-mdm3_5/controls/Input 6 counter/meta	{"order":22,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 6"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 6 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 6 counter/meta/order	22
+/devices/wb-mdm3_5/controls/Input 6 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 3 counter	0
+/devices/wb-mdm3_5/controls/Input 3 counter/meta	{"order":10,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 3"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 3 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 3 counter/meta/order	10
+/devices/wb-mdm3_5/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2	0
+/devices/wb-mdm3_5/controls/Input 2/meta	{"order":5,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 2"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Input 2/meta/order	5
+/devices/wb-mdm3_5/controls/Input 2/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta	{"order":11,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 3"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta/order	11
+/devices/wb-mdm3_5/controls/Input 4 counter	0
+/devices/wb-mdm3_5/controls/Input 4 counter/meta	{"order":14,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 4"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 4 counter/meta/order	14
+/devices/wb-mdm3_5/controls/Input 4 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 4 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta	{"order":4,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 1"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta/order	4
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5	0
+/devices/wb-mdm3_5/controls/Input 5/meta	{"order":17,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 5"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Input 5/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 5/meta/order	17
+/devices/wb-mdm3_5/controls/Input 6	0
+/devices/wb-mdm3_5/controls/Input 6/meta	{"order":21,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 6"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Input 6/meta/order	21
+/devices/wb-mdm3_5/controls/Input 6/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 6/meta/type	switch
+/devices/wb-mdm3_5/controls/Channel 1	100
+/devices/wb-mdm3_5/controls/Channel 1/meta	{"max":100.0,"order":26,"readonly":false,"title":{"ru":"\u041a\u0430\u043d\u0430\u043b 1"},"type":"range"}
+/devices/wb-mdm3_5/controls/Channel 1/meta/readonly	0
+/devices/wb-mdm3_5/controls/Channel 1/meta/type	range
+/devices/wb-mdm3_5/controls/Channel 1/meta/order	26
+/devices/wb-mdm3_5/controls/Channel 1/meta/max	100
+/devices/wb-mdm3_5/controls/Input 2 counter	0
+/devices/wb-mdm3_5/controls/Input 2 counter/meta	{"order":6,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 2"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 2 counter/meta/order	6
+/devices/wb-mdm3_5/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta	{"order":8,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 2"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta/order	8
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5 counter	0
+/devices/wb-mdm3_5/controls/Input 5 counter/meta	{"order":18,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 5"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 5 counter/meta/order	18
+/devices/wb-mdm3_5/controls/Input 5 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 5 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 1	0
+/devices/wb-mdm3_5/controls/Input 1/meta	{"order":1,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 1"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Input 1/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 1/meta/order	1
+/devices/wb-mdm3_5/controls/Input 1/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta	{"order":3,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 1"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta/order	3
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 4	0
+/devices/wb-mdm3_5/controls/Input 4/meta	{"order":13,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 4"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Input 4/meta/order	13
+/devices/wb-mdm3_5/controls/Input 4/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 4/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta	{"order":15,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 4"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta/order	15
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/K2	0
+/devices/wb-mdm3_5/controls/K2/meta	{"order":27,"readonly":false,"type":"switch"}
+/devices/wb-mdm3_5/controls/K2/meta/readonly	0
+/devices/wb-mdm3_5/controls/K2/meta/order	27
+/devices/wb-mdm3_5/controls/K2/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta	{"order":24,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 6"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta/order	24
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta	{"order":7,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 2"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta/order	7
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/K1	0
+/devices/wb-mdm3_5/controls/K1/meta	{"order":25,"readonly":false,"type":"switch"}
+/devices/wb-mdm3_5/controls/K1/meta/readonly	0
+/devices/wb-mdm3_5/controls/K1/meta/order	25
+/devices/wb-mdm3_5/controls/K1/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 1 counter	0
+/devices/wb-mdm3_5/controls/Input 1 counter/meta	{"order":2,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 1"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 1 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 1 counter/meta/order	2
+/devices/wb-mdm3_5/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3	0
+/devices/wb-mdm3_5/controls/Input 3/meta	{"order":9,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 3"},"type":"switch"}
+/devices/wb-mdm3_5/controls/Input 3/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 3/meta/order	9
+/devices/wb-mdm3_5/controls/Input 3/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta	{"order":19,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 5"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta/order	19
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta	{"order":12,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 3"},"type":"value"}
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta/order	12
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/meta	{"driver":"wb-modbus","title":{"en":"WB-MDM3 5"}}
+/devices/wb-mdm3_5/meta/name	WB-MDM3 5
+/devices/wb-mdm3_5/meta/driver	wb-modbus
+/devices/wb-mr3_6/controls/K1	0
+/devices/wb-mr3_6/controls/K1/meta	{"order":9,"readonly":false,"title":{"en":"Command K1","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K1"},"type":"switch"}
+/devices/wb-mr3_6/controls/K1/meta/type	switch
+/devices/wb-mr3_6/controls/K1/meta/readonly	0
+/devices/wb-mr3_6/controls/K1/meta/order	9
+/devices/wb-mr3_6/controls/Input 3 counter	0
+/devices/wb-mr3_6/controls/Input 3 counter/meta	{"order":8,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 3"},"type":"value"}
+/devices/wb-mr3_6/controls/Input 3 counter/meta/order	8
+/devices/wb-mr3_6/controls/Input 3 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 3	0
+/devices/wb-mr3_6/controls/Input 3/meta	{"order":7,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 3"},"type":"switch"}
+/devices/wb-mr3_6/controls/Input 3/meta/order	7
+/devices/wb-mr3_6/controls/Input 3/meta/type	switch
+/devices/wb-mr3_6/controls/Input 3/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 2 counter	0
+/devices/wb-mr3_6/controls/Input 2 counter/meta	{"order":6,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 2"},"type":"value"}
+/devices/wb-mr3_6/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 2 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 2 counter/meta/order	6
+/devices/wb-mr3_6/controls/Input 1	0
+/devices/wb-mr3_6/controls/Input 1/meta	{"order":3,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 1"},"type":"switch"}
+/devices/wb-mr3_6/controls/Input 1/meta/order	3
+/devices/wb-mr3_6/controls/Input 1/meta/type	switch
+/devices/wb-mr3_6/controls/Input 1/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 0 counter	0
+/devices/wb-mr3_6/controls/Input 0 counter/meta	{"order":2,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 0"},"type":"value"}
+/devices/wb-mr3_6/controls/Input 0 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 0 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 0 counter/meta/order	2
+/devices/wb-mr3_6/controls/Input 0	0
+/devices/wb-mr3_6/controls/Input 0/meta	{"order":1,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 0"},"type":"switch"}
+/devices/wb-mr3_6/controls/Input 0/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 0/meta/order	1
+/devices/wb-mr3_6/controls/Input 0/meta/type	switch
+/devices/wb-mr3_6/controls/Input 1 counter	0
+/devices/wb-mr3_6/controls/Input 1 counter/meta	{"order":4,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 1"},"type":"value"}
+/devices/wb-mr3_6/controls/Input 1 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 1 counter/meta/order	4
+/devices/wb-mr3_6/controls/K3	0
+/devices/wb-mr3_6/controls/K3/meta	{"order":11,"readonly":false,"title":{"en":"Command K3","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K3"},"type":"switch"}
+/devices/wb-mr3_6/controls/K3/meta/type	switch
+/devices/wb-mr3_6/controls/K3/meta/order	11
+/devices/wb-mr3_6/controls/K3/meta/readonly	0
+/devices/wb-mr3_6/controls/K2	0
+/devices/wb-mr3_6/controls/K2/meta	{"order":10,"readonly":false,"title":{"en":"Command K2","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K2"},"type":"switch"}
+/devices/wb-mr3_6/controls/K2/meta/order	10
+/devices/wb-mr3_6/controls/K2/meta/readonly	0
+/devices/wb-mr3_6/controls/K2/meta/type	switch
+/devices/wb-mr3_6/controls/Input 2	0
+/devices/wb-mr3_6/controls/Input 2/meta	{"order":5,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 2"},"type":"switch"}
+/devices/wb-mr3_6/controls/Input 2/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 2/meta/type	switch
+/devices/wb-mr3_6/controls/Input 2/meta/order	5
+/devices/wb-mr3_6/controls/Serial	115429
+/devices/wb-mr3_6/controls/Serial/meta	{"order":12,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mr3_6/controls/Serial/meta/order	12
+/devices/wb-mr3_6/controls/Serial/meta/readonly	1
+/devices/wb-mr3_6/controls/Serial/meta/type	text
+/devices/wb-mr3_6/meta	{"driver":"wb-modbus","title":{"en":"WB-MR3 6"}}
+/devices/wb-mr3_6/meta/name	WB-MR3 6
+/devices/wb-mr3_6/meta/driver	wb-modbus
+/devices/wb-mao4_4/meta	{"driver":"wb-modbus","title":{"en":"WB-MAO4 4"}}
+/devices/wb-mao4_4/meta/driver	wb-modbus
+/devices/wb-mao4_4/meta/name	WB-MAO4 4
+/devices/wb-mao4_4/controls/Channel 2 Switch	0
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta	{"order":21,"readonly":false,"title":{"en":"Channel 2","ru":"\u041a\u0430\u043d\u0430\u043b 2"},"type":"switch"}
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta/order	21
+/devices/wb-mao4_4/controls/Input 2 Counter	0
+/devices/wb-mao4_4/controls/Input 2 Counter/meta	{"order":8,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 2"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 2 Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 2 Counter/meta/order	8
+/devices/wb-mao4_4/controls/Input 2 Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter	0
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta	{"order":17,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u0432\u043e\u0439\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 3"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta/order	17
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1	0
+/devices/wb-mao4_4/controls/Input 1/meta	{"order":1,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 1"},"type":"switch"}
+/devices/wb-mao4_4/controls/Input 1/meta/type	switch
+/devices/wb-mao4_4/controls/Input 1/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1/meta/order	1
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta	{"order":18,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445, \u0430 \u0437\u0430\u0442\u0435\u043c \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 3"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta/order	18
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta	{"order":4,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 1"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta/order	4
+/devices/wb-mao4_4/controls/Input 1 Counter	0
+/devices/wb-mao4_4/controls/Input 1 Counter/meta	{"order":2,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 1"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 1 Counter/meta/order	2
+/devices/wb-mao4_4/controls/Input 1 Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level	58
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta	{"max":100.0,"order":20,"readonly":false,"title":{"ru":"\u0423\u0440\u043e\u0432\u0435\u043d\u044c \u0434\u0438\u043c\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u043a\u0430\u043d\u0430\u043b\u0430 1"},"type":"range"}
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/max	100
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/order	20
+/devices/wb-mao4_4/controls/Serial	113245
+/devices/wb-mao4_4/controls/Serial/meta	{"order":27,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mao4_4/controls/Serial/meta/type	text
+/devices/wb-mao4_4/controls/Serial/meta/readonly	1
+/devices/wb-mao4_4/controls/Serial/meta/order	27
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta	{"order":5,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u0432\u043e\u0439\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 1"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta/order	5
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level	0
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta	{"max":100.0,"order":26,"readonly":false,"title":{"ru":"\u0423\u0440\u043e\u0432\u0435\u043d\u044c \u0434\u0438\u043c\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u043a\u0430\u043d\u0430\u043b\u0430 4"},"type":"range"}
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/order	26
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/max	100
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter	0
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta	{"order":11,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u0432\u043e\u0439\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 2"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta/order	11
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Counter	0
+/devices/wb-mao4_4/controls/Input 3 Counter/meta	{"order":14,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 3"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 3 Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3 Counter/meta/order	14
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta	{"order":10,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 2"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta/order	10
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 4 Switch	0
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta	{"order":25,"readonly":false,"title":{"en":"Channel 4","ru":"\u041a\u0430\u043d\u0430\u043b 4"},"type":"switch"}
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta/order	25
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta	{"order":16,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 3"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta/order	16
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Channel 3 Switch	0
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta	{"order":23,"readonly":false,"title":{"en":"Channel 3","ru":"\u041a\u0430\u043d\u0430\u043b 3"},"type":"switch"}
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta/order	23
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter	0
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta	{"order":9,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 2"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta/order	9
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3	0
+/devices/wb-mao4_4/controls/Input 3/meta	{"order":13,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 3"},"type":"switch"}
+/devices/wb-mao4_4/controls/Input 3/meta/order	13
+/devices/wb-mao4_4/controls/Input 3/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3/meta/type	switch
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta	{"order":12,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445, \u0430 \u0437\u0430\u0442\u0435\u043c \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 2"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta/order	12
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta	{"order":3,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 1"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta/order	3
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2	0
+/devices/wb-mao4_4/controls/Input 2/meta	{"order":7,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 2"},"type":"switch"}
+/devices/wb-mao4_4/controls/Input 2/meta/order	7
+/devices/wb-mao4_4/controls/Input 2/meta/type	switch
+/devices/wb-mao4_4/controls/Input 2/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level	0
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta	{"max":100.0,"order":24,"readonly":false,"title":{"ru":"\u0423\u0440\u043e\u0432\u0435\u043d\u044c \u0434\u0438\u043c\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u043a\u0430\u043d\u0430\u043b\u0430 3"},"type":"range"}
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/order	24
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/max	100
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta	{"order":6,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445, \u0430 \u0437\u0430\u0442\u0435\u043c \u0434\u043b\u0438\u043d\u043d\u044b\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 1"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta/order	6
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 1 Switch	0
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta	{"order":19,"readonly":false,"title":{"en":"Channel 1","ru":"\u041a\u0430\u043d\u0430\u043b 1"},"type":"switch"}
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta/order	19
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter	0
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta	{"order":15,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0445 \u043d\u0430\u0436\u0430\u0442\u0438\u0439 \u0432\u0445\u043e\u0434\u0430 3"},"type":"value"}
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta/order	15
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level	49
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta	{"max":100.0,"order":22,"readonly":false,"title":{"ru":"\u0423\u0440\u043e\u0432\u0435\u043d\u044c \u0434\u0438\u043c\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f \u043a\u0430\u043d\u0430\u043b\u0430 2"},"type":"range"}
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/order	22
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/max	100
+/devices/wb-mai6_19/controls/Serial	122886
+/devices/wb-mai6_19/controls/Serial/meta	{"order":3,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mai6_19/controls/Serial/meta/order	3
+/devices/wb-mai6_19/controls/Serial/meta/readonly	1
+/devices/wb-mai6_19/controls/Serial/meta/type	text
+/devices/wb-mai6_19/controls/Uptime	4065645
+/devices/wb-mai6_19/controls/Uptime/meta	{"order":4,"readonly":true,"title":{"ru":"\u0412\u0440\u0435\u043c\u044f \u0440\u0430\u0431\u043e\u0442\u044b \u0441 \u043c\u043e\u043c\u0435\u043d\u0442\u0430 \u0432\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f"},"type":"value","units":"s"}
+/devices/wb-mai6_19/controls/Uptime/meta/readonly	1
+/devices/wb-mai6_19/controls/Uptime/meta/order	4
+/devices/wb-mai6_19/controls/Uptime/meta/type	value
+/devices/wb-mai6_19/controls/5V Output	5.084
+/devices/wb-mai6_19/controls/5V Output/meta	{"order":1,"readonly":true,"title":{"ru":"\u041d\u0430\u043f\u0440\u044f\u0436\u0435\u043d\u0438\u0435 \u043d\u0430 \u043a\u043b\u0435\u043c\u043c\u0430\u0445 5V"},"type":"value","units":"V"}
+/devices/wb-mai6_19/controls/5V Output/meta/order	1
+/devices/wb-mai6_19/controls/5V Output/meta/readonly	1
+/devices/wb-mai6_19/controls/5V Output/meta/type	value
+/devices/wb-mai6_19/controls/Internal Temperature	35.65
+/devices/wb-mai6_19/controls/Internal Temperature/meta	{"order":2,"readonly":true,"title":{"ru":"\u0422\u0435\u043c\u043f\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0432\u043d\u0443\u0442\u0440\u0438 \u043c\u043e\u0434\u0443\u043b\u044f"},"type":"value","units":"deg C"}
+/devices/wb-mai6_19/controls/Internal Temperature/meta/type	value
+/devices/wb-mai6_19/controls/Internal Temperature/meta/order	2
+/devices/wb-mai6_19/controls/Internal Temperature/meta/readonly	1
+/devices/wb-mai6_19/meta	{"driver":"wb-modbus","title":{"en":"WB-MAI6 19"}}
+/devices/wb-mai6_19/meta/name	WB-MAI6 19
+/devices/wb-mai6_19/meta/driver	wb-modbus
+/devices/wb-mr3_3/controls/K3	0
+/devices/wb-mr3_3/controls/K3/meta	{"order":11,"readonly":false,"title":{"en":"Command K3","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K3"},"type":"switch"}
+/devices/wb-mr3_3/controls/K3/meta/order	11
+/devices/wb-mr3_3/controls/K3/meta/type	switch
+/devices/wb-mr3_3/controls/K3/meta/readonly	0
+/devices/wb-mr3_3/controls/Input 1	0
+/devices/wb-mr3_3/controls/Input 1/meta	{"order":3,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 1"},"type":"switch"}
+/devices/wb-mr3_3/controls/Input 1/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 1/meta/order	3
+/devices/wb-mr3_3/controls/Input 1/meta/type	switch
+/devices/wb-mr3_3/controls/Serial	114120
+/devices/wb-mr3_3/controls/Serial/meta	{"order":12,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mr3_3/controls/Serial/meta/readonly	1
+/devices/wb-mr3_3/controls/Serial/meta/order	12
+/devices/wb-mr3_3/controls/Serial/meta/type	text
+/devices/wb-mr3_3/controls/Input 1 counter	0
+/devices/wb-mr3_3/controls/Input 1 counter/meta	{"order":4,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 1"},"type":"value"}
+/devices/wb-mr3_3/controls/Input 1 counter/meta/order	4
+/devices/wb-mr3_3/controls/Input 1 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/K2	0
+/devices/wb-mr3_3/controls/K2/meta	{"order":10,"readonly":false,"title":{"en":"Command K2","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K2"},"type":"switch"}
+/devices/wb-mr3_3/controls/K2/meta/type	switch
+/devices/wb-mr3_3/controls/K2/meta/readonly	0
+/devices/wb-mr3_3/controls/K2/meta/order	10
+/devices/wb-mr3_3/controls/K1	1
+/devices/wb-mr3_3/controls/K1/meta	{"order":9,"readonly":false,"title":{"en":"Command K1","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K1"},"type":"switch"}
+/devices/wb-mr3_3/controls/K1/meta/order	9
+/devices/wb-mr3_3/controls/K1/meta/type	switch
+/devices/wb-mr3_3/controls/K1/meta/readonly	0
+/devices/wb-mr3_3/controls/Input 3 counter	0
+/devices/wb-mr3_3/controls/Input 3 counter/meta	{"order":8,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 3"},"type":"value"}
+/devices/wb-mr3_3/controls/Input 3 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 3 counter/meta/order	8
+/devices/wb-mr3_3/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 2 counter	0
+/devices/wb-mr3_3/controls/Input 2 counter/meta	{"order":6,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 2"},"type":"value"}
+/devices/wb-mr3_3/controls/Input 2 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 2 counter/meta/order	6
+/devices/wb-mr3_3/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 2	0
+/devices/wb-mr3_3/controls/Input 2/meta	{"order":5,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 2"},"type":"switch"}
+/devices/wb-mr3_3/controls/Input 2/meta/type	switch
+/devices/wb-mr3_3/controls/Input 2/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 2/meta/order	5
+/devices/wb-mr3_3/controls/Input 0 counter	0
+/devices/wb-mr3_3/controls/Input 0 counter/meta	{"order":2,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 0"},"type":"value"}
+/devices/wb-mr3_3/controls/Input 0 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 0 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 0 counter/meta/order	2
+/devices/wb-mr3_3/controls/Input 0	0
+/devices/wb-mr3_3/controls/Input 0/meta	{"order":1,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 0"},"type":"switch"}
+/devices/wb-mr3_3/controls/Input 0/meta/order	1
+/devices/wb-mr3_3/controls/Input 0/meta/type	switch
+/devices/wb-mr3_3/controls/Input 0/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 3	0
+/devices/wb-mr3_3/controls/Input 3/meta	{"order":7,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 3"},"type":"switch"}
+/devices/wb-mr3_3/controls/Input 3/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 3/meta/type	switch
+/devices/wb-mr3_3/controls/Input 3/meta/order	7
+/devices/wb-mr3_3/meta	{"driver":"wb-modbus","title":{"en":"WB-MR3 3"}}
+/devices/wb-mr3_3/meta/driver	wb-modbus
+/devices/wb-mr3_3/meta/name	WB-MR3 3
+/devices/wb-mr6c_2/controls/K6	0
+/devices/wb-mr6c_2/controls/K6/meta	{"order":20,"readonly":false,"title":{"en":"Command K6","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K6"},"type":"switch"}
+/devices/wb-mr6c_2/controls/K6/meta/readonly	0
+/devices/wb-mr6c_2/controls/K6/meta/type	switch
+/devices/wb-mr6c_2/controls/K6/meta/order	20
+/devices/wb-mr6c_2/controls/K2	0
+/devices/wb-mr6c_2/controls/K2/meta	{"order":16,"readonly":false,"title":{"en":"Command K2","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K2"},"type":"switch"}
+/devices/wb-mr6c_2/controls/K2/meta/order	16
+/devices/wb-mr6c_2/controls/K2/meta/readonly	0
+/devices/wb-mr6c_2/controls/K2/meta/type	switch
+/devices/wb-mr6c_2/controls/K5	0
+/devices/wb-mr6c_2/controls/K5/meta	{"order":19,"readonly":false,"title":{"en":"Command K5","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K5"},"type":"switch"}
+/devices/wb-mr6c_2/controls/K5/meta/order	19
+/devices/wb-mr6c_2/controls/K5/meta/readonly	0
+/devices/wb-mr6c_2/controls/K5/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 4 counter	0
+/devices/wb-mr6c_2/controls/Input 4 counter/meta	{"order":10,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 4"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 4 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 4 counter/meta/order	10
+/devices/wb-mr6c_2/controls/Input 4 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 2 counter	0
+/devices/wb-mr6c_2/controls/Input 2 counter/meta	{"order":6,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 2"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 2 counter/meta/order	6
+/devices/wb-mr6c_2/controls/Input 2 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/K1	0
+/devices/wb-mr6c_2/controls/K1/meta	{"order":15,"readonly":false,"title":{"en":"Command K1","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K1"},"type":"switch"}
+/devices/wb-mr6c_2/controls/K1/meta/type	switch
+/devices/wb-mr6c_2/controls/K1/meta/order	15
+/devices/wb-mr6c_2/controls/K1/meta/readonly	0
+/devices/wb-mr6c_2/controls/K4	0
+/devices/wb-mr6c_2/controls/K4/meta	{"order":18,"readonly":false,"title":{"en":"Command K4","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K4"},"type":"switch"}
+/devices/wb-mr6c_2/controls/K4/meta/order	18
+/devices/wb-mr6c_2/controls/K4/meta/type	switch
+/devices/wb-mr6c_2/controls/K4/meta/readonly	0
+/devices/wb-mr6c_2/controls/Input 3 counter	0
+/devices/wb-mr6c_2/controls/Input 3 counter/meta	{"order":8,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 3"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 3 counter/meta/order	8
+/devices/wb-mr6c_2/controls/Input 3 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 2	0
+/devices/wb-mr6c_2/controls/Input 2/meta	{"order":5,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 2"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 2/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 2/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 2/meta/order	5
+/devices/wb-mr6c_2/controls/Input 6	0
+/devices/wb-mr6c_2/controls/Input 6/meta	{"order":13,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 6"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 6/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 6/meta/order	13
+/devices/wb-mr6c_2/controls/Input 6/meta/type	switch
+/devices/wb-mr6c_2/controls/K3	0
+/devices/wb-mr6c_2/controls/K3/meta	{"order":17,"readonly":false,"title":{"en":"Command K3","ru":"\u041a\u043e\u043c\u0430\u043d\u0434\u0430 K3"},"type":"switch"}
+/devices/wb-mr6c_2/controls/K3/meta/type	switch
+/devices/wb-mr6c_2/controls/K3/meta/readonly	0
+/devices/wb-mr6c_2/controls/K3/meta/order	17
+/devices/wb-mr6c_2/controls/Serial	4262597002
+/devices/wb-mr6c_2/controls/Serial/meta	{"order":21,"readonly":true,"title":{"ru":"\u0421\u0435\u0440\u0438\u0439\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440"},"type":"text"}
+/devices/wb-mr6c_2/controls/Serial/meta/order	21
+/devices/wb-mr6c_2/controls/Serial/meta/readonly	1
+/devices/wb-mr6c_2/controls/Serial/meta/type	text
+/devices/wb-mr6c_2/controls/Input 1 counter	0
+/devices/wb-mr6c_2/controls/Input 1 counter/meta	{"order":4,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 1"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 1 counter/meta/order	4
+/devices/wb-mr6c_2/controls/Input 1 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 0	0
+/devices/wb-mr6c_2/controls/Input 0/meta	{"order":1,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 0"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 0/meta/order	1
+/devices/wb-mr6c_2/controls/Input 0/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 0/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 4	0
+/devices/wb-mr6c_2/controls/Input 4/meta	{"order":9,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 4"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 4/meta/order	9
+/devices/wb-mr6c_2/controls/Input 4/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 4/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 0 counter	0
+/devices/wb-mr6c_2/controls/Input 0 counter/meta	{"order":2,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 0"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 0 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 0 counter/meta/order	2
+/devices/wb-mr6c_2/controls/Input 0 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 5 counter	0
+/devices/wb-mr6c_2/controls/Input 5 counter/meta	{"order":12,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 5"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 5 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 5 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 5 counter/meta/order	12
+/devices/wb-mr6c_2/controls/Input 1	0
+/devices/wb-mr6c_2/controls/Input 1/meta	{"order":3,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 1"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 1/meta/order	3
+/devices/wb-mr6c_2/controls/Input 1/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 1/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 5	0
+/devices/wb-mr6c_2/controls/Input 5/meta	{"order":11,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 5"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 5/meta/order	11
+/devices/wb-mr6c_2/controls/Input 5/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 5/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 3	0
+/devices/wb-mr6c_2/controls/Input 3/meta	{"order":7,"readonly":true,"title":{"ru":"\u0412\u0445\u043e\u0434 3"},"type":"switch"}
+/devices/wb-mr6c_2/controls/Input 3/meta/order	7
+/devices/wb-mr6c_2/controls/Input 3/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 3/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 6 counter	0
+/devices/wb-mr6c_2/controls/Input 6 counter/meta	{"order":14,"readonly":true,"title":{"ru":"\u0421\u0447\u0435\u0442\u0447\u0438\u043a 6"},"type":"value"}
+/devices/wb-mr6c_2/controls/Input 6 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 6 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 6 counter/meta/order	14
+/devices/wb-mr6c_2/meta	{"driver":"wb-modbus","title":{"en":"WB-MR6C 2"}}
+/devices/wb-mr6c_2/meta/name	WB-MR6C 2
+/devices/wb-mr6c_2/meta/driver	wb-modbus
+/devices/metrics/meta	{"driver": "wb-mqtt-metrics", "title": {"en": "Metrics", "ru": "\u041c\u0435\u0442\u0440\u0438\u043a\u0438"}}
+/devices/metrics/meta/driver	wb-mqtt-metrics
+/devices/metrics/meta/name	Metrics
+/devices/metrics/controls/load_average_1min	0.19
+/devices/metrics/controls/load_average_1min/meta	{"type": "value", "readonly": true, "title": {"en": "Load average (1 min)", "ru": "\u0421\u0440\u0435\u0434\u043d\u044f\u044f \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0430 (1 \u043c\u0438\u043d)"}, "units": "tasks", "min": 0}
+/devices/metrics/controls/load_average_1min/meta/type	value
+/devices/metrics/controls/load_average_1min/meta/readonly	1
+/devices/metrics/controls/load_average_1min/meta/units	tasks
+/devices/metrics/controls/load_average_1min/meta/min	0
+/devices/metrics/controls/load_average_5min	0.35
+/devices/metrics/controls/load_average_5min/meta	{"type": "value", "readonly": true, "title": {"en": "Load average (5 min)", "ru": "\u0421\u0440\u0435\u0434\u043d\u044f\u044f \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0430 (5 \u043c\u0438\u043d)"}, "units": "tasks", "min": 0}
+/devices/metrics/controls/load_average_5min/meta/type	value
+/devices/metrics/controls/load_average_5min/meta/readonly	1
+/devices/metrics/controls/load_average_5min/meta/units	tasks
+/devices/metrics/controls/load_average_5min/meta/min	0
+/devices/metrics/controls/load_average_15min	0.47
+/devices/metrics/controls/load_average_15min/meta	{"type": "value", "readonly": true, "title": {"en": "Load average (15 min)", "ru": "\u0421\u0440\u0435\u0434\u043d\u044f\u044f \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0430 (15 \u043c\u0438\u043d)"}, "units": "tasks", "min": 0}
+/devices/metrics/controls/load_average_15min/meta/type	value
+/devices/metrics/controls/load_average_15min/meta/readonly	1
+/devices/metrics/controls/load_average_15min/meta/units	tasks
+/devices/metrics/controls/load_average_15min/meta/min	0
+/devices/metrics/controls/ram_available	1783
+/devices/metrics/controls/ram_available/meta	{"type": "value", "readonly": true, "title": {"en": "RAM available", "ru": "\u0414\u043e\u0441\u0442\u0443\u043f\u043d\u0430\u044f \u043e\u043f\u0435\u0440\u0430\u0442\u0438\u0432\u043d\u0430\u044f \u043f\u0430\u043c\u044f\u0442\u044c"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/ram_available/meta/type	value
+/devices/metrics/controls/ram_available/meta/readonly	1
+/devices/metrics/controls/ram_available/meta/units	MiB
+/devices/metrics/controls/ram_available/meta/min	0
+/devices/metrics/controls/ram_used	165
+/devices/metrics/controls/ram_used/meta	{"type": "value", "readonly": true, "title": {"en": "RAM used", "ru": "\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u043c\u0430\u044f \u043e\u043f\u0435\u0440\u0430\u0442\u0438\u0432\u043d\u0430\u044f \u043f\u0430\u043c\u044f\u0442\u044c"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/ram_used/meta/type	value
+/devices/metrics/controls/ram_used/meta/readonly	1
+/devices/metrics/controls/ram_used/meta/units	MiB
+/devices/metrics/controls/ram_used/meta/min	0
+/devices/metrics/controls/ram_total	2012
+/devices/metrics/controls/ram_total/meta	{"type": "value", "readonly": true, "title": {"en": "RAM total", "ru": "\u0412\u0441\u0435\u0433\u043e \u043e\u043f\u0435\u0440\u0430\u0442\u0438\u0432\u043d\u043e\u0439 \u043f\u0430\u043c\u044f\u0442\u0438"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/ram_total/meta/type	value
+/devices/metrics/controls/ram_total/meta/readonly	1
+/devices/metrics/controls/ram_total/meta/units	MiB
+/devices/metrics/controls/ram_total/meta/min	0
+/devices/metrics/controls/swap_total	255
+/devices/metrics/controls/swap_total/meta	{"type": "value", "readonly": true, "title": {"en": "Swap total", "ru": "\u0412\u0441\u0435\u0433\u043e swap \u043f\u0430\u043c\u044f\u0442\u0438"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/swap_total/meta/type	value
+/devices/metrics/controls/swap_total/meta/readonly	1
+/devices/metrics/controls/swap_total/meta/units	MiB
+/devices/metrics/controls/swap_total/meta/min	0
+/devices/metrics/controls/swap_used	0
+/devices/metrics/controls/swap_used/meta	{"type": "value", "readonly": true, "title": {"en": "Swap used", "ru": "\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f swap"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/swap_used/meta/type	value
+/devices/metrics/controls/swap_used/meta/readonly	1
+/devices/metrics/controls/swap_used/meta/units	MiB
+/devices/metrics/controls/swap_used/meta/min	0
+/devices/metrics/controls/dev_root_used_space	702
+/devices/metrics/controls/dev_root_used_space/meta	{"type": "value", "readonly": true, "title": {"en": "Used space in dev root", "ru": "\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u043c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e \u0432 \u043a\u043e\u0440\u043d\u0435\u0432\u043e\u043c \u0440\u0430\u0437\u0434\u0435\u043b\u0435"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/dev_root_used_space/meta/type	value
+/devices/metrics/controls/dev_root_used_space/meta/readonly	1
+/devices/metrics/controls/dev_root_used_space/meta/units	MiB
+/devices/metrics/controls/dev_root_used_space/meta/min	0
+/devices/metrics/controls/dev_root_total_space	1984
+/devices/metrics/controls/dev_root_total_space/meta	{"type": "value", "readonly": true, "title": {"en": "Total space of dev root", "ru": "\u041e\u0431\u0449\u0438\u0439 \u0440\u0430\u0437\u043c\u0435\u0440 \u043a\u043e\u0440\u043d\u0435\u0432\u043e\u0433\u043e \u0440\u0430\u0437\u0434\u0435\u043b\u0430"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/dev_root_total_space/meta/type	value
+/devices/metrics/controls/dev_root_total_space/meta/readonly	1
+/devices/metrics/controls/dev_root_total_space/meta/units	MiB
+/devices/metrics/controls/dev_root_total_space/meta/min	0
+/devices/metrics/controls/dev_root_linked_on	/dev/mmcblk0p2
+/devices/metrics/controls/dev_root_linked_on/meta	{"type": "text", "readonly": true, "title": {"en": "Dev root linked on", "ru": "\u041a\u043e\u0440\u043d\u0435\u0432\u043e\u0439 \u0440\u0430\u0437\u0434\u0435\u043b \u0441\u043c\u043e\u043d\u0442\u0438\u0440\u043e\u0432\u0430\u043d \u043d\u0430"}}
+/devices/metrics/controls/dev_root_linked_on/meta/type	text
+/devices/metrics/controls/dev_root_linked_on/meta/readonly	1
+/devices/metrics/controls/data_used_space	826
+/devices/metrics/controls/data_used_space/meta	{"type": "value", "readonly": true, "title": {"en": "Data used space", "ru": "\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u043c\u043e\u0435 \u043c\u0435\u0441\u0442\u043e \u0432 \u0440\u0430\u0437\u0434\u0435\u043b\u0435 \u0434\u0430\u043d\u043d\u044b\u0445"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/data_used_space/meta/type	value
+/devices/metrics/controls/data_used_space/meta/readonly	1
+/devices/metrics/controls/data_used_space/meta/units	MiB
+/devices/metrics/controls/data_used_space/meta/min	0
+/devices/metrics/controls/data_total_space	56110
+/devices/metrics/controls/data_total_space/meta	{"type": "value", "readonly": true, "title": {"en": "Data total space", "ru": "\u041e\u0431\u0449\u0438\u0439 \u0440\u0430\u0437\u043c\u0435\u0440 \u0440\u0430\u0437\u0434\u0435\u043b\u0430 \u0434\u0430\u043d\u043d\u044b\u0445"}, "units": "MiB", "min": 0}
+/devices/metrics/controls/data_total_space/meta/type	value
+/devices/metrics/controls/data_total_space/meta/readonly	1
+/devices/metrics/controls/data_total_space/meta/units	MiB
+/devices/metrics/controls/data_total_space/meta/min	0
+/devices/battery/controls/Current	-3.428
+/devices/battery/controls/Current/meta	{"order":2,"readonly":true,"title":{"ru":"Ток"},"type":"value","units":"A"}
+/devices/battery/controls/Current/meta/readonly	1
+/devices/battery/controls/Current/meta/order	2
+/devices/battery/controls/Current/meta/type	value
+/devices/battery/controls/Voltage	4.154
+/devices/battery/controls/Voltage/meta	{"order":3,"readonly":true,"title":{"ru":"Напряжение"},"type":"voltage"}
+/devices/battery/controls/Voltage/meta/order	3
+/devices/battery/controls/Voltage/meta/readonly	1
+/devices/battery/controls/Voltage/meta/type	voltage
+/devices/battery/controls/Percentage	100
+/devices/battery/controls/Percentage/meta	{"order":1,"readonly":true,"title":{"ru":"Уровень заряда"},"type":"value","units":"%"}
+/devices/battery/controls/Percentage/meta/order	1
+/devices/battery/controls/Percentage/meta/readonly	1
+/devices/battery/controls/Percentage/meta/type	value
+/devices/battery/controls/Charging	0
+/devices/battery/controls/Charging/meta	{"order":5,"readonly":true,"title":{"ru":"Зарядка"},"type":"switch"}
+/devices/battery/controls/Charging/meta/readonly	1
+/devices/battery/controls/Charging/meta/order	5
+/devices/battery/controls/Charging/meta/type	switch
+/devices/battery/meta	{"driver":"wb-rules","title":{"en":"Battery","ru":"Батарея"}}
+/devices/battery/meta/name	Battery
+/devices/battery/meta/driver	wb-rules
+/devices/network/controls/Ethernet IP Online Status	1
+/devices/network/controls/Ethernet IP Online Status/meta	{"order":5,"readonly":true,"title":{"en":"Ethernet 1 Internet Access","ru":"Ethernet 1 Доступ к интернету"},"type":"switch"}
+/devices/network/controls/Ethernet IP Online Status/meta/readonly	1
+/devices/network/controls/Ethernet IP Online Status/meta/type	switch
+/devices/network/controls/Ethernet IP Online Status/meta/order	5
+/devices/network/controls/Wi-Fi IP Online Status	0
+/devices/network/controls/Wi-Fi IP Online Status/meta	{"order":11,"readonly":true,"title":{"en":"Wi-Fi 1 Internet Access","ru":"Wi-Fi 1 Доступ к интернету"},"type":"switch"}
+/devices/network/controls/Wi-Fi IP Online Status/meta/type	switch
+/devices/network/controls/Wi-Fi IP Online Status/meta/readonly	1
+/devices/network/controls/Wi-Fi IP Online Status/meta/order	11
+/devices/network/controls/Ethernet 2 IP Online Status	0
+/devices/network/controls/Ethernet 2 IP Online Status/meta	{"order":8,"readonly":true,"title":{"en":"Ethernet 2 Internet Access","ru":"Ethernet 2 Доступ к интернету"},"type":"switch"}
+/devices/network/controls/Ethernet 2 IP Online Status/meta/readonly	1
+/devices/network/controls/Ethernet 2 IP Online Status/meta/type	switch
+/devices/network/controls/Ethernet 2 IP Online Status/meta/order	8
+/devices/network/controls/Wi-Fi 2 IP Online Status	0
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta	{"order":14,"readonly":true,"title":{"en":"Wi-Fi 2 Internet Access","ru":"Wi-Fi 2 Доступ к интернету"},"type":"switch"}
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta/type	switch
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta/readonly	1
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta/order	14
+/devices/network/controls/Ethernet 2 IP Connection Enabled	0
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta	{"order":9,"readonly":true,"title":{"en":"Ethernet 2 Enabled","ru":"Ethernet 2 Включен"},"type":"switch"}
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta/order	9
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta/type	switch
+/devices/network/controls/GPRS IP Connection Enabled	0
+/devices/network/controls/GPRS IP Connection Enabled/meta	{"order":18,"readonly":true,"title":{"en":"GPRS IP Enabled","ru":"GPRS IP Включен"},"type":"switch"}
+/devices/network/controls/GPRS IP Connection Enabled/meta/order	18
+/devices/network/controls/GPRS IP Connection Enabled/meta/readonly	1
+/devices/network/controls/GPRS IP Connection Enabled/meta/type	switch
+/devices/network/controls/Ethernet IP Connection Enabled	1
+/devices/network/controls/Ethernet IP Connection Enabled/meta	{"order":6,"readonly":true,"title":{"en":"Ethernet 1 Enabled","ru":"Ethernet 1 Включен"},"type":"switch"}
+/devices/network/controls/Ethernet IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Ethernet IP Connection Enabled/meta/type	switch
+/devices/network/controls/Ethernet IP Connection Enabled/meta/order	6
+/devices/network/controls/GPRS IP/meta	{"order":16,"readonly":true,"type":"text"}
+/devices/network/controls/GPRS IP/meta/order	16
+/devices/network/controls/GPRS IP/meta/type	text
+/devices/network/controls/GPRS IP/meta/readonly	1
+/devices/network/controls/Wi-Fi 2 IP/meta	{"order":13,"readonly":true,"title":{"en":"Wi-Fi 2 IP","ru":"Wi-Fi 2 IP"},"type":"text"}
+/devices/network/controls/Wi-Fi 2 IP/meta/order	13
+/devices/network/controls/Wi-Fi 2 IP/meta/type	text
+/devices/network/controls/Wi-Fi 2 IP/meta/readonly	1
+/devices/network/controls/Wi-Fi IP	192.168.42.1
+
+/devices/network/controls/Wi-Fi IP/meta	{"order":10,"readonly":true,"title":{"en":"Wi-Fi 1 IP","ru":"Wi-Fi 1 IP"},"type":"text"}
+/devices/network/controls/Wi-Fi IP/meta/order	10
+/devices/network/controls/Wi-Fi IP/meta/type	text
+/devices/network/controls/Wi-Fi IP/meta/readonly	1
+/devices/network/controls/Default Interface	eth0
+/devices/network/controls/Default Interface/meta	{"order":2,"readonly":true,"title":{"en":"Default Interface","ru":"Интерфейс по умолчанию"},"type":"text"}
+/devices/network/controls/Default Interface/meta/order	2
+/devices/network/controls/Default Interface/meta/readonly	1
+/devices/network/controls/Default Interface/meta/type	text
+/devices/network/controls/GPRS IP Online Status	0
+/devices/network/controls/GPRS IP Online Status/meta	{"order":17,"readonly":true,"title":{"en":"GPRS IP Internet Access","ru":"GPRS IP Доступ к интернету"},"type":"switch"}
+/devices/network/controls/GPRS IP Online Status/meta/type	switch
+/devices/network/controls/GPRS IP Online Status/meta/order	17
+/devices/network/controls/GPRS IP Online Status/meta/readonly	1
+/devices/network/controls/Internet Connection	wb-eth0
+/devices/network/controls/Internet Connection/meta	{"order":3,"readonly":true,"title":{"en":"Internet Connection","ru":"Интернет соединение"},"type":"text"}
+/devices/network/controls/Internet Connection/meta/order	3
+/devices/network/controls/Internet Connection/meta/readonly	1
+/devices/network/controls/Internet Connection/meta/type	text
+/devices/network/controls/Ethernet IP	192.168.2.106
+
+/devices/network/controls/Ethernet IP/meta	{"order":4,"readonly":true,"title":{"en":"Ethernet 1 IP","ru":"Ethernet 1 IP"},"type":"text"}
+/devices/network/controls/Ethernet IP/meta/type	text
+/devices/network/controls/Ethernet IP/meta/readonly	1
+/devices/network/controls/Ethernet IP/meta/order	4
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled	0
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta	{"order":15,"readonly":true,"title":{"en":"Wi-Fi 2 Enabled","ru":"Wi-Fi 2 Включен"},"type":"switch"}
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta/order	15
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta/type	switch
+/devices/network/controls/Active Connections	["lo","wb-ap","wb-eth0"]
+/devices/network/controls/Active Connections/meta	{"order":1,"readonly":true,"title":{"en":"Active Connections","ru":"Активные соединения"},"type":"text"}
+/devices/network/controls/Active Connections/meta/type	text
+/devices/network/controls/Active Connections/meta/readonly	1
+/devices/network/controls/Active Connections/meta/order	1
+/devices/network/controls/Wi-Fi IP Connection Enabled	1
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta	{"order":12,"readonly":true,"title":{"en":"Wi-Fi 1 Enabled","ru":"Wi-Fi 1 Включен"},"type":"switch"}
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta/type	switch
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta/order	12
+/devices/network/controls/Ethernet 2 IP/meta	{"order":7,"readonly":true,"type":"text"}
+/devices/network/controls/Ethernet 2 IP/meta/order	7
+/devices/network/controls/Ethernet 2 IP/meta/type	text
+/devices/network/controls/Ethernet 2 IP/meta/readonly	1
+/devices/network/meta	{"driver":"wb-rules","title":{"en":"Network","ru":"Сеть"}}
+/devices/network/meta/name	Network
+/devices/network/meta/driver	wb-rules
+/devices/system/controls/HW Revision	7.3.1
+/devices/system/controls/HW Revision/meta	{"order":4,"readonly":true,"title":{"en":"HW Revision","ru":"Версия контроллера"},"type":"text"}
+/devices/system/controls/HW Revision/meta/type	text
+/devices/system/controls/HW Revision/meta/readonly	1
+/devices/system/controls/HW Revision/meta/order	4
+/devices/system/controls/Reboot/meta	{"order":6,"readonly":false,"title":{"en":"Reboot","ru":"Перезагрузить"},"type":"pushbutton"}
+/devices/system/controls/Reboot/meta/order	6
+/devices/system/controls/Reboot/meta/readonly	0
+/devices/system/controls/Reboot/meta/type	pushbutton
+/devices/system/controls/Batch No	7.3.1B/2GC/2T 636
+/devices/system/controls/Batch No/meta	{"order":1,"readonly":true,"title":{"en":"Batch No","ru":"Номер партии"},"type":"text"}
+/devices/system/controls/Batch No/meta/readonly	1
+/devices/system/controls/Batch No/meta/order	1
+/devices/system/controls/Batch No/meta/type	text
+/devices/system/controls/Release name	wb-2602
+/devices/system/controls/Release name/meta	{"order":7,"readonly":true,"title":{"en":"Release name","ru":"Название релиза"},"type":"text"}
+/devices/system/controls/Release name/meta/readonly	1
+/devices/system/controls/Release name/meta/type	text
+/devices/system/controls/Release name/meta/order	7
+/devices/system/controls/Release suite	stable
+/devices/system/controls/Release suite/meta	{"order":8,"readonly":true,"title":{"en":"Release suite","ru":"Тип релиза"},"type":"text"}
+/devices/system/controls/Release suite/meta/type	text
+/devices/system/controls/Release suite/meta/order	8
+/devices/system/controls/Release suite/meta/readonly	1
+/devices/system/controls/Temperature Grade	commercial
+/devices/system/controls/Temperature Grade/meta	{"order":10,"readonly":true,"title":{"en":"Temperature Grade","ru":"Температурный диапазон"},"type":"text"}
+/devices/system/controls/Temperature Grade/meta/readonly	1
+/devices/system/controls/Temperature Grade/meta/order	10
+/devices/system/controls/Temperature Grade/meta/type	text
+/devices/system/controls/DTS Version	731
+
+/devices/system/controls/DTS Version/meta	{"order":3,"readonly":true,"title":{"en":"DTS Version","ru":"Версия DTS"},"type":"text"}
+/devices/system/controls/DTS Version/meta/type	text
+/devices/system/controls/DTS Version/meta/readonly	1
+/devices/system/controls/DTS Version/meta/order	3
+/devices/system/controls/Manufacturing Date	2022-08-05 10:34:48
+/devices/system/controls/Manufacturing Date/meta	{"order":5,"readonly":true,"title":{"en":"Manufacturing Date","ru":"Дата производства"},"type":"text"}
+/devices/system/controls/Manufacturing Date/meta/type	text
+/devices/system/controls/Manufacturing Date/meta/readonly	1
+/devices/system/controls/Manufacturing Date/meta/order	5
+/devices/system/controls/Current uptime	2d 14h 54m
+/devices/system/controls/Current uptime/meta	{"order":2,"readonly":true,"title":{"en":"Current uptime","ru":"Время работы"},"type":"text"}
+/devices/system/controls/Current uptime/meta/readonly	1
+/devices/system/controls/Current uptime/meta/order	2
+/devices/system/controls/Current uptime/meta/type	text
+/devices/system/controls/Short SN	A25NDEMJ
+/devices/system/controls/Short SN/meta	{"order":9,"readonly":true,"title":{"en":"Short SN","ru":"Серийный номер"},"type":"text"}
+/devices/system/controls/Short SN/meta/readonly	1
+/devices/system/controls/Short SN/meta/type	text
+/devices/system/controls/Short SN/meta/order	9
+/devices/system/meta	{"driver":"wb-rules","title":{"en":"System","ru":"Система"}}
+/devices/system/meta/name	System
+/devices/system/meta/driver	wb-rules
+/devices/power_status/controls/Vin	24.1
+/devices/power_status/controls/Vin/meta	{"order":1,"readonly":true,"title":{"en":"Input voltage","ru":"Входное напряжение"},"type":"voltage"}
+/devices/power_status/controls/Vin/meta/type	voltage
+/devices/power_status/controls/Vin/meta/readonly	1
+/devices/power_status/controls/Vin/meta/order	1
+/devices/power_status/controls/working on battery	0
+/devices/power_status/controls/working on battery/meta	{"order":2,"readonly":true,"title":{"en":"Working on battery","ru":"Работа от батареи"},"type":"switch"}
+/devices/power_status/controls/working on battery/meta/readonly	1
+/devices/power_status/controls/working on battery/meta/type	switch
+/devices/power_status/controls/working on battery/meta/order	2
+/devices/power_status/meta	{"driver":"wb-rules","title":{"en":"Power status","ru":"Статус питания"}}
+/devices/power_status/meta/driver	wb-rules
+/devices/power_status/meta/name	Power status
+/devices/system_time/controls/timezone	UTC+0000
+/devices/system_time/controls/timezone/meta	{"order":4,"readonly":true,"title":{"en":"Timezone","ru":"Часовой пояс"},"type":"text"}
+/devices/system_time/controls/timezone/meta/type	text
+/devices/system_time/controls/timezone/meta/order	4
+/devices/system_time/controls/timezone/meta/readonly	1
+/devices/system_time/controls/current_day	0
+/devices/system_time/controls/current_day/meta	{"enum":{"0":{"en":"Sunday","ru":"Воскресенье"},"1":{"en":"Monday","ru":"Понедельник"},"2":{"en":"Tuesday","ru":"Вторник"},"3":{"en":"Wednesday","ru":"Среда"},"4":{"en":"Thursday","ru":"Четверг"},"5":{"en":"Friday","ru":"Пятница"},"6":{"en":"Saturday","ru":"Суббота"},"7":{"en":"Not initialized","ru":"Не инициализировано"}},"order":2,"readonly":true,"title":{"en":"Day of week","ru":"День недели"},"type":"value"}
+/devices/system_time/controls/current_day/meta/type	value
+/devices/system_time/controls/current_day/meta/readonly	1
+/devices/system_time/controls/current_day/meta/order	2
+/devices/system_time/controls/current_date	2026-05-10
+/devices/system_time/controls/current_date/meta	{"order":1,"readonly":true,"title":{"en":"Date","ru":"Дата"},"type":"text"}
+/devices/system_time/controls/current_date/meta/type	text
+/devices/system_time/controls/current_date/meta/readonly	1
+/devices/system_time/controls/current_date/meta/order	1
+/devices/system_time/controls/current_time	09:46
+/devices/system_time/controls/current_time/meta	{"order":3,"readonly":true,"title":{"en":"Time","ru":"Время"},"type":"text"}
+/devices/system_time/controls/current_time/meta/readonly	1
+/devices/system_time/controls/current_time/meta/type	text
+/devices/system_time/controls/current_time/meta/order	3
+/devices/system_time/meta	{"driver":"wb-rules","title":{"en":"System Time","ru":"Системное время"}}
+/devices/system_time/meta/driver	wb-rules
+/devices/system_time/meta/name	System Time
+/devices/buzzer/controls/enabled	0
+/devices/buzzer/controls/enabled/meta	{"order":1,"readonly":false,"title":{"en":"Enabled","ru":"Включен"},"type":"switch"}
+/devices/buzzer/controls/enabled/meta/readonly	0
+/devices/buzzer/controls/enabled/meta/order	1
+/devices/buzzer/controls/enabled/meta/type	switch
+/devices/buzzer/controls/frequency	3000
+/devices/buzzer/controls/frequency/meta	{"max":7000,"min":0,"order":2,"readonly":false,"title":{"en":"Frequency","ru":"Частота"},"type":"range"}
+/devices/buzzer/controls/frequency/meta/order	2
+/devices/buzzer/controls/frequency/meta/readonly	0
+/devices/buzzer/controls/frequency/meta/max	7000
+/devices/buzzer/controls/frequency/meta/type	range
+/devices/buzzer/controls/frequency/meta/min	0
+/devices/buzzer/controls/volume	10
+/devices/buzzer/controls/volume/meta	{"max":100,"min":0,"order":3,"readonly":false,"title":{"en":"Volume","ru":"Громкость"},"type":"range"}
+/devices/buzzer/controls/volume/meta/readonly	0
+/devices/buzzer/controls/volume/meta/order	3
+/devices/buzzer/controls/volume/meta/min	0
+/devices/buzzer/controls/volume/meta/max	100
+/devices/buzzer/controls/volume/meta/type	range
+/devices/buzzer/meta	{"driver":"wb-rules","title":{"en":"Buzzer","ru":"Зуммер"}}
+/devices/buzzer/meta/name	Buzzer
+/devices/buzzer/meta/driver	wb-rules
+/devices/wbrules/meta	{"driver":"wb-rules","title":{"en":"Rule engine settings","ru":"Настройки движка правил"}}
+/devices/wbrules/meta/name	Rule engine settings
+/devices/wbrules/meta/driver	wb-rules
+/devices/wbrules/controls/Rule debugging/meta	{"order":1,"readonly":false,"title":{"en":"Rule debugging","ru":"Отладка правил"},"type":"switch"}
+/devices/wbrules/controls/Rule debugging/meta/type	switch
+/devices/wbrules/controls/Rule debugging/meta/order	1
+/devices/wbrules/controls/Rule debugging/meta/readonly	0
+/devices/alarms/meta	{"driver":"wb-rules","title":{"en":"Alarms"}}
+/devices/alarms/meta/driver	wb-rules
+/devices/alarms/meta/name	Alarms
+/devices/alarms/controls/log/meta	{"order":1,"readonly":true,"title":{"en":"Log","ru":"Лог"},"type":"text"}
+/devices/alarms/controls/log/meta/readonly	1
+/devices/alarms/controls/log/meta/type	text
+/devices/alarms/controls/log/meta/order	1
+/devices/hwmon/controls/CPU Temperature	71.868
+/devices/hwmon/controls/CPU Temperature/meta	{"order":2,"readonly":true,"type":"temperature"}
+/devices/hwmon/controls/CPU Temperature/meta/type	temperature
+/devices/hwmon/controls/CPU Temperature/meta/order	2
+/devices/hwmon/controls/CPU Temperature/meta/readonly	1
+/devices/hwmon/controls/Board Temperature	41.125
+/devices/hwmon/controls/Board Temperature/meta	{"order":1,"readonly":true,"type":"temperature"}
+/devices/hwmon/controls/Board Temperature/meta/type	temperature
+/devices/hwmon/controls/Board Temperature/meta/readonly	1
+/devices/hwmon/controls/Board Temperature/meta/order	1
+/devices/hwmon/meta	{"driver":"wb-rules","title":{"en":"HW Monitor","ru":"HW монитор"}}
+/devices/hwmon/meta/driver	wb-rules
+/devices/hwmon/meta/name	HW Monitor
+/rpc/v1/diag/main/diag	1
+/rpc/v1/diag/main/status	1
+/rpc/v1/wb_logs/logs/CancelLoad	1
+/rpc/v1/wb_logs/logs/Load	1
+/rpc/v1/wb_logs/logs/List	1
+/rpc/v1/wb-device-manager/bus-scan/Start	1
+/rpc/v1/wb-device-manager/bus-scan/Stop	1
+/rpc/v1/wb-device-manager/fw-update/GetFirmwareInfo	1
+/rpc/v1/wb-device-manager/fw-update/Update	1
+/rpc/v1/wb-device-manager/fw-update/ClearError	1
+/rpc/v1/wb-device-manager/fw-update/Restore	1
+/rpc/v1/db_logger/history/get_channels	1
+/rpc/v1/db_logger/history/get_values	1
+/rpc/v1/wb-mqtt-serial/device/Probe	1
+/rpc/v1/wb-mqtt-serial/device/Set	1
+/rpc/v1/wb-mqtt-serial/device/LoadConfig	1
+/rpc/v1/wb-mqtt-serial/device/SetPoll	1
+/rpc/v1/wb-mqtt-serial/device/Load	1
+/rpc/v1/wb-mqtt-serial/port/Scan	1
+/rpc/v1/wb-mqtt-serial/port/Load	1
+/rpc/v1/wb-mqtt-serial/port/Setup	1
+/rpc/v1/wb-mqtt-serial/config/GetSchema	1
+/rpc/v1/wb-mqtt-serial/config/Load	1
+/rpc/v1/wb-mqtt-serial/ports/Load	1
+/rpc/v1/wbrules/Editor/Save	1
+/rpc/v1/wbrules/Editor/ChangeState	1
+/rpc/v1/wbrules/Editor/List	1
+/rpc/v1/wbrules/Editor/Load	1
+/rpc/v1/wbrules/Editor/Remove	1
+/rpc/v1/wbrules/Editor/Rename	1
+/rpc/v1/confed/Editor/List	1
+/rpc/v1/confed/Editor/Load	1
+/rpc/v1/confed/Editor/Save	1
+/firmware/fits/factoryreset/present	true
+/firmware/fits/factoryreset/compatibility	+single-rootfs +fit-factory-reset +force-repartition +repartition-ramsize-fix +fit-immutable-support +wb8-debug-network-update-fix +wrong-ab-layout-fix +update-from-cloud 
+/firmware/fits/factoryreset-original/present	true
+/firmware/fits/factoryreset-original/compatibility	+single-rootfs +force-repartition 
+/firmware/status	IDLE
+/wb-cloud-agent/providers	default
+/devices/wb-mai6_19/controls/Uptime	4065647
+/devices/wb-mai6_19/controls/5V Output	5.087
+/devices/wb-mai6_19/controls/Internal Temperature	35.66
+/devices/battery/controls/Current	-3.427
+/devices/wb-map6s_34/controls/PF 1	0.51
+/devices/wb-map6s_34/controls/Urms	235.12
+/devices/wb-map6s_34/controls/Phase angle 1	-31.2
+/devices/system__wb-cloud-agent__default/controls/status	ok
+/devices/wb-map6s_34/controls/RN energy 1	26.82321
+/devices/wb-map6s_34/controls/P 1	9
+/devices/wb-map6s_34/controls/Q 1	-6.25
+/devices/wb-map6s_34/controls/S 3	6.75
+/devices/wb-map6s_34/controls/S 2	6.75
+/devices/wb-map6s_34/controls/Irms 1	0.0771
+/devices/battery/controls/Current	-3.426
+/devices/wb-map6s_34/controls/S 6	6.75
+/devices/wb-map6s_34/controls/S 5	6.75
+/devices/wb-map6s_34/controls/S 4	6.75
+/devices/hwmon/controls/CPU Temperature	72.094
+/devices/hwmon/controls/Board Temperature	41.125
+/devices/wb-mai6_19/controls/Uptime	4065649
+/devices/wb-mai6_19/controls/5V Output	5.076
+/devices/wb-map6s_34/controls/PF 1	0.48
+/devices/wb-map6s_34/controls/Urms	234.86
+/devices/wb-map6s_34/controls/Phase angle 1	-34.6
+/devices/battery/controls/Current	-3.427
+/devices/battery/controls/Voltage	4.155
+/devices/wb-map6s_34/controls/P 1	8.88
+/devices/wb-map6s_34/controls/Q 1	-6.31
+/devices/metrics/controls/load_average_1min	0.33
+/devices/metrics/controls/load_average_5min	0.37
+/devices/metrics/controls/load_average_15min	0.48
+/devices/wb-mai6_19/controls/Uptime	4065650
+/devices/metrics/controls/ram_available	1784
+/devices/metrics/controls/ram_used	164
+/devices/metrics/controls/swap_used	0
+/devices/metrics/controls/dev_root_used_space	703
+/devices/metrics/controls/data_used_space	826
+/devices/wb-mai6_19/controls/5V Output	5.088
+/devices/wb-map6s_34/controls/PF 1	0.5
+/devices/wb-map6s_34/controls/Urms	234.58
+/devices/wb-map6s_34/controls/Phase angle 1	-33.6

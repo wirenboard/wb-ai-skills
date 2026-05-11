@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build .deb and publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential debhelper dh-python pybuild-plugin-pyproject \
+            python3-all python3-setuptools dpkg-dev
+
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION=$(dpkg-parsechangelog -SVersion)
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Tag v$TAG does not match debian/changelog version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Build .deb
+        run: dpkg-buildpackage -us -uc -b -d
+
+      - name: Stage artifacts
+        run: |
+          mkdir -p dist
+          mv ../wb-cli_*.deb dist/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/wb-cli_*.deb
+          generate_release_notes: true

@@ -1,0 +1,1 @@
+[{"baud_rate": 9600, "data_bits": 8, "parity": "N", "path": "/dev/ttyRS485-1", "stop_bits": 2}, {"baud_rate": 9600, "data_bits": 8, "parity": "N", "path": "/dev/ttyRS485-2", "stop_bits": 2}]

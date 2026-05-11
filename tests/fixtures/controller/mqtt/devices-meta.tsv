@@ -1,0 +1,60 @@
+/devices/wb-adc/meta/driver	wb-adc
+/devices/wb-adc/meta/name	ADCs
+/devices/wb-w1/meta/name	1-wire Thermometers
+/devices/wb-w1/meta/driver	wb-w1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/meta/name	Network Connection lo
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/meta/driver	wb-nm-helper
+/devices/knx/meta/name	KNX gateway
+/devices/knx/meta/driver	wb-mqtt-knx
+/devices/wb-gpio/meta/name	Discrete I/O
+/devices/wb-gpio/meta/driver	wb-gpio
+/devices/system__wb-cloud-agent__default/meta/name	cloud status
+/devices/system__wb-cloud-agent__default/meta/driver	wb-cloud-agent
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/meta/name	Network Connection wb-gsm-sim1
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/meta/driver	wb-nm-helper
+/devices/wb-map6s_34/meta/name	WB-MAP6S fw2 34
+/devices/wb-map6s_34/meta/driver	wb-modbus
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/meta/name	Network Connection wb-eth1
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/meta/driver	wb-nm-helper
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/meta/name	Network Connection wb-gsm-sim2
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/meta/driver	wb-nm-helper
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/meta/name	Network Connection wb-eth0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/meta/driver	wb-nm-helper
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/meta/name	Network Connection wb-debug
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/meta/driver	wb-nm-helper
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/meta/name	Network Connection wb-ap
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/meta/driver	wb-nm-helper
+/devices/wb-mcm8_201/meta/driver	wb-modbus
+/devices/wb-mcm8_201/meta/name	WB-MCM8 201
+/devices/wb-mdm3_5/meta/name	WB-MDM3 5
+/devices/wb-mdm3_5/meta/driver	wb-modbus
+/devices/wb-mr3_6/meta/name	WB-MR3 6
+/devices/wb-mr3_6/meta/driver	wb-modbus
+/devices/wb-mao4_4/meta/driver	wb-modbus
+/devices/wb-mao4_4/meta/name	WB-MAO4 4
+/devices/wb-mai6_19/meta/name	WB-MAI6 19
+/devices/wb-mai6_19/meta/driver	wb-modbus
+/devices/wb-mr3_3/meta/driver	wb-modbus
+/devices/wb-mr3_3/meta/name	WB-MR3 3
+/devices/wb-mr6c_2/meta/name	WB-MR6C 2
+/devices/wb-mr6c_2/meta/driver	wb-modbus
+/devices/metrics/meta/driver	wb-mqtt-metrics
+/devices/metrics/meta/name	Metrics
+/devices/battery/meta/name	Battery
+/devices/battery/meta/driver	wb-rules
+/devices/network/meta/name	Network
+/devices/network/meta/driver	wb-rules
+/devices/system/meta/name	System
+/devices/system/meta/driver	wb-rules
+/devices/power_status/meta/driver	wb-rules
+/devices/power_status/meta/name	Power status
+/devices/system_time/meta/driver	wb-rules
+/devices/system_time/meta/name	System Time
+/devices/buzzer/meta/name	Buzzer
+/devices/buzzer/meta/driver	wb-rules
+/devices/wbrules/meta/name	Rule engine settings
+/devices/wbrules/meta/driver	wb-rules
+/devices/alarms/meta/driver	wb-rules
+/devices/alarms/meta/name	Alarms
+/devices/hwmon/meta/driver	wb-rules
+/devices/hwmon/meta/name	HW Monitor

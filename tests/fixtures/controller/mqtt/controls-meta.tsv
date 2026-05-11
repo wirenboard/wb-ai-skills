@@ -1,0 +1,908 @@
+/devices/wb-adc/controls/Vin/meta/readonly	1
+/devices/wb-adc/controls/Vin/meta/type	voltage
+/devices/wb-adc/controls/Vin/meta/order	3
+/devices/wb-adc/controls/A3/meta/type	voltage
+/devices/wb-adc/controls/A3/meta/order	2
+/devices/wb-adc/controls/A3/meta/readonly	1
+/devices/wb-adc/controls/A1/meta/order	0
+/devices/wb-adc/controls/A1/meta/readonly	1
+/devices/wb-adc/controls/A1/meta/type	voltage
+/devices/wb-adc/controls/A2/meta/order	1
+/devices/wb-adc/controls/A2/meta/readonly	1
+/devices/wb-adc/controls/A2/meta/type	voltage
+/devices/knx/controls/data/meta/type	text
+/devices/knx/controls/data/meta/readonly	0
+/devices/knx/controls/data/meta/order	0
+/devices/wb-gpio/controls/V_OUT/meta/readonly	0
+/devices/wb-gpio/controls/V_OUT/meta/order	10
+/devices/wb-gpio/controls/V_OUT/meta/type	switch
+/devices/wb-gpio/controls/5V_OUT/meta/type	switch
+/devices/wb-gpio/controls/5V_OUT/meta/order	9
+/devices/wb-gpio/controls/5V_OUT/meta/readonly	0
+/devices/wb-gpio/controls/D1_IN/meta/order	8
+/devices/wb-gpio/controls/D1_IN/meta/readonly	1
+/devices/wb-gpio/controls/D1_IN/meta/type	switch
+/devices/wb-gpio/controls/A3_IN/meta/type	switch
+/devices/wb-gpio/controls/A3_IN/meta/order	7
+/devices/wb-gpio/controls/A3_IN/meta/readonly	1
+/devices/wb-gpio/controls/A2_IN/meta/type	switch
+/devices/wb-gpio/controls/A2_IN/meta/readonly	1
+/devices/wb-gpio/controls/A2_IN/meta/order	6
+/devices/wb-gpio/controls/A2_OUT/meta/readonly	0
+/devices/wb-gpio/controls/A2_OUT/meta/order	2
+/devices/wb-gpio/controls/A2_OUT/meta/type	switch
+/devices/wb-gpio/controls/D1_OUT/meta/readonly	0
+/devices/wb-gpio/controls/D1_OUT/meta/order	4
+/devices/wb-gpio/controls/D1_OUT/meta/type	switch
+/devices/wb-gpio/controls/A1_IN/meta/type	switch
+/devices/wb-gpio/controls/A1_IN/meta/order	5
+/devices/wb-gpio/controls/A1_IN/meta/readonly	1
+/devices/wb-gpio/controls/A1_OUT/meta/readonly	0
+/devices/wb-gpio/controls/A1_OUT/meta/order	1
+/devices/wb-gpio/controls/A1_OUT/meta/type	switch
+/devices/wb-gpio/controls/A3_OUT/meta/readonly	0
+/devices/wb-gpio/controls/A3_OUT/meta/order	3
+/devices/wb-gpio/controls/A3_OUT/meta/type	switch
+/devices/wb-map6s_34/controls/Ipeak 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 4/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 4/meta/order	35
+/devices/wb-map6s_34/controls/Ipeak 4/meta/error	r
+/devices/wb-map6s_34/controls/Serial/meta/type	text
+/devices/wb-map6s_34/controls/Serial/meta/order	70
+/devices/wb-map6s_34/controls/Serial/meta/readonly	1
+/devices/wb-map6s_34/controls/Frequency/meta/type	value
+/devices/wb-map6s_34/controls/Frequency/meta/precision	0.01
+/devices/wb-map6s_34/controls/Frequency/meta/readonly	1
+/devices/wb-map6s_34/controls/Frequency/meta/order	69
+/devices/wb-map6s_34/controls/Upeak/meta/type	value
+/devices/wb-map6s_34/controls/Upeak/meta/readonly	1
+/devices/wb-map6s_34/controls/Upeak/meta/precision	0.01
+/devices/wb-map6s_34/controls/Upeak/meta/order	68
+/devices/wb-map6s_34/controls/Upeak/meta/error	r
+/devices/wb-map6s_34/controls/Urms/meta/type	value
+/devices/wb-map6s_34/controls/Urms/meta/precision	0.01
+/devices/wb-map6s_34/controls/Urms/meta/order	67
+/devices/wb-map6s_34/controls/Urms/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 6/meta/order	66
+/devices/wb-map6s_34/controls/Phase angle 6/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 6/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 6/meta/order	65
+/devices/wb-map6s_34/controls/RN energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 6/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 6/meta/order	64
+/devices/wb-map6s_34/controls/AN energy 6/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 6/meta/order	63
+/devices/wb-map6s_34/controls/AN energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 6/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 6/meta/order	62
+/devices/wb-map6s_34/controls/AP energy 6/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 6/meta/type	power_consumption
+/devices/wb-map6s_34/controls/S 6/meta/order	60
+/devices/wb-map6s_34/controls/S 6/meta/type	value
+/devices/wb-map6s_34/controls/S 6/meta/readonly	1
+/devices/wb-map6s_34/controls/S 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 6/meta/type	value
+/devices/wb-map6s_34/controls/Q 6/meta/order	59
+/devices/wb-map6s_34/controls/Q 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 6/meta/readonly	1
+/devices/wb-map6s_34/controls/P 6/meta/order	58
+/devices/wb-map6s_34/controls/P 6/meta/type	power
+/devices/wb-map6s_34/controls/P 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 6/meta/order	61
+/devices/wb-map6s_34/controls/PF 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 6/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 6/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 6/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 6/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 6/meta/order	57
+/devices/wb-map6s_34/controls/Ipeak 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 6/meta/error	r
+/devices/wb-map6s_34/controls/Irms 6/meta/type	current
+/devices/wb-map6s_34/controls/Irms 6/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 6/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 6/meta/order	56
+/devices/wb-map6s_34/controls/Phase angle 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 5/meta/order	55
+/devices/wb-map6s_34/controls/Phase angle 5/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 5/meta/order	54
+/devices/wb-map6s_34/controls/RN energy 5/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 5/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 5/meta/order	53
+/devices/wb-map6s_34/controls/RP energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 5/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 5/meta/order	52
+/devices/wb-map6s_34/controls/AP energy 5/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 5/meta/order	51
+/devices/wb-map6s_34/controls/AP energy 5/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 5/meta/type	power_consumption
+/devices/wb-map6s_34/controls/PF 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 5/meta/type	value
+/devices/wb-map6s_34/controls/PF 5/meta/order	50
+/devices/wb-map6s_34/controls/PF 5/meta/readonly	1
+/devices/wb-map6s_34/controls/S 5/meta/type	value
+/devices/wb-map6s_34/controls/S 5/meta/readonly	1
+/devices/wb-map6s_34/controls/S 5/meta/order	49
+/devices/wb-map6s_34/controls/S 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 5/meta/order	48
+/devices/wb-map6s_34/controls/Q 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 5/meta/type	value
+/devices/wb-map6s_34/controls/P 5/meta/type	power
+/devices/wb-map6s_34/controls/P 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 5/meta/order	47
+/devices/wb-map6s_34/controls/P 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 5/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 5/meta/order	46
+/devices/wb-map6s_34/controls/Ipeak 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 5/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 5/meta/error	r
+/devices/wb-map6s_34/controls/Phase angle 4/meta/order	44
+/devices/wb-map6s_34/controls/Phase angle 4/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 4/meta/order	43
+/devices/wb-map6s_34/controls/RN energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 4/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 4/meta/order	42
+/devices/wb-map6s_34/controls/RP energy 4/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 4/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 4/meta/order	41
+/devices/wb-map6s_34/controls/AP energy 4/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 4/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 4/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 4/meta/order	40
+/devices/wb-map6s_34/controls/PF 4/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 4/meta/type	value
+/devices/wb-map6s_34/controls/PF 4/meta/order	39
+/devices/wb-map6s_34/controls/S 4/meta/type	value
+/devices/wb-map6s_34/controls/S 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/S 4/meta/order	38
+/devices/wb-map6s_34/controls/S 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 4/meta/order	37
+/devices/wb-map6s_34/controls/Q 4/meta/type	value
+/devices/wb-map6s_34/controls/Q 4/meta/readonly	1
+/devices/wb-map6s_34/controls/P 4/meta/order	36
+/devices/wb-map6s_34/controls/P 4/meta/type	power
+/devices/wb-map6s_34/controls/P 4/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 4/meta/type	current
+/devices/wb-map6s_34/controls/Irms 4/meta/order	34
+/devices/wb-map6s_34/controls/Irms 4/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 4/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Phase angle 3/meta/order	33
+/devices/wb-map6s_34/controls/Phase angle 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 3/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/RN energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 3/meta/order	32
+/devices/wb-map6s_34/controls/RN energy 3/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 3/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 3/meta/order	31
+/devices/wb-map6s_34/controls/RP energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 3/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 3/meta/order	30
+/devices/wb-map6s_34/controls/AN energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 3/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 3/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 3/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 3/meta/order	29
+/devices/wb-map6s_34/controls/PF 3/meta/type	value
+/devices/wb-map6s_34/controls/PF 3/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 3/meta/order	28
+/devices/wb-map6s_34/controls/S 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/S 3/meta/order	27
+/devices/wb-map6s_34/controls/S 3/meta/readonly	1
+/devices/wb-map6s_34/controls/S 3/meta/type	value
+/devices/wb-map6s_34/controls/Q 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 3/meta/order	26
+/devices/wb-map6s_34/controls/Q 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 3/meta/type	value
+/devices/wb-map6s_34/controls/P 3/meta/readonly	1
+/devices/wb-map6s_34/controls/P 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 3/meta/order	25
+/devices/wb-map6s_34/controls/P 3/meta/type	power
+/devices/wb-map6s_34/controls/Irms 5/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 5/meta/order	45
+/devices/wb-map6s_34/controls/Irms 5/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 5/meta/type	current
+/devices/wb-map6s_34/controls/Ipeak 3/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 3/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 3/meta/order	24
+/devices/wb-map6s_34/controls/Ipeak 3/meta/error	r
+/devices/wb-map6s_34/controls/Phase angle 2/meta/type	value
+/devices/wb-map6s_34/controls/Phase angle 2/meta/order	22
+/devices/wb-map6s_34/controls/Phase angle 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/Phase angle 2/meta/readonly	1
+/devices/wb-map6s_34/controls/RN energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 2/meta/order	21
+/devices/wb-map6s_34/controls/RN energy 2/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 2/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 2/meta/order	20
+/devices/wb-map6s_34/controls/RP energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 2/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 2/meta/order	19
+/devices/wb-map6s_34/controls/Irms 3/meta/order	23
+/devices/wb-map6s_34/controls/Irms 3/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 3/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 3/meta/type	current
+/devices/wb-map6s_34/controls/AP energy 2/meta/readonly	1
+/devices/wb-map6s_34/controls/AP energy 2/meta/order	18
+/devices/wb-map6s_34/controls/AP energy 2/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 2/meta/precision	1e-06
+/devices/wb-map6s_34/controls/PF 2/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 2/meta/order	17
+/devices/wb-map6s_34/controls/PF 2/meta/type	value
+/devices/wb-map6s_34/controls/S 2/meta/readonly	1
+/devices/wb-map6s_34/controls/S 2/meta/order	16
+/devices/wb-map6s_34/controls/S 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/S 2/meta/type	value
+/devices/wb-map6s_34/controls/Q 2/meta/type	value
+/devices/wb-map6s_34/controls/Q 2/meta/order	15
+/devices/wb-map6s_34/controls/Q 2/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 2/meta/type	power
+/devices/wb-map6s_34/controls/P 2/meta/readonly	1
+/devices/wb-map6s_34/controls/P 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 2/meta/order	14
+/devices/wb-map6s_34/controls/Ipeak 2/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 2/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 2/meta/order	13
+/devices/wb-map6s_34/controls/Ipeak 2/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 2/meta/error	r
+/devices/wb-map6s_34/controls/Irms 2/meta/type	current
+/devices/wb-map6s_34/controls/Irms 2/meta/readonly	1
+/devices/wb-map6s_34/controls/Irms 2/meta/order	12
+/devices/wb-map6s_34/controls/Irms 2/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Phase angle 1/meta/readonly	1
+/devices/wb-map6s_34/controls/Phase angle 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Phase angle 1/meta/order	11
+/devices/wb-map6s_34/controls/Phase angle 1/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 1/meta/type	value
+/devices/wb-map6s_34/controls/RN energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RN energy 1/meta/order	10
+/devices/wb-map6s_34/controls/RN energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/RP energy 1/meta/type	value
+/devices/wb-map6s_34/controls/RP energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/RP energy 1/meta/order	9
+/devices/wb-map6s_34/controls/RP energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 1/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AN energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/AN energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AN energy 1/meta/order	8
+/devices/wb-map6s_34/controls/AP energy 1/meta/precision	1e-06
+/devices/wb-map6s_34/controls/AP energy 1/meta/order	7
+/devices/wb-map6s_34/controls/AP energy 1/meta/type	power_consumption
+/devices/wb-map6s_34/controls/AP energy 1/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 1/meta/readonly	1
+/devices/wb-map6s_34/controls/PF 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/PF 1/meta/order	6
+/devices/wb-map6s_34/controls/PF 1/meta/type	value
+/devices/wb-map6s_34/controls/S 1/meta/type	value
+/devices/wb-map6s_34/controls/S 1/meta/readonly	1
+/devices/wb-map6s_34/controls/S 1/meta/order	5
+/devices/wb-map6s_34/controls/S 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Q 1/meta/order	4
+/devices/wb-map6s_34/controls/Q 1/meta/readonly	1
+/devices/wb-map6s_34/controls/Q 1/meta/type	value
+/devices/wb-map6s_34/controls/Q 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/P 1/meta/type	power
+/devices/wb-map6s_34/controls/P 1/meta/readonly	1
+/devices/wb-map6s_34/controls/P 1/meta/order	3
+/devices/wb-map6s_34/controls/P 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 1/meta/readonly	1
+/devices/wb-map6s_34/controls/Ipeak 1/meta/precision	0.01
+/devices/wb-map6s_34/controls/Ipeak 1/meta/order	2
+/devices/wb-map6s_34/controls/Ipeak 1/meta/type	value
+/devices/wb-map6s_34/controls/Ipeak 1/meta/error	r
+/devices/wb-map6s_34/controls/Irms 1/meta/type	current
+/devices/wb-map6s_34/controls/Irms 1/meta/precision	0.0001
+/devices/wb-map6s_34/controls/Irms 1/meta/order	1
+/devices/wb-map6s_34/controls/Irms 1/meta/readonly	1
+/devices/wb-mcm8_201/controls/Reset all counters/meta/type	pushbutton
+/devices/wb-mcm8_201/controls/Reset all counters/meta/readonly	0
+/devices/wb-mcm8_201/controls/Reset all counters/meta/order	17
+/devices/wb-mcm8_201/controls/Input 8 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 8 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 8 counter/meta/order	16
+/devices/wb-mcm8_201/controls/Input 8/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 8/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 8/meta/order	15
+/devices/wb-mcm8_201/controls/Input 7 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 7 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 7 counter/meta/order	14
+/devices/wb-mcm8_201/controls/Serial/meta/type	text
+/devices/wb-mcm8_201/controls/Serial/meta/order	18
+/devices/wb-mcm8_201/controls/Serial/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 7/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 7/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 7/meta/order	13
+/devices/wb-mcm8_201/controls/Input 6 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 6 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 6 counter/meta/order	12
+/devices/wb-mcm8_201/controls/Input 6/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 6/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 6/meta/order	11
+/devices/wb-mcm8_201/controls/Input 5/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 5/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 5/meta/order	9
+/devices/wb-mcm8_201/controls/Input 4 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 4 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 4 counter/meta/order	8
+/devices/wb-mcm8_201/controls/Input 4/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 4/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 4/meta/order	7
+/devices/wb-mcm8_201/controls/Input 3 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 3 counter/meta/order	6
+/devices/wb-mcm8_201/controls/Input 3/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 3/meta/order	5
+/devices/wb-mcm8_201/controls/Input 3/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 2 counter/meta/order	4
+/devices/wb-mcm8_201/controls/Input 2 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 2/meta/order	3
+/devices/wb-mcm8_201/controls/Input 2/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 2/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 1 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 1 counter/meta/order	2
+/devices/wb-mcm8_201/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 1/meta/type	switch
+/devices/wb-mcm8_201/controls/Input 1/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 1/meta/order	1
+/devices/wb-mcm8_201/controls/Input 5 counter/meta/readonly	1
+/devices/wb-mcm8_201/controls/Input 5 counter/meta/type	value
+/devices/wb-mcm8_201/controls/Input 5 counter/meta/order	10
+/devices/wb-mdm3_5/controls/Overcurrent/meta/type	switch
+/devices/wb-mdm3_5/controls/Overcurrent/meta/readonly	1
+/devices/wb-mdm3_5/controls/Overcurrent/meta/order	33
+/devices/wb-mdm3_5/controls/AC on L-N/meta/type	switch
+/devices/wb-mdm3_5/controls/AC on L-N/meta/readonly	1
+/devices/wb-mdm3_5/controls/AC on L-N/meta/order	32
+/devices/wb-mdm3_5/controls/Serial/meta/type	text
+/devices/wb-mdm3_5/controls/Serial/meta/readonly	1
+/devices/wb-mdm3_5/controls/Serial/meta/order	31
+/devices/wb-mdm3_5/controls/Channel 3/meta/readonly	0
+/devices/wb-mdm3_5/controls/Channel 3/meta/order	30
+/devices/wb-mdm3_5/controls/Channel 3/meta/type	range
+/devices/wb-mdm3_5/controls/Channel 3/meta/max	100
+/devices/wb-mdm3_5/controls/K3/meta/readonly	0
+/devices/wb-mdm3_5/controls/K3/meta/order	29
+/devices/wb-mdm3_5/controls/K3/meta/type	switch
+/devices/wb-mdm3_5/controls/Channel 2/meta/type	range
+/devices/wb-mdm3_5/controls/Channel 2/meta/max	100
+/devices/wb-mdm3_5/controls/Channel 2/meta/readonly	0
+/devices/wb-mdm3_5/controls/Channel 2/meta/order	28
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter/meta/order	20
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta/order	16
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta/order	23
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 6 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 6 counter/meta/order	22
+/devices/wb-mdm3_5/controls/Input 6 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 3 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 3 counter/meta/order	10
+/devices/wb-mdm3_5/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2/meta/order	5
+/devices/wb-mdm3_5/controls/Input 2/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter/meta/order	11
+/devices/wb-mdm3_5/controls/Input 4 counter/meta/order	14
+/devices/wb-mdm3_5/controls/Input 4 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 4 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta/order	4
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 5/meta/order	17
+/devices/wb-mdm3_5/controls/Input 6/meta/order	21
+/devices/wb-mdm3_5/controls/Input 6/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 6/meta/type	switch
+/devices/wb-mdm3_5/controls/Channel 1/meta/readonly	0
+/devices/wb-mdm3_5/controls/Channel 1/meta/type	range
+/devices/wb-mdm3_5/controls/Channel 1/meta/order	26
+/devices/wb-mdm3_5/controls/Channel 1/meta/max	100
+/devices/wb-mdm3_5/controls/Input 2 counter/meta/order	6
+/devices/wb-mdm3_5/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta/order	8
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5 counter/meta/order	18
+/devices/wb-mdm3_5/controls/Input 5 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 5 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 1/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 1/meta/order	1
+/devices/wb-mdm3_5/controls/Input 1/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta/order	3
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 4/meta/order	13
+/devices/wb-mdm3_5/controls/Input 4/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 4/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta/order	15
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/K2/meta/readonly	0
+/devices/wb-mdm3_5/controls/K2/meta/order	27
+/devices/wb-mdm3_5/controls/K2/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta/order	24
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta/order	7
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/K1/meta/readonly	0
+/devices/wb-mdm3_5/controls/K1/meta/order	25
+/devices/wb-mdm3_5/controls/K1/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 1 counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 1 counter/meta/order	2
+/devices/wb-mdm3_5/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3/meta/type	switch
+/devices/wb-mdm3_5/controls/Input 3/meta/order	9
+/devices/wb-mdm3_5/controls/Input 3/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta/type	value
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta/order	19
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta/order	12
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta/readonly	1
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter/meta/type	value
+/devices/wb-mr3_6/controls/K1/meta/type	switch
+/devices/wb-mr3_6/controls/K1/meta/readonly	0
+/devices/wb-mr3_6/controls/K1/meta/order	9
+/devices/wb-mr3_6/controls/Input 3 counter/meta/order	8
+/devices/wb-mr3_6/controls/Input 3 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 3/meta/order	7
+/devices/wb-mr3_6/controls/Input 3/meta/type	switch
+/devices/wb-mr3_6/controls/Input 3/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 2 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 2 counter/meta/order	6
+/devices/wb-mr3_6/controls/Input 1/meta/order	3
+/devices/wb-mr3_6/controls/Input 1/meta/type	switch
+/devices/wb-mr3_6/controls/Input 1/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 0 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 0 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 0 counter/meta/order	2
+/devices/wb-mr3_6/controls/Input 0/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 0/meta/order	1
+/devices/wb-mr3_6/controls/Input 0/meta/type	switch
+/devices/wb-mr3_6/controls/Input 1 counter/meta/type	value
+/devices/wb-mr3_6/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 1 counter/meta/order	4
+/devices/wb-mr3_6/controls/K3/meta/type	switch
+/devices/wb-mr3_6/controls/K3/meta/order	11
+/devices/wb-mr3_6/controls/K3/meta/readonly	0
+/devices/wb-mr3_6/controls/K2/meta/order	10
+/devices/wb-mr3_6/controls/K2/meta/readonly	0
+/devices/wb-mr3_6/controls/K2/meta/type	switch
+/devices/wb-mr3_6/controls/Input 2/meta/readonly	1
+/devices/wb-mr3_6/controls/Input 2/meta/type	switch
+/devices/wb-mr3_6/controls/Input 2/meta/order	5
+/devices/wb-mr3_6/controls/Serial/meta/order	12
+/devices/wb-mr3_6/controls/Serial/meta/readonly	1
+/devices/wb-mr3_6/controls/Serial/meta/type	text
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 2 Switch/meta/order	21
+/devices/wb-mao4_4/controls/Input 2 Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 2 Counter/meta/order	8
+/devices/wb-mao4_4/controls/Input 2 Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta/order	17
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1/meta/type	switch
+/devices/wb-mao4_4/controls/Input 1/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1/meta/order	1
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta/order	18
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter/meta/order	4
+/devices/wb-mao4_4/controls/Input 1 Counter/meta/order	2
+/devices/wb-mao4_4/controls/Input 1 Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/max	100
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level/meta/order	20
+/devices/wb-mao4_4/controls/Serial/meta/type	text
+/devices/wb-mao4_4/controls/Serial/meta/readonly	1
+/devices/wb-mao4_4/controls/Serial/meta/order	27
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta/order	5
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/order	26
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level/meta/max	100
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta/order	11
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3 Counter/meta/order	14
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta/order	10
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta/order	25
+/devices/wb-mao4_4/controls/Channel 4 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta/order	16
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta/order	23
+/devices/wb-mao4_4/controls/Channel 3 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta/order	9
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3/meta/order	13
+/devices/wb-mao4_4/controls/Input 3/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 3/meta/type	switch
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta/order	12
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta/order	3
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 2/meta/order	7
+/devices/wb-mao4_4/controls/Input 2/meta/type	switch
+/devices/wb-mao4_4/controls/Input 2/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/order	24
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/max	100
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta/order	6
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta/order	19
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 1 Switch/meta/type	switch
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta/order	15
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta/type	value
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter/meta/readonly	1
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/readonly	0
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/order	22
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/type	range
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level/meta/max	100
+/devices/wb-mai6_19/controls/Serial/meta/order	3
+/devices/wb-mai6_19/controls/Serial/meta/readonly	1
+/devices/wb-mai6_19/controls/Serial/meta/type	text
+/devices/wb-mai6_19/controls/Uptime/meta/readonly	1
+/devices/wb-mai6_19/controls/Uptime/meta/order	4
+/devices/wb-mai6_19/controls/Uptime/meta/type	value
+/devices/wb-mai6_19/controls/5V Output/meta/order	1
+/devices/wb-mai6_19/controls/5V Output/meta/readonly	1
+/devices/wb-mai6_19/controls/5V Output/meta/type	value
+/devices/wb-mai6_19/controls/Internal Temperature/meta/type	value
+/devices/wb-mai6_19/controls/Internal Temperature/meta/order	2
+/devices/wb-mai6_19/controls/Internal Temperature/meta/readonly	1
+/devices/wb-mr3_3/controls/K3/meta/order	11
+/devices/wb-mr3_3/controls/K3/meta/type	switch
+/devices/wb-mr3_3/controls/K3/meta/readonly	0
+/devices/wb-mr3_3/controls/Input 1/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 1/meta/order	3
+/devices/wb-mr3_3/controls/Input 1/meta/type	switch
+/devices/wb-mr3_3/controls/Serial/meta/readonly	1
+/devices/wb-mr3_3/controls/Serial/meta/order	12
+/devices/wb-mr3_3/controls/Serial/meta/type	text
+/devices/wb-mr3_3/controls/Input 1 counter/meta/order	4
+/devices/wb-mr3_3/controls/Input 1 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/K2/meta/type	switch
+/devices/wb-mr3_3/controls/K2/meta/readonly	0
+/devices/wb-mr3_3/controls/K2/meta/order	10
+/devices/wb-mr3_3/controls/K1/meta/order	9
+/devices/wb-mr3_3/controls/K1/meta/type	switch
+/devices/wb-mr3_3/controls/K1/meta/readonly	0
+/devices/wb-mr3_3/controls/Input 3 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 3 counter/meta/order	8
+/devices/wb-mr3_3/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 2 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 2 counter/meta/order	6
+/devices/wb-mr3_3/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 2/meta/type	switch
+/devices/wb-mr3_3/controls/Input 2/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 2/meta/order	5
+/devices/wb-mr3_3/controls/Input 0 counter/meta/type	value
+/devices/wb-mr3_3/controls/Input 0 counter/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 0 counter/meta/order	2
+/devices/wb-mr3_3/controls/Input 0/meta/order	1
+/devices/wb-mr3_3/controls/Input 0/meta/type	switch
+/devices/wb-mr3_3/controls/Input 0/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 3/meta/readonly	1
+/devices/wb-mr3_3/controls/Input 3/meta/type	switch
+/devices/wb-mr3_3/controls/Input 3/meta/order	7
+/devices/wb-mr6c_2/controls/K6/meta/readonly	0
+/devices/wb-mr6c_2/controls/K6/meta/type	switch
+/devices/wb-mr6c_2/controls/K6/meta/order	20
+/devices/wb-mr6c_2/controls/K2/meta/order	16
+/devices/wb-mr6c_2/controls/K2/meta/readonly	0
+/devices/wb-mr6c_2/controls/K2/meta/type	switch
+/devices/wb-mr6c_2/controls/K5/meta/order	19
+/devices/wb-mr6c_2/controls/K5/meta/readonly	0
+/devices/wb-mr6c_2/controls/K5/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 4 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 4 counter/meta/order	10
+/devices/wb-mr6c_2/controls/Input 4 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 2 counter/meta/order	6
+/devices/wb-mr6c_2/controls/Input 2 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 2 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/K1/meta/type	switch
+/devices/wb-mr6c_2/controls/K1/meta/order	15
+/devices/wb-mr6c_2/controls/K1/meta/readonly	0
+/devices/wb-mr6c_2/controls/K4/meta/order	18
+/devices/wb-mr6c_2/controls/K4/meta/type	switch
+/devices/wb-mr6c_2/controls/K4/meta/readonly	0
+/devices/wb-mr6c_2/controls/Input 3 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 3 counter/meta/order	8
+/devices/wb-mr6c_2/controls/Input 3 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 2/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 2/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 2/meta/order	5
+/devices/wb-mr6c_2/controls/Input 6/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 6/meta/order	13
+/devices/wb-mr6c_2/controls/Input 6/meta/type	switch
+/devices/wb-mr6c_2/controls/K3/meta/type	switch
+/devices/wb-mr6c_2/controls/K3/meta/readonly	0
+/devices/wb-mr6c_2/controls/K3/meta/order	17
+/devices/wb-mr6c_2/controls/Serial/meta/order	21
+/devices/wb-mr6c_2/controls/Serial/meta/readonly	1
+/devices/wb-mr6c_2/controls/Serial/meta/type	text
+/devices/wb-mr6c_2/controls/Input 1 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 1 counter/meta/order	4
+/devices/wb-mr6c_2/controls/Input 1 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 0/meta/order	1
+/devices/wb-mr6c_2/controls/Input 0/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 0/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 4/meta/order	9
+/devices/wb-mr6c_2/controls/Input 4/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 4/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 0 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 0 counter/meta/order	2
+/devices/wb-mr6c_2/controls/Input 0 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 5 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 5 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 5 counter/meta/order	12
+/devices/wb-mr6c_2/controls/Input 1/meta/order	3
+/devices/wb-mr6c_2/controls/Input 1/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 1/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 5/meta/order	11
+/devices/wb-mr6c_2/controls/Input 5/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 5/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 3/meta/order	7
+/devices/wb-mr6c_2/controls/Input 3/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 3/meta/type	switch
+/devices/wb-mr6c_2/controls/Input 6 counter/meta/readonly	1
+/devices/wb-mr6c_2/controls/Input 6 counter/meta/type	value
+/devices/wb-mr6c_2/controls/Input 6 counter/meta/order	14
+/devices/metrics/controls/load_average_1min/meta/type	value
+/devices/metrics/controls/load_average_1min/meta/readonly	1
+/devices/metrics/controls/load_average_1min/meta/units	tasks
+/devices/metrics/controls/load_average_1min/meta/min	0
+/devices/metrics/controls/load_average_5min/meta/type	value
+/devices/metrics/controls/load_average_5min/meta/readonly	1
+/devices/metrics/controls/load_average_5min/meta/units	tasks
+/devices/metrics/controls/load_average_5min/meta/min	0
+/devices/metrics/controls/load_average_15min/meta/type	value
+/devices/metrics/controls/load_average_15min/meta/readonly	1
+/devices/metrics/controls/load_average_15min/meta/units	tasks
+/devices/metrics/controls/load_average_15min/meta/min	0
+/devices/metrics/controls/ram_available/meta/type	value
+/devices/metrics/controls/ram_available/meta/readonly	1
+/devices/metrics/controls/ram_available/meta/units	MiB
+/devices/metrics/controls/ram_available/meta/min	0
+/devices/metrics/controls/ram_used/meta/type	value
+/devices/metrics/controls/ram_used/meta/readonly	1
+/devices/metrics/controls/ram_used/meta/units	MiB
+/devices/metrics/controls/ram_used/meta/min	0
+/devices/metrics/controls/ram_total/meta/type	value
+/devices/metrics/controls/ram_total/meta/readonly	1
+/devices/metrics/controls/ram_total/meta/units	MiB
+/devices/metrics/controls/ram_total/meta/min	0
+/devices/metrics/controls/swap_total/meta/type	value
+/devices/metrics/controls/swap_total/meta/readonly	1
+/devices/metrics/controls/swap_total/meta/units	MiB
+/devices/metrics/controls/swap_total/meta/min	0
+/devices/metrics/controls/swap_used/meta/type	value
+/devices/metrics/controls/swap_used/meta/readonly	1
+/devices/metrics/controls/swap_used/meta/units	MiB
+/devices/metrics/controls/swap_used/meta/min	0
+/devices/metrics/controls/dev_root_used_space/meta/type	value
+/devices/metrics/controls/dev_root_used_space/meta/readonly	1
+/devices/metrics/controls/dev_root_used_space/meta/units	MiB
+/devices/metrics/controls/dev_root_used_space/meta/min	0
+/devices/metrics/controls/dev_root_total_space/meta/type	value
+/devices/metrics/controls/dev_root_total_space/meta/readonly	1
+/devices/metrics/controls/dev_root_total_space/meta/units	MiB
+/devices/metrics/controls/dev_root_total_space/meta/min	0
+/devices/metrics/controls/dev_root_linked_on/meta/type	text
+/devices/metrics/controls/dev_root_linked_on/meta/readonly	1
+/devices/metrics/controls/data_used_space/meta/type	value
+/devices/metrics/controls/data_used_space/meta/readonly	1
+/devices/metrics/controls/data_used_space/meta/units	MiB
+/devices/metrics/controls/data_used_space/meta/min	0
+/devices/metrics/controls/data_total_space/meta/type	value
+/devices/metrics/controls/data_total_space/meta/readonly	1
+/devices/metrics/controls/data_total_space/meta/units	MiB
+/devices/metrics/controls/data_total_space/meta/min	0
+/devices/battery/controls/Current/meta/readonly	1
+/devices/battery/controls/Current/meta/order	2
+/devices/battery/controls/Current/meta/type	value
+/devices/battery/controls/Voltage/meta/order	3
+/devices/battery/controls/Voltage/meta/readonly	1
+/devices/battery/controls/Voltage/meta/type	voltage
+/devices/battery/controls/Percentage/meta/order	1
+/devices/battery/controls/Percentage/meta/readonly	1
+/devices/battery/controls/Percentage/meta/type	value
+/devices/battery/controls/Charging/meta/readonly	1
+/devices/battery/controls/Charging/meta/order	5
+/devices/battery/controls/Charging/meta/type	switch
+/devices/network/controls/Ethernet IP Online Status/meta/readonly	1
+/devices/network/controls/Ethernet IP Online Status/meta/type	switch
+/devices/network/controls/Ethernet IP Online Status/meta/order	5
+/devices/network/controls/Wi-Fi IP Online Status/meta/type	switch
+/devices/network/controls/Wi-Fi IP Online Status/meta/readonly	1
+/devices/network/controls/Wi-Fi IP Online Status/meta/order	11
+/devices/network/controls/Ethernet 2 IP Online Status/meta/readonly	1
+/devices/network/controls/Ethernet 2 IP Online Status/meta/type	switch
+/devices/network/controls/Ethernet 2 IP Online Status/meta/order	8
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta/type	switch
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta/readonly	1
+/devices/network/controls/Wi-Fi 2 IP Online Status/meta/order	14
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta/order	9
+/devices/network/controls/Ethernet 2 IP Connection Enabled/meta/type	switch
+/devices/network/controls/GPRS IP Connection Enabled/meta/order	18
+/devices/network/controls/GPRS IP Connection Enabled/meta/readonly	1
+/devices/network/controls/GPRS IP Connection Enabled/meta/type	switch
+/devices/network/controls/Ethernet IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Ethernet IP Connection Enabled/meta/type	switch
+/devices/network/controls/Ethernet IP Connection Enabled/meta/order	6
+/devices/network/controls/GPRS IP/meta/order	16
+/devices/network/controls/GPRS IP/meta/type	text
+/devices/network/controls/GPRS IP/meta/readonly	1
+/devices/network/controls/Wi-Fi 2 IP/meta/order	13
+/devices/network/controls/Wi-Fi 2 IP/meta/type	text
+/devices/network/controls/Wi-Fi 2 IP/meta/readonly	1
+/devices/network/controls/Wi-Fi IP/meta/order	10
+/devices/network/controls/Wi-Fi IP/meta/type	text
+/devices/network/controls/Wi-Fi IP/meta/readonly	1
+/devices/network/controls/Default Interface/meta/order	2
+/devices/network/controls/Default Interface/meta/readonly	1
+/devices/network/controls/Default Interface/meta/type	text
+/devices/network/controls/GPRS IP Online Status/meta/type	switch
+/devices/network/controls/GPRS IP Online Status/meta/order	17
+/devices/network/controls/GPRS IP Online Status/meta/readonly	1
+/devices/network/controls/Internet Connection/meta/order	3
+/devices/network/controls/Internet Connection/meta/readonly	1
+/devices/network/controls/Internet Connection/meta/type	text
+/devices/network/controls/Ethernet IP/meta/type	text
+/devices/network/controls/Ethernet IP/meta/readonly	1
+/devices/network/controls/Ethernet IP/meta/order	4
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta/order	15
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled/meta/type	switch
+/devices/network/controls/Active Connections/meta/type	text
+/devices/network/controls/Active Connections/meta/readonly	1
+/devices/network/controls/Active Connections/meta/order	1
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta/type	switch
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta/readonly	1
+/devices/network/controls/Wi-Fi IP Connection Enabled/meta/order	12
+/devices/network/controls/Ethernet 2 IP/meta/order	7
+/devices/network/controls/Ethernet 2 IP/meta/type	text
+/devices/network/controls/Ethernet 2 IP/meta/readonly	1
+/devices/system/controls/HW Revision/meta/type	text
+/devices/system/controls/HW Revision/meta/readonly	1
+/devices/system/controls/HW Revision/meta/order	4
+/devices/system/controls/Reboot/meta/order	6
+/devices/system/controls/Reboot/meta/readonly	0
+/devices/system/controls/Reboot/meta/type	pushbutton
+/devices/system/controls/Batch No/meta/readonly	1
+/devices/system/controls/Batch No/meta/order	1
+/devices/system/controls/Batch No/meta/type	text
+/devices/system/controls/Release name/meta/readonly	1
+/devices/system/controls/Release name/meta/type	text
+/devices/system/controls/Release name/meta/order	7
+/devices/system/controls/Release suite/meta/type	text
+/devices/system/controls/Release suite/meta/order	8
+/devices/system/controls/Release suite/meta/readonly	1
+/devices/system/controls/Temperature Grade/meta/readonly	1
+/devices/system/controls/Temperature Grade/meta/order	10
+/devices/system/controls/Temperature Grade/meta/type	text
+/devices/system/controls/DTS Version/meta/type	text
+/devices/system/controls/DTS Version/meta/readonly	1
+/devices/system/controls/DTS Version/meta/order	3
+/devices/system/controls/Manufacturing Date/meta/type	text
+/devices/system/controls/Manufacturing Date/meta/readonly	1
+/devices/system/controls/Manufacturing Date/meta/order	5
+/devices/system/controls/Current uptime/meta/readonly	1
+/devices/system/controls/Current uptime/meta/order	2
+/devices/system/controls/Current uptime/meta/type	text
+/devices/system/controls/Short SN/meta/readonly	1
+/devices/system/controls/Short SN/meta/type	text
+/devices/system/controls/Short SN/meta/order	9
+/devices/power_status/controls/Vin/meta/type	voltage
+/devices/power_status/controls/Vin/meta/readonly	1
+/devices/power_status/controls/Vin/meta/order	1
+/devices/power_status/controls/working on battery/meta/readonly	1
+/devices/power_status/controls/working on battery/meta/type	switch
+/devices/power_status/controls/working on battery/meta/order	2
+/devices/system_time/controls/timezone/meta/type	text
+/devices/system_time/controls/timezone/meta/order	4
+/devices/system_time/controls/timezone/meta/readonly	1
+/devices/system_time/controls/current_day/meta/type	value
+/devices/system_time/controls/current_day/meta/readonly	1
+/devices/system_time/controls/current_day/meta/order	2
+/devices/system_time/controls/current_date/meta/type	text
+/devices/system_time/controls/current_date/meta/readonly	1
+/devices/system_time/controls/current_date/meta/order	1
+/devices/system_time/controls/current_time/meta/readonly	1
+/devices/system_time/controls/current_time/meta/type	text
+/devices/system_time/controls/current_time/meta/order	3
+/devices/buzzer/controls/enabled/meta/readonly	0
+/devices/buzzer/controls/enabled/meta/order	1
+/devices/buzzer/controls/enabled/meta/type	switch
+/devices/buzzer/controls/frequency/meta/order	2
+/devices/buzzer/controls/frequency/meta/readonly	0
+/devices/buzzer/controls/frequency/meta/max	7000
+/devices/buzzer/controls/frequency/meta/type	range
+/devices/buzzer/controls/frequency/meta/min	0
+/devices/buzzer/controls/volume/meta/readonly	0
+/devices/buzzer/controls/volume/meta/order	3
+/devices/buzzer/controls/volume/meta/min	0
+/devices/buzzer/controls/volume/meta/max	100
+/devices/buzzer/controls/volume/meta/type	range
+/devices/wbrules/controls/Rule debugging/meta/type	switch
+/devices/wbrules/controls/Rule debugging/meta/order	1
+/devices/wbrules/controls/Rule debugging/meta/readonly	0
+/devices/alarms/controls/log/meta/readonly	1
+/devices/alarms/controls/log/meta/type	text
+/devices/alarms/controls/log/meta/order	1
+/devices/hwmon/controls/CPU Temperature/meta/type	temperature
+/devices/hwmon/controls/CPU Temperature/meta/order	2
+/devices/hwmon/controls/CPU Temperature/meta/readonly	1
+/devices/hwmon/controls/Board Temperature/meta/type	temperature
+/devices/hwmon/controls/Board Temperature/meta/readonly	1
+/devices/hwmon/controls/Board Temperature/meta/order	1

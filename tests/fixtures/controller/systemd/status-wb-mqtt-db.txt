@@ -1,0 +1,20 @@
+● wb-mqtt-db.service - Wiren Board database logger
+     Loaded: loaded (/lib/systemd/system/wb-mqtt-db.service; enabled; vendor preset: enabled)
+     Active: active (running) since Thu 2026-05-07 18:57:22 UTC; 2 days ago
+   Main PID: 5365 (main)
+      Tasks: 7 (limit: 4790)
+     Memory: 12.6M
+        CPU: 28min 3.500s
+     CGroup: /system.slice/wb-mqtt-db.service
+             └─5365 /usr/bin/wb-mqtt-db
+
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 43)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 44)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 45)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 46)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 47)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 48)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 49)
+May 08 15:39:17 wirenboard-A25NDEMJ wb-mqtt-db[5365]: INFO: [mqtt] subscription succeeded (message id 50)
+May 09 05:58:46 wirenboard-A25NDEMJ wb-mqtt-db[5365]: WARNING: [conventions] converting value "2" to boolean "true"
+May 10 04:43:04 wirenboard-A25NDEMJ wb-mqtt-db[5365]: WARNING: [conventions] converting value "2" to boolean "true"

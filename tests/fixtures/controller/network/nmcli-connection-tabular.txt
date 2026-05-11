@@ -1,0 +1,7 @@
+wb-ap:d12c8d3c-1abe-4832-9b71-4ed6e3c20885:802-11-wireless:wlan0
+wb-eth0:91f1c71d-2d97-4675-886f-ecbe52b8451e:802-3-ethernet:eth0
+lo:b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd:loopback:lo
+wb-debug:0f098677-2b49-4167-a534-207567b1751b:802-3-ethernet:
+wb-eth1:c3e38405-9c17-4155-ad70-664311b49066:802-3-ethernet:
+wb-gsm-sim1:5d4297ba-c319-4c05-a153-17cb42e6e196:gsm:
+wb-gsm-sim2:8b9964d4-b8dd-34d3-a3ed-481840bcf8c9:gsm:

@@ -1,0 +1,40 @@
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Python
+__pycache__/
+*.egg-info/
+dist/
+build/
+.coverage
+.pytest_cache/
+htmlcov/
+*.pyc
+
+# Venv
+.venv/
+
+# Claude Code (per-user/per-project state, not for VCS)
+.claude/
+
+# opencode
+.opencode/
+
+# Codestyle (sibling clone)
+/codestyle/
+
+# Debian build artifacts
+debian/wb-cli/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.debhelper
+debian/*.substvars
+.pybuild/
+
+# Local scratch
+/scratch/
+/tmp/

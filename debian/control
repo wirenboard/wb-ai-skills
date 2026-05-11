@@ -1,0 +1,27 @@
+Source: wb-cli
+Section: utils
+Priority: optional
+Maintainer: Wiren Board Team <info@wirenboard.com>
+Build-Depends: debhelper-compat (= 12),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-setuptools
+Standards-Version: 4.5.1
+
+Package: wb-cli
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         python3 (>= 3.9),
+         python3-mqttrpc,
+         python3-wb-common,
+         mosquitto-clients,
+         jq
+Description: Command-line interface to a Wiren Board controller
+ wb-cli provides a structured CLI for managing Wiren Board controllers.
+ It supports MQTT, Modbus, systemd, journal, network, cloud agent,
+ automation rules, configuration, and system diagnostics.
+ .
+ Output is JSON by default, designed for both human operators and
+ LLM-driven automation via SSH.

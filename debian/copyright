@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: wb-cli
+Source: https://github.com/wirenboard/wb-ai-skills
+
+Files: *
+Copyright: 2026 Wiren Board Team <info@wirenboard.com>
+License: MIT

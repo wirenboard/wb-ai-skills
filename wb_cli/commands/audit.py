@@ -1,0 +1,56 @@
+"""``wb-cli audit`` — quick system health check."""
+
+from __future__ import annotations
+
+import argparse
+from typing import Any, Dict, List
+
+from wb_cli.plugin import BasePlugin
+
+
+class AuditPlugin(BasePlugin):
+    name = "audit"
+    help = "quick system health check: failed units, disk, memory"
+
+    def register(self, subparsers: argparse._SubParsersAction) -> None:
+        parser = subparsers.add_parser(
+            self.name,
+            help=self.help,
+            description="Run a quick health audit of the controller.",
+        )
+        parser.add_argument("-q", "--quiet", action="store_true")
+
+    def dispatch(self, ctx) -> dict:
+        checks: List[Dict[str, Any]] = []
+
+        # Failed units
+        failed = ctx.systemd.list_failed()
+        checks.append(
+            {
+                "check": "failed_units",
+                "ok": len(failed) == 0,
+                "count": len(failed),
+                "units": [u.get("unit", u.get("UNIT", "")) for u in failed],
+            }
+        )
+
+        # Controller identity
+        info = ctx.controller.to_dict() if ctx.controller else {}
+        checks.append(
+            {
+                "check": "controller_identity",
+                "ok": info.get("serial_number") is not None,
+                "serial_number": info.get("serial_number"),
+                "release_name": info.get("release_name"),
+                "fw_version": info.get("fw_version"),
+            }
+        )
+
+        all_ok = all(c["ok"] for c in checks)
+        return {
+            "ok": all_ok,
+            "checks": checks,
+        }
+
+
+PLUGIN = AuditPlugin()

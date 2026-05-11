@@ -1,0 +1,21 @@
+● wb-mqtt-serial.service - MQTT Driver for serial devices
+     Loaded: loaded (/lib/systemd/system/wb-mqtt-serial.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-05-08 16:02:04 UTC; 1 day 17h ago
+    Process: 31886 ExecStartPre=/usr/lib/wb-mqtt-serial/generate-system-config.sh (code=exited, status=0/SUCCESS)
+   Main PID: 31887 (wb-mqtt-serial)
+      Tasks: 10 (limit: 4790)
+     Memory: 8.2M
+        CPU: 1h 18min 38.040s
+     CGroup: /system.slice/wb-mqtt-serial.service
+             └─31887 /usr/bin/wb-mqtt-serial
+
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:coil: 2>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:discrete: 0>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:discrete: 1>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:discrete: 2>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:discrete: 7>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:input: 32>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:input: 33>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:input: 34>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are enabled for <modbus:6:input: 39>
+May 08 16:02:15 wirenboard-A25NDEMJ wb-mqtt-serial[31887]: INFO: [serial client] Events are disabled for <modbus:6: reboot>

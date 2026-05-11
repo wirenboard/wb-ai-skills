@@ -1,0 +1,21 @@
+● wb-cloud-agent.service - Wiren Board Cloud Agent (default)
+     Loaded: loaded (/lib/systemd/system/wb-cloud-agent.service; enabled; vendor preset: enabled)
+     Active: active (running) since Thu 2026-05-07 18:52:31 UTC; 2 days ago
+   Main PID: 1829 (python3)
+      Tasks: 3 (limit: 4790)
+     Memory: 9.2M
+        CPU: 59min 47.493s
+     CGroup: /system.slice/wb-cloud-agent.service
+             ├─ 1829 python3 /usr/bin/wb-cloud-agent --daemon --provider default
+             └─15311 curl --connect-timeout 45 --retry 8 --retry-delay 1 --retry-all-errors --cert                                               --key ATECCx08:00:02:C0:00 --engine ateccx08 --key-type ENG -w |||{"code":"%{response_code}"} https://agent.wirenboard.cloud/api-agent/v1/events/
+
+May 08 08:36:39 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 9c3c798a-79f1-42d4-bbf1-cdae61bc39a1
+May 08 09:02:29 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 4a613a71-cc47-45d6-9af5-8d0a0ee2fdcf
+May 08 09:37:05 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 081c9355-cb32-4ca9-9c63-2b1ef476ccbf
+May 08 10:05:36 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id cff63122-7f51-4a9f-aaa8-74ca88864b12
+May 08 10:36:30 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 95a9e5c3-8a5a-4fe0-ab60-c9554faa1527
+May 08 11:00:58 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id cfd4c283-ae9e-40ed-b0ac-36e76e91f19d
+May 08 11:32:46 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 042f3892-fa9e-422f-8634-f6476f45bfc9
+May 08 12:05:37 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id f2c39f7f-5617-4c88-b650-664f96a5299e
+May 08 12:36:49 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 32f91a1f-fdf4-49bb-9c2d-55fc0c2b0a83
+May 08 13:05:22 wirenboard-A25NDEMJ wb-cloud-agent[1829]: Event 'update_metrics_config' handled successfully, event id 78059e50-ac80-4a0f-b972-9c479991d467

@@ -1,0 +1,345 @@
+/devices/wb-adc/controls/Vin	24.1
+/devices/wb-adc/controls/A3	0.1
+/devices/wb-adc/controls/A1	0.1
+/devices/wb-adc/controls/A2	0.1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Name	lo
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/UUID	b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Type	loopback
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Active	1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Device	lo
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/State	activated
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Address	127.0.0.1
+/devices/system__networks__b5bf7f38-48ee-4b8f-b0b7-7412b638c6bd/controls/Connectivity	1
+/devices/knx/controls/data	i:0/0/0 i:0/0/0 GroupValueRead 0x00
+/devices/wb-gpio/controls/V_OUT	1
+/devices/wb-gpio/controls/5V_OUT	1
+/devices/wb-gpio/controls/D1_IN	0
+/devices/wb-gpio/controls/A3_IN	0
+/devices/wb-gpio/controls/A2_IN	0
+/devices/wb-gpio/controls/A2_OUT	0
+/devices/wb-gpio/controls/D1_OUT	0
+/devices/wb-gpio/controls/A1_IN	0
+/devices/wb-gpio/controls/A1_OUT	0
+/devices/wb-gpio/controls/A3_OUT	0
+/devices/system__wb-cloud-agent__default/controls/status	ok
+/devices/system__wb-cloud-agent__default/controls/activation_link	unknown
+/devices/system__wb-cloud-agent__default/controls/cloud_base_url	https://wirenboard.cloud
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Name	wb-gsm-sim1
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/UUID	5d4297ba-c319-4c05-a153-17cb42e6e196
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Type	gsm
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Active	0
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/State	deactivated
+/devices/system__networks__5d4297ba-c319-4c05-a153-17cb42e6e196/controls/Connectivity	0
+/devices/wb-map6s_34/controls/Ipeak 4	0
+/devices/wb-map6s_34/controls/Serial	12352670
+/devices/wb-map6s_34/controls/Frequency	50.02
+/devices/wb-map6s_34/controls/Upeak	0
+/devices/wb-map6s_34/controls/Urms	234.85
+/devices/wb-map6s_34/controls/Phase angle 6	0
+/devices/wb-map6s_34/controls/RN energy 6	0.00042
+/devices/wb-map6s_34/controls/RP energy 6	0.00905
+/devices/wb-map6s_34/controls/AN energy 6	0
+/devices/wb-map6s_34/controls/AP energy 6	0.40029
+/devices/wb-map6s_34/controls/S 6	6.75
+/devices/wb-map6s_34/controls/Q 6	0
+/devices/wb-map6s_34/controls/P 6	0
+/devices/wb-map6s_34/controls/PF 6	0
+/devices/wb-map6s_34/controls/Ipeak 6	0
+/devices/wb-map6s_34/controls/Irms 6	0.0289
+/devices/wb-map6s_34/controls/Phase angle 5	0
+/devices/wb-map6s_34/controls/RN energy 5	0.00042
+/devices/wb-map6s_34/controls/RP energy 5	0.00928
+/devices/wb-map6s_34/controls/AN energy 5	0
+/devices/wb-map6s_34/controls/AP energy 5	0.40046
+/devices/wb-map6s_34/controls/PF 5	0
+/devices/wb-map6s_34/controls/S 5	6.75
+/devices/wb-map6s_34/controls/Q 5	0
+/devices/wb-map6s_34/controls/P 5	0
+/devices/wb-map6s_34/controls/Ipeak 5	0
+/devices/wb-map6s_34/controls/Phase angle 4	0
+/devices/wb-map6s_34/controls/RN energy 4	0.0004
+/devices/wb-map6s_34/controls/RP energy 4	0.00916
+/devices/wb-map6s_34/controls/AN energy 4	0
+/devices/wb-map6s_34/controls/AP energy 4	0.4006
+/devices/wb-map6s_34/controls/PF 4	0
+/devices/wb-map6s_34/controls/S 4	6.75
+/devices/wb-map6s_34/controls/Q 4	0
+/devices/wb-map6s_34/controls/P 4	0
+/devices/wb-map6s_34/controls/Irms 4	0.0289
+/devices/wb-map6s_34/controls/Phase angle 3	0
+/devices/wb-map6s_34/controls/RN energy 3	0.00042
+/devices/wb-map6s_34/controls/RP energy 3	0.01004
+/devices/wb-map6s_34/controls/AN energy 3	0
+/devices/wb-map6s_34/controls/AP energy 3	0.39979
+/devices/wb-map6s_34/controls/PF 3	0
+/devices/wb-map6s_34/controls/S 3	6.75
+/devices/wb-map6s_34/controls/Q 3	0
+/devices/wb-map6s_34/controls/P 3	0
+/devices/wb-map6s_34/controls/Irms 5	0.0289
+/devices/wb-map6s_34/controls/Ipeak 3	0
+/devices/wb-map6s_34/controls/Phase angle 2	0
+/devices/wb-map6s_34/controls/RN energy 2	0.00042
+/devices/wb-map6s_34/controls/RP energy 2	0.01023
+/devices/wb-map6s_34/controls/AN energy 2	0
+/devices/wb-map6s_34/controls/Irms 3	0.0289
+/devices/wb-map6s_34/controls/AP energy 2	0.3998
+/devices/wb-map6s_34/controls/PF 2	0
+/devices/wb-map6s_34/controls/S 2	6.75
+/devices/wb-map6s_34/controls/Q 2	0
+/devices/wb-map6s_34/controls/P 2	0
+/devices/wb-map6s_34/controls/Ipeak 2	0
+/devices/wb-map6s_34/controls/Irms 2	0.0289
+/devices/wb-map6s_34/controls/Phase angle 1	-33.4
+/devices/wb-map6s_34/controls/RN energy 1	26.82322
+/devices/wb-map6s_34/controls/RP energy 1	125.83847
+/devices/wb-map6s_34/controls/AN energy 1	155.45367
+/devices/wb-map6s_34/controls/AP energy 1	38.17082
+/devices/wb-map6s_34/controls/PF 1	0.5
+/devices/wb-map6s_34/controls/S 1	18.13
+/devices/wb-map6s_34/controls/Q 1	-6.31
+/devices/wb-map6s_34/controls/P 1	8.94
+/devices/wb-map6s_34/controls/Ipeak 1	0
+/devices/wb-map6s_34/controls/Irms 1	0.0771
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Name	wb-eth1
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/UUID	c3e38405-9c17-4155-ad70-664311b49066
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Type	802-3-ethernet
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Active	0
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/State	deactivated
+/devices/system__networks__c3e38405-9c17-4155-ad70-664311b49066/controls/Connectivity	0
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Name	wb-gsm-sim2
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/UUID	8b9964d4-b8dd-34d3-a3ed-481840bcf8c9
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Type	gsm
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Active	0
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/State	deactivated
+/devices/system__networks__8b9964d4-b8dd-34d3-a3ed-481840bcf8c9/controls/Connectivity	0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Name	wb-eth0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/UUID	91f1c71d-2d97-4675-886f-ecbe52b8451e
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Type	802-3-ethernet
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Active	1
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Device	eth0
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/State	activated
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Address	192.168.2.106
+/devices/system__networks__91f1c71d-2d97-4675-886f-ecbe52b8451e/controls/Connectivity	1
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Name	wb-debug
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/UUID	0f098677-2b49-4167-a534-207567b1751b
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Type	802-3-ethernet
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Active	0
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/State	deactivated
+/devices/system__networks__0f098677-2b49-4167-a534-207567b1751b/controls/Connectivity	0
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Name	wb-ap
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/UUID	d12c8d3c-1abe-4832-9b71-4ed6e3c20885
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Type	802-11-wireless
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Active	1
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Device	wlan0
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/State	activated
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Address	192.168.42.1
+/devices/system__networks__d12c8d3c-1abe-4832-9b71-4ed6e3c20885/controls/Connectivity	1
+/devices/wb-mcm8_201/controls/Input 8 counter	0
+/devices/wb-mcm8_201/controls/Input 8	0
+/devices/wb-mcm8_201/controls/Input 7 counter	0
+/devices/wb-mcm8_201/controls/Serial	4265607340
+/devices/wb-mcm8_201/controls/Input 7	0
+/devices/wb-mcm8_201/controls/Input 6 counter	0
+/devices/wb-mcm8_201/controls/Input 6	0
+/devices/wb-mcm8_201/controls/Input 5	0
+/devices/wb-mcm8_201/controls/Input 4 counter	0
+/devices/wb-mcm8_201/controls/Input 4	0
+/devices/wb-mcm8_201/controls/Input 3 counter	5
+/devices/wb-mcm8_201/controls/Input 3	0
+/devices/wb-mcm8_201/controls/Input 2 counter	3
+/devices/wb-mcm8_201/controls/Input 2	0
+/devices/wb-mcm8_201/controls/Input 1 counter	475
+/devices/wb-mcm8_201/controls/Input 1	0
+/devices/wb-mcm8_201/controls/Input 5 counter	37
+/devices/wb-mdm3_5/controls/Overcurrent	0
+/devices/wb-mdm3_5/controls/AC on L-N	1
+/devices/wb-mdm3_5/controls/Serial	4264828885
+/devices/wb-mdm3_5/controls/Channel 3	100
+/devices/wb-mdm3_5/controls/K3	0
+/devices/wb-mdm3_5/controls/Channel 2	100
+/devices/wb-mdm3_5/controls/Input 5 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 4 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 6 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 6 counter	0
+/devices/wb-mdm3_5/controls/Input 3 counter	0
+/devices/wb-mdm3_5/controls/Input 2	0
+/devices/wb-mdm3_5/controls/Input 3 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 4 counter	0
+/devices/wb-mdm3_5/controls/Input 1 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 5	0
+/devices/wb-mdm3_5/controls/Input 6	0
+/devices/wb-mdm3_5/controls/Channel 1	100
+/devices/wb-mdm3_5/controls/Input 2 counter	0
+/devices/wb-mdm3_5/controls/Input 2 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 5 counter	0
+/devices/wb-mdm3_5/controls/Input 1	0
+/devices/wb-mdm3_5/controls/Input 1 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 4	0
+/devices/wb-mdm3_5/controls/Input 4 Single Press Counter	0
+/devices/wb-mdm3_5/controls/K2	0
+/devices/wb-mdm3_5/controls/Input 6 Long Press Counter	0
+/devices/wb-mdm3_5/controls/Input 2 Single Press Counter	0
+/devices/wb-mdm3_5/controls/K1	0
+/devices/wb-mdm3_5/controls/Input 1 counter	0
+/devices/wb-mdm3_5/controls/Input 3	0
+/devices/wb-mdm3_5/controls/Input 5 Single Press Counter	0
+/devices/wb-mdm3_5/controls/Input 3 Long Press Counter	0
+/devices/wb-mr3_6/controls/K1	0
+/devices/wb-mr3_6/controls/Input 3 counter	0
+/devices/wb-mr3_6/controls/Input 3	0
+/devices/wb-mr3_6/controls/Input 2 counter	0
+/devices/wb-mr3_6/controls/Input 1	0
+/devices/wb-mr3_6/controls/Input 0 counter	0
+/devices/wb-mr3_6/controls/Input 0	0
+/devices/wb-mr3_6/controls/Input 1 counter	0
+/devices/wb-mr3_6/controls/K3	0
+/devices/wb-mr3_6/controls/K2	0
+/devices/wb-mr3_6/controls/Input 2	0
+/devices/wb-mr3_6/controls/Serial	115429
+/devices/wb-mao4_4/controls/Channel 2 Switch	0
+/devices/wb-mao4_4/controls/Input 2 Counter	0
+/devices/wb-mao4_4/controls/Input 3 Double Press Counter	0
+/devices/wb-mao4_4/controls/Input 1	0
+/devices/wb-mao4_4/controls/Input 3 Short Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Counter	0
+/devices/wb-mao4_4/controls/Channel 1 Dimming Level	58
+/devices/wb-mao4_4/controls/Serial	113245
+/devices/wb-mao4_4/controls/Input 1 Double Press Counter	0
+/devices/wb-mao4_4/controls/Channel 4 Dimming Level	0
+/devices/wb-mao4_4/controls/Input 2 Double Press Counter	0
+/devices/wb-mao4_4/controls/Input 3 Counter	0
+/devices/wb-mao4_4/controls/Input 2 Long Press Counter	0
+/devices/wb-mao4_4/controls/Channel 4 Switch	0
+/devices/wb-mao4_4/controls/Input 3 Long Press Counter	0
+/devices/wb-mao4_4/controls/Channel 3 Switch	0
+/devices/wb-mao4_4/controls/Input 2 Short Press Counter	0
+/devices/wb-mao4_4/controls/Input 3	0
+/devices/wb-mao4_4/controls/Input 2 Short Long Press Counter	0
+/devices/wb-mao4_4/controls/Input 1 Short Press Counter	0
+/devices/wb-mao4_4/controls/Input 2	0
+/devices/wb-mao4_4/controls/Channel 3 Dimming Level	0
+/devices/wb-mao4_4/controls/Input 1 Short Long Press Counter	0
+/devices/wb-mao4_4/controls/Channel 1 Switch	0
+/devices/wb-mao4_4/controls/Input 3 Short Press Counter	0
+/devices/wb-mao4_4/controls/Channel 2 Dimming Level	49
+/devices/wb-mai6_19/controls/Serial	122886
+/devices/wb-mai6_19/controls/Uptime	4065655
+/devices/wb-mai6_19/controls/5V Output	5.088
+/devices/wb-mai6_19/controls/Internal Temperature	35.66
+/devices/wb-mr3_3/controls/K3	0
+/devices/wb-mr3_3/controls/Input 1	0
+/devices/wb-mr3_3/controls/Serial	114120
+/devices/wb-mr3_3/controls/Input 1 counter	0
+/devices/wb-mr3_3/controls/K2	0
+/devices/wb-mr3_3/controls/K1	1
+/devices/wb-mr3_3/controls/Input 3 counter	0
+/devices/wb-mr3_3/controls/Input 2 counter	0
+/devices/wb-mr3_3/controls/Input 2	0
+/devices/wb-mr3_3/controls/Input 0 counter	0
+/devices/wb-mr3_3/controls/Input 0	0
+/devices/wb-mr3_3/controls/Input 3	0
+/devices/wb-mr6c_2/controls/K6	0
+/devices/wb-mr6c_2/controls/K2	0
+/devices/wb-mr6c_2/controls/K5	0
+/devices/wb-mr6c_2/controls/Input 4 counter	0
+/devices/wb-mr6c_2/controls/Input 2 counter	0
+/devices/wb-mr6c_2/controls/K1	0
+/devices/wb-mr6c_2/controls/K4	0
+/devices/wb-mr6c_2/controls/Input 3 counter	0
+/devices/wb-mr6c_2/controls/Input 2	0
+/devices/wb-mr6c_2/controls/Input 6	0
+/devices/wb-mr6c_2/controls/K3	0
+/devices/wb-mr6c_2/controls/Serial	4262597002
+/devices/wb-mr6c_2/controls/Input 1 counter	0
+/devices/wb-mr6c_2/controls/Input 0	0
+/devices/wb-mr6c_2/controls/Input 4	0
+/devices/wb-mr6c_2/controls/Input 0 counter	0
+/devices/wb-mr6c_2/controls/Input 5 counter	0
+/devices/wb-mr6c_2/controls/Input 1	0
+/devices/wb-mr6c_2/controls/Input 5	0
+/devices/wb-mr6c_2/controls/Input 3	0
+/devices/wb-mr6c_2/controls/Input 6 counter	0
+/devices/metrics/controls/load_average_1min	0.75
+/devices/metrics/controls/load_average_5min	0.46
+/devices/metrics/controls/load_average_15min	0.51
+/devices/metrics/controls/ram_available	1782
+/devices/metrics/controls/ram_used	166
+/devices/metrics/controls/ram_total	2012
+/devices/metrics/controls/swap_total	255
+/devices/metrics/controls/swap_used	0
+/devices/metrics/controls/dev_root_used_space	703
+/devices/metrics/controls/dev_root_total_space	1984
+/devices/metrics/controls/dev_root_linked_on	/dev/mmcblk0p2
+/devices/metrics/controls/data_used_space	826
+/devices/metrics/controls/data_total_space	56110
+/devices/battery/controls/Current	-3.428
+/devices/battery/controls/Voltage	4.155
+/devices/battery/controls/Percentage	100
+/devices/battery/controls/Charging	0
+/devices/network/controls/Ethernet IP Online Status	1
+/devices/network/controls/Wi-Fi IP Online Status	0
+/devices/network/controls/Ethernet 2 IP Online Status	0
+/devices/network/controls/Wi-Fi 2 IP Online Status	0
+/devices/network/controls/Ethernet 2 IP Connection Enabled	0
+/devices/network/controls/GPRS IP Connection Enabled	0
+/devices/network/controls/Ethernet IP Connection Enabled	1
+/devices/network/controls/Wi-Fi IP	192.168.42.1
+
+/devices/network/controls/Default Interface	eth0
+/devices/network/controls/GPRS IP Online Status	0
+/devices/network/controls/Internet Connection	wb-eth0
+/devices/network/controls/Ethernet IP	192.168.2.106
+
+/devices/network/controls/Wi-Fi 2 IP Connection Enabled	0
+/devices/network/controls/Active Connections	["lo","wb-ap","wb-eth0"]
+/devices/network/controls/Wi-Fi IP Connection Enabled	1
+/devices/system/controls/HW Revision	7.3.1
+/devices/system/controls/Batch No	7.3.1B/2GC/2T 636
+/devices/system/controls/Release name	wb-2602
+/devices/system/controls/Release suite	stable
+/devices/system/controls/Temperature Grade	commercial
+/devices/system/controls/DTS Version	731
+
+/devices/system/controls/Manufacturing Date	2022-08-05 10:34:48
+/devices/system/controls/Current uptime	2d 14h 54m
+/devices/system/controls/Short SN	A25NDEMJ
+/devices/power_status/controls/Vin	24.1
+/devices/power_status/controls/working on battery	0
+/devices/system_time/controls/timezone	UTC+0000
+/devices/system_time/controls/current_day	0
+/devices/system_time/controls/current_date	2026-05-10
+/devices/system_time/controls/current_time	09:46
+/devices/buzzer/controls/enabled	0
+/devices/buzzer/controls/frequency	3000
+/devices/buzzer/controls/volume	10
+/devices/hwmon/controls/CPU Temperature	72.094
+/devices/hwmon/controls/Board Temperature	41.125
+/devices/wb-mai6_19/controls/Uptime	4065657
+/devices/wb-mai6_19/controls/5V Output	5.089
+/devices/wb-map6s_34/controls/Urms	235.01
+/devices/wb-map6s_34/controls/Phase angle 1	-32.8
+/devices/wb-map6s_34/controls/AP energy 1	38.17083
+/devices/wb-map6s_34/controls/P 1	8.88
+/devices/wb-map6s_34/controls/Q 1	-6.37
+/devices/wb-map6s_34/controls/S 3	6.81
+/devices/wb-map6s_34/controls/S 2	6.81
+/devices/battery/controls/Current	-3.427
+/devices/hwmon/controls/CPU Temperature	71.303
+/devices/hwmon/controls/Board Temperature	41.125
+/devices/wb-map6s_34/controls/S 6	6.81
+/devices/wb-map6s_34/controls/S 5	6.81
+/devices/wb-map6s_34/controls/S 4	6.81
+/devices/wb-mai6_19/controls/Uptime	4065659
+/devices/wb-mai6_19/controls/5V Output	5.09
+/devices/wb-map6s_34/controls/PF 1	0.49
+/devices/wb-map6s_34/controls/Urms	234.43
+/devices/wb-map6s_34/controls/Phase angle 1	-33.1
+/devices/wb-map6s_34/controls/RN energy 1	26.82323
+/devices/wb-map6s_34/controls/P 1	9
+/devices/wb-map6s_34/controls/Q 1	-6.25
+/devices/wb-map6s_34/controls/S 3	6.75
+/devices/wb-map6s_34/controls/S 2	6.75
+/devices/wb-map6s_34/controls/S 1	18.06
+/devices/wb-adc/controls/A1	0.0
+/devices/wb-map6s_34/controls/Irms 1	0.0773

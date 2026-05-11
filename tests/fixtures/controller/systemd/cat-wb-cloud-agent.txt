@@ -1,0 +1,18 @@
+# /lib/systemd/system/wb-cloud-agent.service
+[Unit]
+Description=Wiren Board Cloud Agent (default)
+Wants=mosquitto.service
+After=network.target mosquitto.service
+StartLimitIntervalSec=3600
+StartLimitBurst=100
+
+[Service]
+ExecStart=/usr/bin/wb-cloud-agent --daemon --provider default
+ExecStartPre=/usr/lib/wb-cloud-agent/check-certs.sh
+ExecStartPre=/usr/lib/wb-cloud-agent/activate-providers.sh
+Restart=always
+RestartSec=10
+RestartPreventExitStatus=6
+
+[Install]
+WantedBy=multi-user.target

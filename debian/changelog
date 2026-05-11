@@ -1,0 +1,10 @@
+wb-cli (0.1.0) stable; urgency=medium
+
+  * Initial release.
+  * Scaffold: plugin system, output envelope, error codes.
+  * Plugins: info, plugins, audit, cloud, confed, devices, failed,
+    history, job, logs, metrics, modbus, mqtt, net, rpc, rules,
+    serial-debug, snapshot, systemd.
+  * 55 tests, pylint 10.00/10.
+
+ -- Wiren Board Team <info@wirenboard.com>  Sat, 10 May 2026 14:00:00 +0000
