@@ -1,3 +1,45 @@
+wb-cli (0.3.1) stable; urgency=medium
+
+  * NEW: `wb-cli rules enable <name>` — inverse of `disable`. The pair was
+    missing in 0.3.0.
+  * NEW: `wb-cli modbus devices` — dumps every configured device from
+    /etc/wb-mqtt-serial.conf with the effective UART parameters (port-level
+    defaults overridden by per-device fields).
+  * `modbus-fw check` and `modbus-fw update` now accept the slave_id as
+    optional. Without it they walk every device from the serial config:
+      wb-cli modbus-fw check                   # bulk check against config
+      wb-cli modbus-fw update --all            # bulk update everything
+                                                 with can_update=true
+                                                 (--all is required to
+                                                 acknowledge the bulk write)
+    Each row in bulk check carries either the version info or an `error`
+    string when the RPC fails for that device.
+  * lib/serial_conf.py — extracted parsing of /etc/wb-mqtt-serial.conf so
+    both `modbus` and `modbus-fw` share it. Plugins live under wb_cli/lib/
+    when they have logic worth sharing.
+  * `rules disable` / `rules enable` now do a plain `mv` of the rule file
+    instead of going through wbrules' Editor RPC — the editor rejects any
+    save/rename whose name doesn't end in .js, so 0.3.0's implementation
+    failed for both directions. wb-rules watches /etc/wb-rules/ via inotify,
+    so the rename takes effect on its own. Both commands now also refuse to
+    overwrite an existing target (new RULES_TARGET_EXISTS error) and report
+    RULES_NOT_FOUND when the source is missing.
+  * `rules load` unwraps wb-rules' current envelope shape
+    (`{"content": "<source>", "enabled": true}`) and returns just the source.
+    0.3.0 returned the whole dict and broke any caller that piped the result
+    back into `rules save`.
+  * `modbus templates` got a human-mode renderer (was falling through to
+    the JSON-fallback table).
+  * `modbus-fw check` bulk now shows the per-device `error` column in the
+    human table when any row has one — previously the JSON envelope kept it,
+    but the rendered table dropped it and ERROR rows were unexplained.
+  * RpcClient attaches an upgrade hint when a server returns an ImportError
+    (typical symptom of an out-of-date wb-device-manager / wb-rules / etc.
+    on the controller's system Python). The hint tells the user which
+    package to `apt-get install`.
+
+ -- Wiren Board Team <info@wirenboard.com>  Tue, 12 May 2026 00:30:00 +0000
+
 wb-cli (0.3.0) stable; urgency=medium
 
   * `modbus scan` now mirrors the three buttons in the web UI:

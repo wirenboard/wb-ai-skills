@@ -26,7 +26,7 @@ class ModbusPlugin(BasePlugin):
     def dispatch(self, ctx) -> dict:
         return _actions.dispatch(ctx)
 
-    def render(self, result):
+    def render(self, result):  # pylint: disable=too-many-return-statements
         # `modbus scan`: header + table.
         if "devices" in result and result["devices"] and "cfg" in result["devices"][0]:
             rows = []
@@ -63,6 +63,13 @@ class ModbusPlugin(BasePlugin):
                     f"{result.get('progress', 0)}%. " + (result.get("hint") or "")
                 ).rstrip()
             return f"no devices found by{kind} scan"
+        # `modbus devices`: configured-device table from /etc/wb-mqtt-serial.conf.
+        if "devices" in result and result["devices"] and "port_path" in result["devices"][0]:
+            return _devices_table(result["devices"])
+        # `modbus templates`: long flat list, one per line.
+        if "templates" in result and isinstance(result["templates"], list):
+            names = result["templates"]
+            return "\n".join([f"{len(names)} template(s):", *names])
         # `modbus probe`: yes/no plus details.
         if "found" in result:
             if not result["found"]:
@@ -70,6 +77,29 @@ class ModbusPlugin(BasePlugin):
             sub = result.get("result") or {}
             return f"found  {sub.get('device_signature', '?')} sn={sub.get('sn', '?')}"
         return None
+
+
+def _devices_table(rows):
+    table = []
+    for dev in rows:
+        port = dev.get("port", {})
+        table.append(
+            {
+                "slave_id": str(dev.get("slave_id", "?")),
+                "device_type": dev.get("device_type") or "?",
+                "port": dev.get("port_path") or "?",
+                "baud": str(port.get("baud_rate", "?")),
+                "uart": (
+                    f"{port.get('data_bits', '?')}{port.get('parity', '?')}" f"{port.get('stop_bits', '?')}"
+                ),
+            }
+        )
+    columns = ["slave_id", "device_type", "port", "baud", "uart"]
+    widths = {c: max(len(c), *(len(r[c]) for r in table)) for c in columns}
+    header = "  ".join(c.ljust(widths[c]) for c in columns)
+    sep = "  ".join("-" * widths[c] for c in columns)
+    body = ["  ".join(r[c].ljust(widths[c]) for c in columns) for r in table]
+    return "\n".join([f"{len(rows)} device(s) in /etc/wb-mqtt-serial.conf:", header, sep, *body])
 
 
 def _scan_table(rows, *, scan_type=None, completed=True, progress=None, hint=None):

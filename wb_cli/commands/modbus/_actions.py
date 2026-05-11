@@ -9,6 +9,7 @@ import subprocess
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
+from wb_cli.lib import serial_conf
 from wb_cli.lib.progress import ProgressBar
 
 _BROKER_SETTLE_S = 1.0
@@ -112,6 +113,21 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
     )
     p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
 
+    p = sub.add_parser(
+        "devices",
+        help="list every device configured in /etc/wb-mqtt-serial.conf",
+        description=(
+            "Dump every enabled device from the serial config with its effective UART\n"
+            "parameters (port-level defaults overridden by device-level fields)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument(
+        "--port",
+        default=None,
+        help="filter to a single serial port path",
+    )
+
     sub.add_parser(
         "ports",
         help="list serial ports configured in wb-mqtt-serial",
@@ -145,6 +161,8 @@ def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
         return _template(ctx)
     if subcmd == "device-info":
         return _device_info(ctx)
+    if subcmd == "devices":
+        return _devices(ctx)
     if subcmd == "ports":
         return _ports(ctx)
     if subcmd == "add-devices":
@@ -373,20 +391,22 @@ def _template(ctx) -> dict:
 
 
 def _device_info(ctx) -> dict:
-    result = ctx.rpc.call("confed/Editor/Load", {"path": "/etc/wb-mqtt-serial.conf"})
-    content = result.get("content", result) if isinstance(result, dict) else {}
-    devices = []
-    for port in content.get("ports", []) if isinstance(content, dict) else []:
-        devices.extend(port.get("devices", []))
-    for dev in devices:
-        if str(dev.get("slave_id")) == str(ctx.args.device_id) or dev.get("id") == ctx.args.device_id:
+    content = serial_conf.load_config(ctx)
+    for dev in serial_conf.iter_devices(content):
+        if str(dev["slave_id"]) == str(ctx.args.device_id) or dev["id"] == ctx.args.device_id:
             return {"device": dev}
     raise WbCliError(
         code="MODBUS_DEVICE_NOT_FOUND",
-        message=f"Device '{ctx.args.device_id}' not in /etc/wb-mqtt-serial.conf",
+        message=f"Device '{ctx.args.device_id}' not in {serial_conf.CONFIG_PATH}",
         details={"device_id": ctx.args.device_id},
         exit_code=ExitCode.DOMAIN,
     )
+
+
+def _devices(ctx) -> dict:
+    content = serial_conf.load_config(ctx)
+    devices = serial_conf.list_devices(content, port=ctx.args.port)
+    return {"devices": devices, "count": len(devices)}
 
 
 def _ports(ctx) -> dict:

@@ -86,6 +86,7 @@ class RpcClient:  # pylint: disable=too-few-public-methods
             raise WbCliError(
                 code="RPC_ERROR_RESPONSE",
                 message=f"RPC call to '{target}' failed: {server_msg}",
+                hint=_hint_for_server_error(driver, server_msg),
                 details={
                     "target": target,
                     "returncode": rc,
@@ -104,3 +105,26 @@ class RpcClient:  # pylint: disable=too-few-public-methods
                 details={"target": target, "stdout": stdout.strip()},
                 exit_code=ExitCode.DOMAIN,
             ) from exc
+
+
+# Map server-side import-time failures to a "your daemon is outdated" hint.
+# The pattern we hit in the wild: wb-device-manager 1.14.1 on Python 3.9 fails
+# to import HeaderWriteError from email.errors (added in 3.12). Newer
+# versions of the daemon don't reach for that symbol. Every RPC call against
+# a stale daemon surfaces the same ImportError, so a generic match is enough.
+_DAEMON_PACKAGE = {
+    "wb-device-manager": "wb-device-manager",
+    "wbrules": "wb-rules",
+    "wb-mqtt-serial": "wb-mqtt-serial",
+    "confed": "wb-mqtt-confed",
+}
+
+
+def _hint_for_server_error(driver: str, server_msg: str) -> Optional[str]:
+    if "ImportError" not in server_msg and "cannot import name" not in server_msg:
+        return None
+    pkg = _DAEMON_PACKAGE.get(driver, driver)
+    return (
+        f"{pkg} on this controller looks too old for the system Python. "
+        f"Upgrade it: `apt-get update && apt-get install -y {pkg}`."
+    )

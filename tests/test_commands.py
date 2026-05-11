@@ -16,6 +16,7 @@ from wb_cli.commands.confed import ConfedPlugin
 from wb_cli.commands.history import HistoryPlugin
 from wb_cli.commands.job_cmd import JobPlugin
 from wb_cli.commands.modbus._plugin import ModbusPlugin
+from wb_cli.commands.modbus_fw import ModbusFwPlugin
 from wb_cli.commands.mqtt_cmd import MqttPlugin
 from wb_cli.commands.rules import RulesPlugin
 from wb_cli.commands.serial_debug import SerialDebugPlugin
@@ -208,6 +209,20 @@ def test_rules_load():
     assert result["name"] == "myrule"
 
 
+def test_rules_load_unwraps_envelope():
+    """Modern wb-rules wraps source in `{"content": ..., "enabled": ...}` — unwrap it."""
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="load",
+            name="myrule",
+        )
+    )
+    ctx.rpc.call.return_value = {"content": "defineRule(...);", "enabled": True}
+    result = RulesPlugin().dispatch(ctx)
+    assert result["content"] == "defineRule(...);"
+
+
 def test_rules_name_with_slash():
     ctx = _ctx(
         args=argparse.Namespace(
@@ -230,6 +245,69 @@ def test_rules_name_with_js():
     )
     with pytest.raises(WbCliError, match="without .js"):
         RulesPlugin().dispatch(ctx)
+
+
+def test_rules_disable_uses_shell_mv():
+    """`rules disable` runs `mv .js .js.disabled` — wb-rules Editor rejects non-.js names."""
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="disable",
+            name="myrule",
+        )
+    )
+    # test src -> exists (rc=0); test dst -> missing (rc=1); mv -> ok (rc=0).
+    ctx.shell.run.side_effect = [(0, "", ""), (1, "", ""), (0, "", "")]
+    result = RulesPlugin().dispatch(ctx)
+    assert result["from"] == "/etc/wb-rules/myrule.js"
+    assert result["to"] == "/etc/wb-rules/myrule.js.disabled"
+    mv_call = ctx.shell.run.call_args_list[-1].args[0]
+    assert mv_call == ["mv", "/etc/wb-rules/myrule.js", "/etc/wb-rules/myrule.js.disabled"]
+
+
+def test_rules_enable_uses_shell_mv():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="enable",
+            name="myrule",
+        )
+    )
+    ctx.shell.run.side_effect = [(0, "", ""), (1, "", ""), (0, "", "")]
+    result = RulesPlugin().dispatch(ctx)
+    assert result["from"] == "/etc/wb-rules/myrule.js.disabled"
+    assert result["to"] == "/etc/wb-rules/myrule.js"
+
+
+def test_rules_disable_refuses_if_target_exists():
+    """If `.js.disabled` already exists, refuse — don't clobber the user's data."""
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="disable",
+            name="myrule",
+        )
+    )
+    # src exists (rc=0); dst already exists (rc=0).
+    ctx.shell.run.side_effect = [(0, "", ""), (0, "", "")]
+    with pytest.raises(WbCliError) as exc:
+        RulesPlugin().dispatch(ctx)
+    assert exc.value.code == "RULES_TARGET_EXISTS"
+
+
+def test_rules_enable_missing_source():
+    """Enabling a rule that has no .js.disabled — clear RULES_NOT_FOUND."""
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="enable",
+            name="myrule",
+        )
+    )
+    ctx.shell.run.side_effect = [(1, "", "")]  # src missing
+    with pytest.raises(WbCliError) as exc:
+        RulesPlugin().dispatch(ctx)
+    assert exc.value.code == "RULES_NOT_FOUND"
 
 
 # --- history ---
@@ -564,6 +642,222 @@ def test_modbus_add_devices_rejects_invalid_json():
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_ADD_INVALID_JSON"
+
+
+def test_modbus_devices_lists_from_serial_conf():
+    """`modbus devices` dumps every enabled device from /etc/wb-mqtt-serial.conf."""
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="devices",
+            port=None,
+        )
+    )
+    ctx.rpc.call.return_value = {
+        "content": {
+            "ports": [
+                {
+                    "path": "/dev/ttyRS485-1",
+                    "devices": [
+                        {"slave_id": 4},
+                        {"slave_id": 7, "enabled": False},  # skipped
+                    ],
+                },
+                {"path": "/dev/ttyRS485-2", "devices": [{"slave_id": 12}]},
+            ]
+        }
+    }
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["count"] == 2  # disabled device skipped
+    slaves = sorted(d["slave_id"] for d in result["devices"])
+    assert slaves == [4, 12]
+
+
+def test_modbus_devices_filters_by_port():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="devices",
+            port="/dev/ttyRS485-2",
+        )
+    )
+    ctx.rpc.call.return_value = {
+        "content": {
+            "ports": [
+                {"path": "/dev/ttyRS485-1", "devices": [{"slave_id": 1}]},
+                {"path": "/dev/ttyRS485-2", "devices": [{"slave_id": 2}]},
+            ]
+        }
+    }
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["count"] == 1
+    assert result["devices"][0]["slave_id"] == 2
+
+
+# --- modbus-fw ---
+
+
+def _fw_check_args(slave_id=None, port=None):
+    """Common Namespace for `modbus-fw check`."""
+    return argparse.Namespace(
+        quiet=False,
+        subcmd="check",
+        slave_id=slave_id,
+        port=port,
+        baud=9600,
+        parity="N",
+        data_bits=8,
+        stop_bits=2,
+    )
+
+
+def test_modbus_fw_check_single():
+    """With a slave_id, check probes just that device."""
+    ctx = _ctx(args=_fw_check_args(slave_id=4, port="/dev/ttyRS485-1"))
+    ctx.rpc.call.return_value = {
+        "fw": "1.20.0",
+        "available_fw": "1.21.3",
+        "can_update": True,
+        "bootloader": "1.0.0",
+        "available_bootloader": "1.0.0",
+    }
+    result = ModbusFwPlugin().dispatch(ctx)
+    assert result["slave_id"] == 4
+    assert result["can_update"] is True
+    method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
+    assert method == "wb-device-manager/fw-update/GetFirmwareInfo"
+    assert params["slave_id"] == 4
+    assert params["port"]["path"] == "/dev/ttyRS485-1"
+
+
+def test_modbus_fw_check_bulk_walks_serial_conf():
+    """Without a slave_id, bulk-check walks every device from the serial config."""
+    ctx = _ctx(args=_fw_check_args(slave_id=None, port=None))
+
+    serial_conf_payload = {
+        "content": {
+            "ports": [
+                {
+                    "path": "/dev/ttyRS485-1",
+                    "devices": [{"slave_id": 4}, {"slave_id": 7}],
+                }
+            ]
+        }
+    }
+
+    def _call(method, params, **_kw):  # pylint: disable=unused-argument
+        if method == "confed/Editor/Load":
+            return serial_conf_payload
+        if method == "wb-device-manager/fw-update/GetFirmwareInfo":
+            return {"fw": "1.0", "available_fw": "1.0", "can_update": False}
+        raise AssertionError(f"unexpected rpc call: {method}")
+
+    ctx.rpc.call.side_effect = _call
+    result = ModbusFwPlugin().dispatch(ctx)
+    assert result["count"] == 2
+    assert {row["slave_id"] for row in result["devices"]} == {4, 7}
+    assert all("can_update" in row for row in result["devices"])
+
+
+def test_modbus_fw_check_bulk_attaches_per_device_error():
+    """A per-device RPC failure becomes an `error` field instead of aborting bulk-check."""
+    ctx = _ctx(args=_fw_check_args(slave_id=None, port=None))
+    serial_conf_payload = {
+        "content": {
+            "ports": [
+                {
+                    "path": "/dev/ttyRS485-1",
+                    "devices": [{"slave_id": 4}, {"slave_id": 7}],
+                }
+            ]
+        }
+    }
+
+    calls = {"n": 0}
+
+    def _call(method, params, **_kw):  # pylint: disable=unused-argument
+        if method == "confed/Editor/Load":
+            return serial_conf_payload
+        if method == "wb-device-manager/fw-update/GetFirmwareInfo":
+            calls["n"] += 1
+            if params["slave_id"] == 4:
+                raise WbCliError(code="RPC_TIMEOUT", message="no answer", exit_code=3)
+            return {"fw": "1.0", "available_fw": "1.0", "can_update": False}
+        raise AssertionError(f"unexpected rpc call: {method}")
+
+    ctx.rpc.call.side_effect = _call
+    result = ModbusFwPlugin().dispatch(ctx)
+    assert calls["n"] == 2  # both devices probed
+    by_slave = {row["slave_id"]: row for row in result["devices"]}
+    assert by_slave[4]["error"] == "no answer"
+    assert by_slave[7]["can_update"] is False
+
+
+def _fw_update_args(slave_id=None, port=None, all_flag=False):
+    return argparse.Namespace(
+        quiet=False,
+        subcmd="update",
+        slave_id=slave_id,
+        port=port,
+        baud=9600,
+        parity="N",
+        data_bits=8,
+        stop_bits=2,
+        software_type="firmware",
+        all=all_flag,
+        wait=False,
+    )
+
+
+def test_modbus_fw_update_bulk_requires_all_flag():
+    """Bulk update without --all is refused — flashing every device is destructive."""
+    ctx = _ctx(args=_fw_update_args(slave_id=None, all_flag=False))
+    with pytest.raises(WbCliError) as exc:
+        ModbusFwPlugin().dispatch(ctx)
+    assert exc.value.code == "MODBUS_FW_BULK_NEEDS_FLAG"
+
+
+def test_modbus_fw_update_bulk_skips_up_to_date_devices():
+    """Bulk update queues only devices with `can_update=true`; others go to `skipped`."""
+    ctx = _ctx(args=_fw_update_args(slave_id=None, all_flag=True))
+    serial_conf_payload = {
+        "content": {
+            "ports": [
+                {
+                    "path": "/dev/ttyRS485-1",
+                    "devices": [{"slave_id": 4}, {"slave_id": 7}],
+                }
+            ]
+        }
+    }
+
+    def _call(method, params, **_kw):  # pylint: disable=unused-argument
+        if method == "confed/Editor/Load":
+            return serial_conf_payload
+        if method == "wb-device-manager/fw-update/GetFirmwareInfo":
+            return {"can_update": params["slave_id"] == 7, "fw": "1.0", "available_fw": "1.1"}
+        if method == "wb-device-manager/fw-update/Update":
+            return {"ok": True}
+        raise AssertionError(f"unexpected rpc call: {method}")
+
+    ctx.rpc.call.side_effect = _call
+    result = ModbusFwPlugin().dispatch(ctx)
+    assert result["count"] == 1
+    assert result["queued"][0]["slave_id"] == 7
+    assert result["skipped"][0]["slave_id"] == 4
+
+
+def test_modbus_fw_update_single_passes_software_type():
+    """Single-device update forwards software_type to the RPC."""
+    ctx = _ctx(args=_fw_update_args(slave_id=4, port="/dev/ttyRS485-1", all_flag=False))
+    ctx.args.software_type = "bootloader"
+    ctx.rpc.call.return_value = {"ok": True}
+    result = ModbusFwPlugin().dispatch(ctx)
+    assert result["type"] == "bootloader"
+    assert result["ok"] is True
+    method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
+    assert method == "wb-device-manager/fw-update/Update"
+    assert params["type"] == "bootloader"
 
 
 # --- serial-debug ---
