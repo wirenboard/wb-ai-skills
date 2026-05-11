@@ -30,9 +30,7 @@ def auto_render(data: Any) -> str:
         return _format_scalar(data)
 
     list_keys = [
-        k
-        for k, v in data.items()
-        if isinstance(v, list) and all(isinstance(item, Mapping) for item in v)
+        k for k, v in data.items() if isinstance(v, list) and all(isinstance(item, Mapping) for item in v)
     ]
     if len(list_keys) == 1:
         return _render_table(data[list_keys[0]])
