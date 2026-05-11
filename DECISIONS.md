@@ -5,7 +5,7 @@
 ## Среда
 
 - Debian 11 bullseye на контроллере, Python 3.9.2.
-- Сборка пакета в CI (bookworm/trixie), установка на bullseye.
+- CI собирает `_all.deb` на ubuntu-latest (debhelper 13, `pybuild-plugin-pyproject`); ставится на bullseye без проблем — пакет arch-независимый, runtime deps берутся из wirenboard apt-репозитория.
 - stdlib + apt-пакеты. Никакого pip, никакого Click.
 - `Depends: python3 (>= 3.9), python3-mqttrpc, python3-wb-common, mosquitto-clients, jq`.
 

@@ -1,8 +1,10 @@
 # wb-cli
 
+[![CI](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml)
+
 Command-line interface to a [Wiren Board](https://wirenboard.com) controller.
 
-Runs **on the controller** (`apt install wb-cli`). Designed for two audiences:
+Runs **on the controller**. Designed for two audiences:
 
 1. **LLM agents** — SSH to the controller, call `wb-cli <command>`, get structured JSON back.
 2. **Humans** — same commands, `--human` flag for readable output.
@@ -44,8 +46,19 @@ Every command outputs a `{"data": {...}}` or `{"error": {...}}` JSON envelope on
 
 ## Install on a controller
 
+Once published to the Wiren Board apt repository:
+
 ```bash
-apt update && apt install wb-cli
+apt-get update && apt-get install -y wb-cli
+```
+
+Otherwise install the latest `.deb` from [GitHub Releases](https://github.com/wirenboard/wb-ai-skills/releases/latest):
+
+```bash
+URL=$(curl -fsSL https://api.github.com/repos/wirenboard/wb-ai-skills/releases/latest \
+      | grep -oE 'https://[^"]+wb-cli_[^"]+\.deb' | head -1)
+curl -fsSL -o /tmp/wb-cli.deb "$URL"
+apt-get install -y /tmp/wb-cli.deb     # resolves python3-mqttrpc / python3-wb-common from wirenboard repo
 ```
 
 ## Development
@@ -77,8 +90,10 @@ wb_cli/
     modbus/            subpackage for >4 subcommands
 tests/
   conftest.py          controller_root fixture from captured data
-  test_*.py            49 tests via FakeContext
+  test_*.py            52 tests via FakeContext
+skills/                10 LLM-facing methodology SKILL.md files
 debian/                .deb packaging for wb7/bullseye
+.github/workflows/     CI (lint + tests on py3.9/3.11, .deb build) + release on tag v*
 ```
 
 See [DECISIONS.md](DECISIONS.md) for architectural rationale.
