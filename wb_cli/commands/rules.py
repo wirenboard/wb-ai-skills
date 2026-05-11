@@ -56,7 +56,16 @@ class RulesPlugin(BasePlugin):
         p = sub.add_parser(
             "disable",
             help="disable a rule (rename .js -> .js.disabled, no reload risk)",
-            description="Rename <name>.js to <name>.js.disabled so wb-rules ignores it. Source is preserved.",
+            description=(
+                "Rename <name>.js to <name>.js.disabled so wb-rules ignores it. Source is preserved."
+            ),
+        )
+        p.add_argument("name", help="rule file name without .js")
+
+        p = sub.add_parser(
+            "enable",
+            help="re-enable a previously disabled rule (rename .js.disabled -> .js)",
+            description=("Inverse of `disable`: rename <name>.js.disabled back to <name>.js."),
         )
         p.add_argument("name", help="rule file name without .js")
 
@@ -67,7 +76,7 @@ class RulesPlugin(BasePlugin):
         )
         p.add_argument("name", help="rule file name without .js")
 
-    def dispatch(self, ctx) -> dict:
+    def dispatch(self, ctx) -> dict:  # pylint: disable=too-many-return-statements
         subcmd = ctx.args.subcmd
         if subcmd == "list":
             return self._list(ctx)
@@ -77,6 +86,8 @@ class RulesPlugin(BasePlugin):
             return self._save(ctx)
         if subcmd == "disable":
             return self._disable(ctx)
+        if subcmd == "enable":
+            return self._enable(ctx)
         if subcmd == "delete":
             return self._delete(ctx)
         return {}
@@ -116,7 +127,11 @@ class RulesPlugin(BasePlugin):
                     exit_code=ExitCode.DOMAIN,
                 ) from exc
             raise
-        return {"name": ctx.args.name, "content": result}
+        # wb-rules' Editor/Load returns either a bare string (old) or
+        # ``{"content": "<source>", "enabled": true}`` (current). Unwrap so
+        # the user gets the source they asked for.
+        content = result.get("content", result) if isinstance(result, dict) else result
+        return {"name": ctx.args.name, "content": content}
 
     def _save(self, ctx) -> dict:
         _validate_name(ctx.args.name)
@@ -128,22 +143,21 @@ class RulesPlugin(BasePlugin):
 
     def _disable(self, ctx) -> dict:
         _validate_name(ctx.args.name)
-        src = ctx.args.name + ".js"
-        try:
-            ctx.rpc.call("wbrules/Editor/Rename", {"from": src, "to": src + ".disabled"})
-        except WbCliError as exc:
-            # Fallback: read source, save under .disabled, then delete original.
-            try:
-                payload = ctx.rpc.call("wbrules/Editor/Load", {"path": src})
-            except WbCliError as load_exc:
-                raise exc from load_exc
-            content = payload if isinstance(payload, str) else payload.get("content", "")
-            ctx.rpc.call(
-                "wbrules/Editor/Save",
-                {"path": src + ".disabled", "content": content},
-            )
-            ctx.rpc.call("wbrules/Editor/Remove", {"path": src})
-        return {"name": ctx.args.name, "ok": True}
+        return _rename_via_shell(
+            ctx,
+            f"/etc/wb-rules/{ctx.args.name}.js",
+            f"/etc/wb-rules/{ctx.args.name}.js.disabled",
+            kind="disable",
+        )
+
+    def _enable(self, ctx) -> dict:
+        _validate_name(ctx.args.name)
+        return _rename_via_shell(
+            ctx,
+            f"/etc/wb-rules/{ctx.args.name}.js.disabled",
+            f"/etc/wb-rules/{ctx.args.name}.js",
+            kind="enable",
+        )
 
     def _delete(self, ctx) -> dict:
         _validate_name(ctx.args.name)
@@ -152,6 +166,41 @@ class RulesPlugin(BasePlugin):
             {"path": ctx.args.name + ".js"},
         )
         return {"name": ctx.args.name, "ok": True}
+
+
+def _rename_via_shell(ctx, src: str, dst: str, *, kind: str) -> dict:
+    """Rename a rule file in place, bypassing the wb-rules editor.
+
+    The Editor RPC rejects any save/rename whose target doesn't end in ``.js``,
+    so disable/enable can't go through it. wb-rules watches /etc/wb-rules/ via
+    inotify, so a plain ``mv`` is enough to make it reload.
+    """
+    rc, _, _ = ctx.shell.run(["test", "-f", src])
+    if rc != 0:
+        raise WbCliError(
+            code="RULES_NOT_FOUND",
+            message=f"{src} does not exist — cannot {kind}",
+            details={"path": src},
+            exit_code=ExitCode.DOMAIN,
+        )
+    rc, _, _ = ctx.shell.run(["test", "-e", dst])
+    if rc == 0:
+        raise WbCliError(
+            code="RULES_TARGET_EXISTS",
+            message=f"{dst} already exists — refusing to overwrite",
+            hint=f"Remove or rename {dst} first.",
+            details={"path": dst},
+            exit_code=ExitCode.DOMAIN,
+        )
+    rc, _, stderr = ctx.shell.run(["mv", src, dst])
+    if rc != 0:
+        raise WbCliError(
+            code="RULES_RENAME_FAILED",
+            message=f"mv {src} -> {dst} failed: {stderr.strip() or 'unknown error'}",
+            details={"src": src, "dst": dst, "stderr": stderr},
+            exit_code=ExitCode.ENVIRONMENT,
+        )
+    return {"ok": True, "from": src, "to": dst}
 
 
 def _validate_name(name: str) -> None:

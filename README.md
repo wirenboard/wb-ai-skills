@@ -28,10 +28,11 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 | `mqtt list <pattern>` | List retained topics |
 | `confed load <path>` | Load config via wb-mqtt-confed |
 | `confed save <path> <json>` | Save config via wb-mqtt-confed |
-| `rules list\|load\|save\|disable\|delete` | Manage wb-rules automation scripts |
+| `rules list\|load\|save\|enable\|disable\|delete` | Manage wb-rules automation scripts |
 | `history get <dev/ctrl>` | Time-series data from wb-mqtt-db |
 | `history chart <dev/ctrl>` | Mermaid chart of historical data |
-| `modbus scan\|probe\|templates\|template\|ports\|device-info\|add-devices` | RS-485 / Modbus |
+| `modbus scan\|probe\|templates\|template\|ports\|device-info\|devices\|add-devices` | RS-485 / Modbus |
+| `modbus-fw check\|update\|restore\|clear-error\|watch\|state` | Firmware update of Modbus devices |
 | `cloud` | Cloud agent status |
 | `serial-debug --port <path>` | RS-485 debug capture with auto-restore |
 | `audit` | Quick health check |

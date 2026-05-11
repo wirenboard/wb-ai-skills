@@ -87,8 +87,12 @@ wb-cli mqtt write <topic> <value> [-r]         # raw MQTT: publish (-r for retai
 wb-cli mqtt list '<pattern>'                   # list retained topics by wildcard
 wb-cli confed load <path>                      # service config via confed RPC
 wb-cli rules list                              # wb-rules automation
+wb-cli rules enable|disable <name>             # rename .js <-> .js.disabled (no overwrite)
 wb-cli history get <device>/<control>          # time-series from wb-mqtt-db
-wb-cli modbus scan                             # scan RS-485 (filter with --port)
+wb-cli modbus scan                             # scan RS-485 (Fast Modbus; --slow / --bootloader)
+wb-cli modbus devices                          # devices configured in /etc/wb-mqtt-serial.conf
+wb-cli modbus-fw check [<slave_id>] [--port]   # firmware versions; bulk uses serial.conf
+wb-cli modbus-fw update [<slave_id>] [--all]   # flash one device, or every updatable one
 wb-cli audit                                   # quick health check
 ```
 

@@ -70,3 +70,29 @@ def test_other_shell_error_propagates_untouched(shell_raising):
     with pytest.raises(WbCliError) as exc:
         RpcClient(shell_raising("FS_NOT_FOUND")).call("drv/svc/M")
     assert exc.value.code == "FS_NOT_FOUND"
+
+
+def test_import_error_from_daemon_carries_upgrade_hint(shell_returning):
+    """A stale daemon (e.g. wb-device-manager 1.14 on py3.9) surfaces ImportError
+    on every RPC. We attach an `apt-get install -y <pkg>` hint mapped from the
+    driver name so the user knows what to upgrade."""
+    payload = (
+        "Error: Server error [-32000]: "
+        "{'type': 'ImportError', "
+        "'message': \"cannot import name 'HeaderWriteError' from 'email.errors'\"}"
+    )
+    shell = shell_returning(1, payload, "")
+    with pytest.raises(WbCliError) as exc:
+        RpcClient(shell).call("wb-device-manager/fw-update/GetFirmwareInfo")
+    assert exc.value.code == "RPC_ERROR_RESPONSE"
+    assert exc.value.hint is not None
+    assert "wb-device-manager" in exc.value.hint
+    assert "apt-get" in exc.value.hint
+
+
+def test_non_import_error_carries_no_hint(shell_returning):
+    """Ordinary RPC errors (timeouts, bad params) shouldn't suggest an upgrade."""
+    shell = shell_returning(1, "", "Error: Server error [-32601]: method not found")
+    with pytest.raises(WbCliError) as exc:
+        RpcClient(shell).call("wb-device-manager/svc/Method")
+    assert exc.value.hint is None
