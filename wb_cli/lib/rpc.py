@@ -69,7 +69,7 @@ class RpcClient:  # pylint: disable=too-few-public-methods
         try:
             rc, stdout, stderr = self._sh.run(cmd, timeout=timeout + 2)
         except WbCliError as exc:
-            if exc.code == "TIMEOUT":
+            if exc.code == "SHELL_TIMEOUT":
                 raise WbCliError(
                     code="RPC_NO_REPLY",
                     message=f"RPC call to '{target}' timed out after {timeout}s",
@@ -79,10 +79,19 @@ class RpcClient:  # pylint: disable=too-few-public-methods
             raise
 
         if rc != 0:
+            # mqtt-rpc-client writes server-side errors to stdout ("Error: ..."),
+            # not stderr; fall back to stdout if stderr is empty so the user
+            # actually sees what the RPC server said.
+            server_msg = stderr.strip() or stdout.strip()
             raise WbCliError(
                 code="RPC_ERROR_RESPONSE",
-                message=f"RPC call to '{target}' failed: {stderr.strip()}",
-                details={"target": target, "returncode": rc},
+                message=f"RPC call to '{target}' failed: {server_msg}",
+                details={
+                    "target": target,
+                    "returncode": rc,
+                    "stderr": stderr.strip(),
+                    "stdout": stdout.strip(),
+                },
                 exit_code=ExitCode.DOMAIN,
             )
 

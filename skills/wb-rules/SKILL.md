@@ -27,7 +27,7 @@ ssh root@<HOST> journalctl -u wb-rules --since '10s ago' --no-pager
 
 ## Workflow
 
-1. Check channel type: `ssh root@<HOST> wb-cli devices controls <device>`
+1. Check channel type: `ssh root@<HOST> wb-cli dev <device>`
 2. List existing rules: `ssh root@<HOST> wb-cli rules list`
 3. Check for conflicts with existing rules — show interaction table
 4. Show logic (table or Mermaid diagram), get confirmation

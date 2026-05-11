@@ -58,10 +58,11 @@ def test_output_mode_env_overrides_tty_heuristic(monkeypatch):
     assert _resolve_output_mode(None) == "json"
 
 
-def test_output_mode_defaults_to_json_for_non_tty(monkeypatch):
+def test_output_mode_defaults_to_human_for_pipe(monkeypatch):
     monkeypatch.delenv("WB_CLI_OUTPUT", raising=False)
     monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    assert _resolve_output_mode(None) == "json"
+    # Default is human everywhere; LLM/scripts opt into JSON with --json or env.
+    assert _resolve_output_mode(None) == "human"
 
 
 def test_output_mode_defaults_to_human_for_tty(monkeypatch):
@@ -73,4 +74,4 @@ def test_output_mode_defaults_to_human_for_tty(monkeypatch):
 def test_output_mode_ignores_unknown_env_value(monkeypatch):
     monkeypatch.setenv("WB_CLI_OUTPUT", "garbage")
     monkeypatch.setattr("sys.stdout.isatty", lambda: False)
-    assert _resolve_output_mode(None) == "json"
+    assert _resolve_output_mode(None) == "human"

@@ -12,15 +12,17 @@ _CLOUD_UNIT = "wb-cloud-agent@wirenboard.cloud"
 
 class CloudPlugin(BasePlugin):
     name = "cloud"
-    help = "Wiren Board cloud agent: link status and connection info"
+    help = "report whether the Wiren Board cloud agent is up"
 
     def register(self, subparsers: argparse._SubParsersAction) -> None:
-        parser = subparsers.add_parser(
+        subparsers.add_parser(
             self.name,
             help=self.help,
-            description="Show cloud agent link status.",
+            description=(
+                f"Check the state of the {_CLOUD_UNIT} systemd unit. Returns an\n"
+                "error envelope if the agent is missing or inactive."
+            ),
         )
-        parser.add_argument("-q", "--quiet", action="store_true")
 
     def dispatch(self, ctx) -> dict:
         try:

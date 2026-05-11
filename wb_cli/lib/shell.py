@@ -42,7 +42,7 @@ class ShellRunner:  # pylint: disable=too-few-public-methods
             ) from exc
         except subprocess.TimeoutExpired as exc:
             raise WbCliError(
-                code="TIMEOUT",
+                code="SHELL_TIMEOUT",
                 message=f"Command timed out after {timeout}s: {' '.join(cmd)}",
                 details={"command": cmd, "timeout_seconds": timeout},
                 exit_code=ExitCode.ENVIRONMENT,
@@ -50,7 +50,7 @@ class ShellRunner:  # pylint: disable=too-few-public-methods
 
         if check and proc.returncode != 0:
             raise WbCliError(
-                code="INTERNAL",
+                code="SHELL_COMMAND_FAILED",
                 message=f"Command failed (exit {proc.returncode}): {' '.join(cmd)}",
                 details={
                     "command": cmd,

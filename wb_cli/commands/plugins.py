@@ -13,20 +13,22 @@ from wb_cli.plugin import BasePlugin
 
 class PluginsPlugin(BasePlugin):
     name = "plugins"
-    help = "list installed wb-cli plugins"
+    help = "list every plugin this wb-cli build knows about"
 
     def register(self, subparsers: argparse._SubParsersAction) -> None:
         parser = subparsers.add_parser(
             self.name,
             help=self.help,
-            description="List installed wb-cli plugins.",
+            description=(
+                "Self-introspection: which commands are compiled into this wb-cli.\n"
+                "Pass a plugin name to get its short help and Python module path."
+            ),
         )
-        parser.add_argument("-q", "--quiet", action="store_true")
         parser.add_argument(
             "name",
             nargs="?",
             metavar="<name>",
-            help="show details of one plugin",
+            help="show details for one plugin",
         )
 
     def dispatch(self, ctx) -> dict:

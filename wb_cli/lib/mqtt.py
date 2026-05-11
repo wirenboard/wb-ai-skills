@@ -9,10 +9,20 @@ idle for a short window (see ``_IDLE_WINDOW_S``).  We can't rely on
 the full timeout even after every retained value has already arrived,
 making ``devices list`` feel "stuck" for 5 seconds when in fact the data
 landed in the first 50 ms.
+
+Two buffering quirks to dodge:
+  * mosquitto_sub full-buffers stdout under a pipe — we run it through
+    ``stdbuf -oL`` so every retained message flushes immediately.
+  * Python's ``proc.stdout`` wraps the file descriptor in a BufferedReader,
+    so once ``readline`` slurps the whole pipe into its private buffer,
+    ``select(fileno)`` says "nothing here" and we miss subsequent lines.
+    We read the raw fd ourselves and split on ``\\n``.
 """
 
 from __future__ import annotations
 
+import errno
+import os
 import select
 import subprocess
 import time
@@ -23,6 +33,7 @@ from wb_cli.lib.shell import ShellRunner
 
 _IDLE_WINDOW_S = 0.3
 _POLL_INTERVAL_S = 0.05
+_READ_CHUNK = 4096
 
 
 class MqttClient:
@@ -44,12 +55,27 @@ class MqttClient:
         delivery looks done (idle window after the first message) or *timeout*
         seconds have passed, whichever comes first.
         """
+        # Force mosquitto_sub's stdout to be line-buffered. Under a pipe it
+        # would otherwise full-buffer, batching multiple retained messages
+        # into one flush — that breaks our idle-window heuristic and we
+        # silently miss meta-keys for short replies.
+        cmd = [
+            "stdbuf",
+            "-oL",
+            "mosquitto_sub",
+            "-F",
+            "%t\t%p",
+            "-t",
+            topic,
+        ]
         try:
             proc = subprocess.Popen(  # pylint: disable=consider-using-with
-                ["mosquitto_sub", "-F", "%t\t%p", "-t", topic],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
+                # Bytes mode — we read the raw fd via os.read() and split on
+                # newlines ourselves so Python's BufferedReader doesn't gobble
+                # multiple retained messages into its private buffer.
             )
         except FileNotFoundError as exc:
             raise WbCliError(
@@ -70,13 +96,16 @@ class MqttClient:
                 _, stderr = proc.communicate()
 
         rc = proc.returncode
+        stderr_text = (
+            stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else stderr
+        ) or ""
         # Negative rc = killed by signal (our terminate). Anything other than
         # a successful exit or our own kill, with empty output, means the
         # broker rejected us.
         if not results and rc not in (0, None) and rc > 0:
             raise WbCliError(
                 code="MQTT_BROKER_DOWN",
-                message=f"mosquitto_sub failed (rc={rc}): {(stderr or '').strip()}",
+                message=f"mosquitto_sub failed (rc={rc}): {stderr_text.strip()}",
                 details={"topic": topic, "returncode": rc},
                 exit_code=ExitCode.ENVIRONMENT,
             )
@@ -118,19 +147,34 @@ def _drain_retained(proc, topic: str, timeout: float) -> List[Tuple[str, str]]:
 
     Raises ``MQTT_TIMEOUT`` if nothing at all arrived within *timeout* seconds.
     """
+    fd = proc.stdout.fileno()
+    os.set_blocking(fd, False)
     results: List[Tuple[str, str]] = []
+    buf = b""
     deadline = time.monotonic() + timeout
     last_msg_at: float = 0.0
     while time.monotonic() < deadline:
-        ready, _, _ = select.select([proc.stdout], [], [], _POLL_INTERVAL_S)
+        ready, _, _ = select.select([fd], [], [], _POLL_INTERVAL_S)
         if ready:
-            line = proc.stdout.readline()
-            if not line:
+            try:
+                chunk = os.read(fd, _READ_CHUNK)
+            except BlockingIOError:
+                chunk = b""
+            except OSError as exc:
+                if exc.errno == errno.EAGAIN:
+                    chunk = b""
+                else:
+                    raise
+            if not chunk and proc.poll() is not None:
                 break
-            if "\t" in line:
-                t, _, p = line.rstrip("\n").partition("\t")
-                results.append((t, p))
-                last_msg_at = time.monotonic()
+            buf += chunk
+            while b"\n" in buf:
+                line, _, buf = buf.partition(b"\n")
+                line_str = line.decode("utf-8", errors="replace")
+                if "\t" in line_str:
+                    t, _, p = line_str.partition("\t")
+                    results.append((t, p))
+                    last_msg_at = time.monotonic()
         elif results and (time.monotonic() - last_msg_at) > _IDLE_WINDOW_S:
             return results
     if not results:

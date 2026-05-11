@@ -13,7 +13,6 @@ import pytest
 from wb_cli.commands.audit import AuditPlugin
 from wb_cli.commands.cloud import CloudPlugin
 from wb_cli.commands.confed import ConfedPlugin
-from wb_cli.commands.devices import DevicesPlugin
 from wb_cli.commands.history import HistoryPlugin
 from wb_cli.commands.job_cmd import JobPlugin
 from wb_cli.commands.modbus._plugin import ModbusPlugin
@@ -83,7 +82,6 @@ def test_cloud_inactive():
 def test_mqtt_read():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="read",
             topic="/devices/test/controls/val",
@@ -119,7 +117,6 @@ def test_mqtt_write():
 def test_mqtt_list():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="list",
             topic="#",
@@ -132,179 +129,8 @@ def test_mqtt_list():
 
 
 # --- devices ---
-
-
-def test_devices_list():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="list",
-        )
-    )
-    ctx.mqtt.subscribe.return_value = [
-        ("/devices/wb-adc/meta/name", "ADCs"),
-        ("/devices/wb-adc/meta/driver", "wb-adc"),
-        ("/devices/wb-gpio/meta/name", "Discrete I/O"),
-        ("/devices/wb-gpio/meta/driver", "wb-gpio"),
-    ]
-    result = DevicesPlugin().dispatch(ctx)
-    assert result["count"] == 2
-    ids = [d["id"] for d in result["devices"]]
-    assert "wb-adc" in ids
-
-
-def test_devices_controls():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="controls",
-            device="wb-adc",
-        )
-    )
-    ctx.mqtt.subscribe.side_effect = [
-        [("/devices/wb-adc/controls/A1", "0.5")],
-        [],
-    ]
-    result = DevicesPlugin().dispatch(ctx)
-    assert result["count"] == 1
-
-
-def test_devices_set():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="set",
-            device="wb-mr6c_52",
-            control="K1",
-            value="1",
-        )
-    )
-    # 1st subscribe: value-topic probe; 2nd: meta (readonly check).
-    ctx.mqtt.subscribe.side_effect = [
-        [("/devices/wb-mr6c_52/controls/K1", "0")],
-        [("/devices/wb-mr6c_52/controls/K1/meta/type", "switch")],
-    ]
-    result = DevicesPlugin().dispatch(ctx)
-    assert result["ok"] is True
-    ctx.mqtt.publish.assert_called_once_with("/devices/wb-mr6c_52/controls/K1/on", "1")
-
-
-def test_devices_set_refuses_unknown_control():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="set",
-            device="wb-mr6c_52",
-            control="K1",
-            value="1",
-        )
-    )
-    ctx.mqtt.subscribe.return_value = []  # value topic is empty -> not found
-    with pytest.raises(WbCliError) as exc:
-        DevicesPlugin().dispatch(ctx)
-    assert exc.value.code == "DEVICES_CONTROL_NOT_FOUND"
-    ctx.mqtt.publish.assert_not_called()
-
-
-def test_devices_set_refuses_readonly_control():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="set",
-            device="wb-gpio",
-            control="D1_IN",
-            value="1",
-        )
-    )
-    ctx.mqtt.subscribe.side_effect = [
-        [("/devices/wb-gpio/controls/D1_IN", "0")],
-        [
-            ("/devices/wb-gpio/controls/D1_IN/meta/type", "switch"),
-            ("/devices/wb-gpio/controls/D1_IN/meta/readonly", "1"),
-        ],
-    ]
-    with pytest.raises(WbCliError) as exc:
-        DevicesPlugin().dispatch(ctx)
-    assert exc.value.code == "DEVICES_CONTROL_READONLY"
-    ctx.mqtt.publish.assert_not_called()
-
-
-def test_devices_get_returns_value_and_meta():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="get",
-            device="wb-mr6c_2",
-            control="K1",
-        )
-    )
-    ctx.mqtt.subscribe.side_effect = [
-        [("/devices/wb-mr6c_2/controls/K1", "1")],
-        [
-            ("/devices/wb-mr6c_2/controls/K1/meta/type", "switch"),
-            ("/devices/wb-mr6c_2/controls/K1/meta/readonly", "0"),
-        ],
-    ]
-    result = DevicesPlugin().dispatch(ctx)
-    assert result == {
-        "device": "wb-mr6c_2",
-        "control": "K1",
-        "value": "1",
-        "type": "switch",
-        "readonly": False,
-    }
-
-
-def test_devices_get_missing_control():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="get",
-            device="wb-mr6c_2",
-            control="nope",
-        )
-    )
-    ctx.mqtt.subscribe.return_value = []
-    with pytest.raises(WbCliError) as exc:
-        DevicesPlugin().dispatch(ctx)
-    assert exc.value.code == "DEVICES_CONTROL_NOT_FOUND"
-
-
-def test_devices_controls_with_meta():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            human=False,
-            quiet=False,
-            subcmd="controls",
-            device="wb-gpio",
-        )
-    )
-    ctx.mqtt.subscribe.side_effect = [
-        [
-            ("/devices/wb-gpio/controls/V_OUT", "1"),
-            ("/devices/wb-gpio/controls/D1_IN", "0"),
-        ],
-        [
-            ("/devices/wb-gpio/controls/V_OUT/meta/type", "switch"),
-            ("/devices/wb-gpio/controls/V_OUT/meta/readonly", "0"),
-            ("/devices/wb-gpio/controls/D1_IN/meta/type", "switch"),
-            ("/devices/wb-gpio/controls/D1_IN/meta/readonly", "1"),
-        ],
-    ]
-    result = DevicesPlugin().dispatch(ctx)
-    assert result["count"] == 2
-    ctrl_vout = next(c for c in result["controls"] if c["name"] == "V_OUT")
-    assert ctrl_vout["type"] == "switch"
-    assert ctrl_vout["readonly"] is False
-    ctrl_d1 = next(c for c in result["controls"] if c["name"] == "D1_IN")
-    assert ctrl_d1["readonly"] is True
+# Plugin removed in 0.3.0; everything moved to the `dev` plugin
+# (see tests/test_dev.py).
 
 
 # --- confed ---
@@ -313,7 +139,6 @@ def test_devices_controls_with_meta():
 def test_confed_load():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="load",
             path="/etc/wb-mqtt-serial.conf",
@@ -331,7 +156,6 @@ def test_confed_load():
 def test_confed_save():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="save",
             path="/etc/test.conf",
@@ -345,7 +169,6 @@ def test_confed_save():
 def test_confed_save_invalid_json():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="save",
             path="/etc/test.conf",
@@ -362,7 +185,6 @@ def test_confed_save_invalid_json():
 def test_rules_list():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="list",
         )
@@ -376,7 +198,6 @@ def test_rules_list():
 def test_rules_load():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="load",
             name="myrule",
@@ -390,7 +211,6 @@ def test_rules_load():
 def test_rules_name_with_slash():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="load",
             name="dir/rule",
@@ -403,7 +223,6 @@ def test_rules_name_with_slash():
 def test_rules_name_with_js():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="load",
             name="rule.js",
@@ -419,7 +238,6 @@ def test_rules_name_with_js():
 def test_history_get():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="get",
             channel="wb-adc/A1",
@@ -436,7 +254,6 @@ def test_history_get():
 def test_history_chart():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="chart",
             channel="wb-adc/A1",
@@ -456,7 +273,6 @@ def test_history_chart():
 def test_snapshot_save(tmp_path: Path):
     ctx = _ctx(controller=ControllerInfo(root=tmp_path))
     ctx.args = argparse.Namespace(
-        human=False,
         quiet=False,
         subcmd="save",
         label="test",
@@ -480,7 +296,6 @@ def test_snapshot_save(tmp_path: Path):
 def test_job_list():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="list",
         )
@@ -496,18 +311,18 @@ def test_job_list():
 def test_modbus_scan(monkeypatch):
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="scan",
             port="/dev/ttyRS485-1",
             timeout=5.0,
+            scan_type="extended",
         )
     )
     ctx.rpc.call.return_value = "Ok"
     final_state = (
-        '{"progress": 10, "scanning": true, "devices": []}\n'
-        '{"progress": 50, "scanning": true, "devices": []}\n'
-        '{"progress": 100, "scanning": true, "devices": ['
+        '{"progress": 10, "scanning": true, "is_ext_scan": true, "devices": []}\n'
+        '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": []}\n'
+        '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": ['
         '{"slave_id": 52, "title": "WB-MR6C", "port": {"path": "/dev/ttyRS485-1"}}'
         "]}\n"
     )
@@ -535,6 +350,12 @@ def test_modbus_scan(monkeypatch):
         "wb_cli.commands.modbus._actions.subprocess.Popen",
         lambda *a, **kw: _FakeProc(),
     )
+    # The real _await_scan uses select() on the subprocess fd; with a StringIO
+    # stand-in we short-circuit to "always ready" so readline does the work.
+    monkeypatch.setattr(
+        "wb_cli.commands.modbus._actions.select.select",
+        lambda r, w, x, t=None: (r, w, x),
+    )
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
 
@@ -542,7 +363,6 @@ def test_modbus_scan(monkeypatch):
 def test_modbus_ports():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="ports",
         )
@@ -555,7 +375,6 @@ def test_modbus_ports():
 def test_modbus_templates():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="templates",
         )
@@ -568,7 +387,6 @@ def test_modbus_templates():
 def test_modbus_template_reads_file_from_disk():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="template",
             template_id="config-wb-mr3",
@@ -585,7 +403,6 @@ def test_modbus_template_reads_file_from_disk():
 def test_modbus_template_missing_file():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="template",
             template_id="nonexistent",
@@ -600,7 +417,6 @@ def test_modbus_template_missing_file():
 def test_modbus_template_invalid_json():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="template",
             template_id="broken",
@@ -615,7 +431,6 @@ def test_modbus_template_invalid_json():
 def test_modbus_device_info_finds_device_by_slave_id():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="device-info",
             device_id="5",
@@ -636,7 +451,6 @@ def test_modbus_device_info_finds_device_by_slave_id():
 def test_modbus_device_info_not_found():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="device-info",
             device_id="999",
@@ -645,13 +459,12 @@ def test_modbus_device_info_not_found():
     ctx.rpc.call.return_value = {"content": {"ports": []}}
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
-    assert exc.value.code == "DEVICES_DEVICE_NOT_FOUND"
+    assert exc.value.code == "MODBUS_DEVICE_NOT_FOUND"
 
 
 def test_modbus_probe_found():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="probe",
             port="/dev/ttyRS485-1",
@@ -667,7 +480,6 @@ def test_modbus_probe_found():
 def test_modbus_probe_empty_response_means_not_found():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="probe",
             port="/dev/ttyRS485-1",
@@ -683,7 +495,6 @@ def test_modbus_probe_empty_response_means_not_found():
 def test_modbus_probe_rpc_failure_surfaces_as_not_found():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="probe",
             port="/dev/ttyRS485-1",
@@ -699,7 +510,6 @@ def test_modbus_probe_rpc_failure_surfaces_as_not_found():
 def test_modbus_add_devices_appends_to_target_port():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="add-devices",
             port="/dev/ttyRS485-1",
@@ -730,7 +540,6 @@ def test_modbus_add_devices_appends_to_target_port():
 def test_modbus_add_devices_unknown_port():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="add-devices",
             port="/dev/ttyNOPE",
@@ -740,13 +549,12 @@ def test_modbus_add_devices_unknown_port():
     ctx.rpc.call.return_value = {"content": {"ports": []}}
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
-    assert exc.value.code == "MODBUS_ADD_NO_DEVICES"
+    assert exc.value.code == "MODBUS_ADD_PORT_NOT_FOUND"
 
 
 def test_modbus_add_devices_rejects_invalid_json():
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             subcmd="add-devices",
             port="/dev/ttyRS485-1",
@@ -755,7 +563,7 @@ def test_modbus_add_devices_rejects_invalid_json():
     )
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
-    assert exc.value.code == "MODBUS_ADD_NO_DEVICES"
+    assert exc.value.code == "MODBUS_ADD_INVALID_JSON"
 
 
 # --- serial-debug ---
@@ -764,7 +572,6 @@ def test_modbus_add_devices_rejects_invalid_json():
 def test_serial_debug(monkeypatch):
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             port="/dev/ttyRS485-1",
             seconds=10,
@@ -781,7 +588,6 @@ def test_serial_debug(monkeypatch):
 def test_serial_debug_restores_debug_off_when_journal_raises(monkeypatch):
     ctx = _ctx(
         args=argparse.Namespace(
-            human=False,
             quiet=False,
             port="/dev/ttyRS485-1",
             seconds=10,

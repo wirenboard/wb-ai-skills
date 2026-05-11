@@ -51,7 +51,7 @@ For reading retained MQTT values (device controls, meta), prefer `wb-cli`:
 ssh root@<HOST> wb-cli mqtt read '/devices/wb-mr6c_2/controls/K1'
 ssh root@<HOST> wb-cli mqtt write '/devices/wb-mr6c_2/controls/K1/on' 1
 ssh root@<HOST> wb-cli mqtt list '/devices/+/meta/name'
-ssh root@<HOST> wb-cli devices controls wb-mr6c_2      # all controls with types and values
+ssh root@<HOST> wb-cli dev wb-mr6c_2      # all controls with types and values
 ```
 
 Use raw `mosquitto_sub`/`mosquitto_pub` only for: `$SYS` topics, non-retained streams, broker config testing with `-u`/`-P` auth flags, and bridge diagnostics.
@@ -219,7 +219,7 @@ bridge_insecure false
 ```bash
 ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/broker/+' -C 20 -W 2"
 # $SYS/broker/clients/connected, $SYS/broker/messages/received/1min etc.
-ssh root@<HOST> wb-cli devices list                   # all WB devices with names (faster than raw sub)
+ssh root@<HOST> wb-cli dev                   # all WB devices with names (faster than raw sub)
 ```
 
 `mosquitto_sub` without `-u` against a closed listener → 1883 will refuse, 1883 on the Unix socket (mosquitto_sub auto-picks hostname=localhost:1883 by default). To hit the Unix socket: `mosquitto_sub -L mqtt://localhost:1883/<topic>` or connect with `mosquitto_sub -h /var/run/mosquitto/mosquitto.sock` — doesn't work in some versions, easier via 1883.

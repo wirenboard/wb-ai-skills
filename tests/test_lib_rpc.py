@@ -39,7 +39,7 @@ def test_invalid_target_empty_segment(shell_returning):
 
 def test_timeout_becomes_rpc_no_reply(shell_raising):
     with pytest.raises(WbCliError) as exc:
-        RpcClient(shell_raising("TIMEOUT")).call("drv/svc/M")
+        RpcClient(shell_raising("SHELL_TIMEOUT")).call("drv/svc/M")
     assert exc.value.code == "RPC_NO_REPLY"
 
 

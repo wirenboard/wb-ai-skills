@@ -178,7 +178,7 @@ Minimum: change `device_type`, `device.id`, `device.name`, `title`, then rewrite
 First a template with **one** channel. Add the device to `/etc/wb-mqtt-serial.conf` via confed, verify the channel publishes and the value is plausible:
 
 ```bash
-ssh root@<HOST> wb-cli devices controls <device.id>_<slave_id>
+ssh root@<HOST> wb-cli dev <device.id>_<slave_id>
 # or read a single value:
 ssh root@<HOST> wb-cli mqtt read '/devices/<device.id>_<slave_id>/controls/<channel>'
 ```

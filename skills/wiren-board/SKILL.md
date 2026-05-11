@@ -76,17 +76,28 @@ In human mode a stderr spinner / progress bar is drawn during long operations; i
 ### Key commands
 
 ```bash
-wb-cli info                              # serial, firmware, board, uptime
-wb-cli devices list                      # all devices with names
-wb-cli devices controls <device>         # values, types, readonly, errors
-wb-cli devices set <device> <ctrl> <val> # turn on/off, write value
-wb-cli mqtt read <topic>                 # read retained value
-wb-cli mqtt write <topic> <value>        # publish
-wb-cli confed load <path>                # load config via confed RPC
-wb-cli rules list                        # automation rules
-wb-cli history get <device/control>      # time-series from db
-wb-cli modbus scan --port /dev/ttyRS485-1
-wb-cli audit                             # quick health check
+wb-cli info                                    # serial, firmware, board, uptime
+wb-cli dev                                     # every <device>/<control> with value/type/flags
+wb-cli dev <device>                            # controls of one device with metadata
+wb-cli dev <device>/<control>                  # read one control
+wb-cli dev <device>/<control> <value>          # write one control (refuses readonly / unknown)
+wb-cli dev --all                               # include system_* devices
+wb-cli mqtt read <topic>                       # raw MQTT: read retained value
+wb-cli mqtt write <topic> <value> [-r]         # raw MQTT: publish (-r for retained)
+wb-cli mqtt list '<pattern>'                   # list retained topics by wildcard
+wb-cli confed load <path>                      # service config via confed RPC
+wb-cli rules list                              # wb-rules automation
+wb-cli history get <device>/<control>          # time-series from wb-mqtt-db
+wb-cli modbus scan                             # scan RS-485 (filter with --port)
+wb-cli audit                                   # quick health check
+```
+
+Addresses everywhere use the wb-rules form `<device>/<control>` — same as
+`dev["X"]["Y"]` inside a rule. Quote it if the control name has a space:
+
+```bash
+ssh root@<HOST> "wb-cli --json dev 'wb-mdm3_5/Channel 1 Dimming Level' 30"
+ssh root@<HOST> "wb-cli --json dev 'wb-map6s_34/P 1'"
 ```
 
 ### Standard Linux — use SSH directly

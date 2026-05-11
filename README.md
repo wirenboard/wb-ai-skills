@@ -10,8 +10,8 @@ Runs **on the controller**. Built for LLM agents and operators: SSH in, call `wb
 ssh root@wirenboard-A25NDEMJ wb-cli info
 # → {"data": {"serial_number": "A25NDEMJ", "release_name": "wb-2602", ...}}
 
-ssh root@wirenboard-A25NDEMJ wb-cli devices set wb-mr6c_52 K1 1
-# → {"data": {"device": "wb-mr6c_52", "control": "K1", "value": "1", "ok": true}}
+ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
+# → {"data": {"device": "wb-mr6c_2", "control": "K1", "value": "1", "ok": true}}
 ```
 
 ## Commands
@@ -19,13 +19,13 @@ ssh root@wirenboard-A25NDEMJ wb-cli devices set wb-mr6c_52 K1 1
 | Command | What it does |
 |---|---|
 | `info` | Controller identity: serial, firmware, board revision, uptime |
-| `devices list` | All devices with names and drivers |
-| `devices controls <dev>` | Controls with values, types, readonly, error flags |
-| `devices set <dev> <ctrl> <val>` | Set a control value (turn on/off, write) |
-| `devices inventory` | Full device tree with metadata |
+| `dev` | All controls on the bus with value / type / readonly (use `--all` for `system_*`) |
+| `dev <device>` | Controls of one device, same columns |
+| `dev <device>/<control>` | Read one control |
+| `dev <device>/<control> <value>` | Write one control (refuses readonly / unknown) |
 | `mqtt read <topic>` | Read retained MQTT value |
 | `mqtt write <topic> <val>` | Publish MQTT message (`-r` to retain) |
-| `mqtt list [topic]` | List retained topics |
+| `mqtt list <pattern>` | List retained topics |
 | `confed load <path>` | Load config via wb-mqtt-confed |
 | `confed save <path> <json>` | Save config via wb-mqtt-confed |
 | `rules list\|load\|save\|disable\|delete` | Manage wb-rules automation scripts |
@@ -49,7 +49,7 @@ ssh root@wirenboard-A25NDEMJ wb-cli devices set wb-mr6c_52 K1 1
 Override anywhere:
 
 ```bash
-wb-cli --json devices list      # force JSON
+wb-cli --json dev               # force JSON
 wb-cli --human modbus ports     # force human view
 WB_CLI_OUTPUT=json wb-cli info  # same via env (good for shells)
 WB_CLI_NO_SPINNER=1 wb-cli ...  # silence the spinner regardless of mode

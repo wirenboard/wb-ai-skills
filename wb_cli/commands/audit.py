@@ -10,15 +10,18 @@ from wb_cli.plugin import BasePlugin
 
 class AuditPlugin(BasePlugin):
     name = "audit"
-    help = "quick system health check: failed units, disk, memory"
+    help = "quick health check (failed units, identity)"
 
     def register(self, subparsers: argparse._SubParsersAction) -> None:
-        parser = subparsers.add_parser(
+        subparsers.add_parser(
             self.name,
             help=self.help,
-            description="Run a quick health audit of the controller.",
+            description=(
+                "Quick controller health snapshot — what `wb-cli snapshot` saves, but\n"
+                "with explicit per-check verdicts. Returns ok=false (exit 0 still) if\n"
+                "any check fails."
+            ),
         )
-        parser.add_argument("-q", "--quiet", action="store_true")
 
     def dispatch(self, ctx) -> dict:
         checks: List[Dict[str, Any]] = []

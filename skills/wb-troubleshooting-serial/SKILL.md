@@ -26,7 +26,7 @@ If wb-cli is installed, use these instead of raw MQTT RPC:
 ssh root@<HOST> wb-cli serial-debug --port /dev/ttyRS485-1 --seconds 60
 ssh root@<HOST> wb-cli modbus scan --port /dev/ttyRS485-1
 ssh root@<HOST> wb-cli modbus probe --port /dev/ttyRS485-1 --address 52
-ssh root@<HOST> wb-cli devices controls wb-mr6c_52
+ssh root@<HOST> wb-cli dev wb-mr6c_52
 ```
 
 For detailed diagnostics (CRC analysis, experiment workflow), use the manual steps below.

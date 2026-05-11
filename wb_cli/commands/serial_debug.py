@@ -12,26 +12,27 @@ from wb_cli.plugin import BasePlugin
 
 class SerialDebugPlugin(BasePlugin):
     name = "serial-debug"
-    help = "RS-485 bus debug: enable debug logging, capture, then restore"
+    help = "turn on RS-485 debug logging, capture for N seconds, then restore"
 
     def register(self, subparsers: argparse._SubParsersAction) -> None:
         parser = subparsers.add_parser(
             self.name,
             help=self.help,
-            description="Enable wb-mqtt-serial debug, capture for N seconds, restore.",
+            description=(
+                "Toggle wb-mqtt-serial's Debug control on, wait `--seconds`, then collect\n"
+                "everything wb-mqtt-serial wrote to the journal during that window. The\n"
+                "Debug control is restored to off even if the capture itself fails."
+            ),
+            epilog=("Example:\n" "  wb-cli serial-debug --port /dev/ttyRS485-1 --seconds 30\n"),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
         )
-        parser.add_argument(
-            "--port",
-            required=True,
-            help="serial port path (e.g. /dev/ttyRS485-1)",
-        )
+        parser.add_argument("--port", required=True, help="serial port path, e.g. /dev/ttyRS485-1")
         parser.add_argument(
             "--seconds",
             type=int,
             default=10,
-            help="capture duration (default: 10)",
+            help="how long to keep debug on / collect the journal (default: 10)",
         )
-        parser.add_argument("-q", "--quiet", action="store_true")
 
     def dispatch(self, ctx) -> dict:
         port = ctx.args.port
@@ -52,7 +53,8 @@ class SerialDebugPlugin(BasePlugin):
             countdown(f"capturing {port}", seconds)
             entries = ctx.journal.read(
                 unit="wb-mqtt-serial",
-                since=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_ts)),
+                # journald accepts local time; we pin to UTC for reproducibility.
+                since=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(start_ts)),
                 timeout=10.0,
             )
         finally:

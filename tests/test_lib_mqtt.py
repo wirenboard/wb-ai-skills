@@ -11,20 +11,23 @@ from wb_cli.lib.mqtt import MqttClient
 # ---------- subscribe ----------
 
 
-class _FakePopen:
-    """Stand-in for subprocess.Popen tailored to mqtt._drain_retained.
+class _FakeStdout:  # pylint: disable=too-few-public-methods
+    def fileno(self):
+        return -1
 
-    ``lines`` is the retained stream we expect mosquitto_sub to print to
-    stdout; once exhausted, the .stdout file behaves like the broker went
-    silent — exactly the case `_drain_retained` watches for via select().
+
+class _FakePopen:
+    """Stand-in for subprocess.Popen for mqtt._drain_retained.
+
+    The plugin reads via ``os.read(fd, n)``; we drive that via _install_io().
+    ``returncode`` and ``communicate`` are present because the surrounding
+    ``subscribe`` calls them.
     """
 
-    def __init__(self, lines, *, returncode=0, stderr=""):
-        self._lines = list(lines)
+    def __init__(self, *, returncode=0, stderr=b""):
         self.returncode = returncode
         self._stderr = stderr
-        self.stdout = MagicMock()
-        self.stdout.readline.side_effect = self._lines + [""]
+        self.stdout = _FakeStdout()
 
     def terminate(self):
         pass
@@ -32,41 +35,74 @@ class _FakePopen:
     def kill(self):
         pass
 
+    def poll(self):
+        return None
+
     def communicate(self, timeout=None):  # pylint: disable=unused-argument
-        return ("", self._stderr)
+        return (b"", self._stderr)
 
 
-def _install_popen(monkeypatch, fake_popen):
-    monkeypatch.setattr("wb_cli.lib.mqtt.subprocess.Popen", lambda *a, **kw: fake_popen)
+def _install_io(monkeypatch, chunks, ready_pattern=None):
+    """Wire os.read + select.select so subscribe sees the given retained chunks.
 
+    ``chunks``: list of bytes blobs returned by os.read in order; an empty
+    blob simulates EOF (Python sees BlockingIOError-equivalent and idle window
+    kicks in).
+    ``ready_pattern``: list of bools controlling select() readiness; by
+    default each chunk corresponds to one ready+read cycle, then
+    not-ready forever.
+    """
+    if ready_pattern is None:
+        ready_pattern = [True] * len(chunks) + [False] * 100
 
-def _install_select(monkeypatch, sequence):
-    """Drive select.select(): each call pops one (stdout_ready, [], []) value."""
-    iterator = iter(sequence)
+    chunk_iter = iter(chunks)
+    ready_iter = iter(ready_pattern)
 
-    def fake_select(rlist, wlist, xlist, timeout=None):  # pylint: disable=unused-argument
-        try:
-            ready = next(iterator)
-        except StopIteration:
-            ready = False
+    def fake_select(rlist, _wlist, _xlist, _timeout):
+        ready = next(ready_iter, False)
         return (rlist if ready else [], [], [])
 
+    def fake_read(_fd, _n):
+        return next(chunk_iter, b"")
+
     monkeypatch.setattr("wb_cli.lib.mqtt.select.select", fake_select)
+    monkeypatch.setattr("wb_cli.lib.mqtt.os.read", fake_read)
+    monkeypatch.setattr("wb_cli.lib.mqtt.os.set_blocking", lambda *_a, **_kw: None)
+
+
+def _install_popen(monkeypatch, proc):
+    monkeypatch.setattr("wb_cli.lib.mqtt.subprocess.Popen", lambda *a, **kw: proc)
 
 
 def test_subscribe_parses_tab_separated_lines(monkeypatch):
-    proc = _FakePopen(["topic/a\tvalue-a\n", "topic/b\tvalue-b\n"])
-    _install_popen(monkeypatch, proc)
-    _install_select(monkeypatch, [True, True, False, False, False, False, False, False])
+    _install_popen(monkeypatch, _FakePopen())
+    _install_io(monkeypatch, [b"topic/a\tvalue-a\ntopic/b\tvalue-b\n"])
+    assert MqttClient(MagicMock()).subscribe("topic/+", timeout=2.0) == [
+        ("topic/a", "value-a"),
+        ("topic/b", "value-b"),
+    ]
+
+
+def test_subscribe_handles_chunked_arrival(monkeypatch):
+    """Retained lines may arrive in any number of os.read() chunks."""
+    _install_popen(monkeypatch, _FakePopen())
+    _install_io(monkeypatch, [b"topic/a\tv", b"alue-a\ntopic/b\tvalue-b\n"])
+    assert MqttClient(MagicMock()).subscribe("topic/+", timeout=2.0) == [
+        ("topic/a", "value-a"),
+        ("topic/b", "value-b"),
+    ]
+
+
+def test_subscribe_keeps_spaces_inside_payload(monkeypatch):
+    _install_popen(monkeypatch, _FakePopen())
+    _install_io(monkeypatch, [b"/devices/wb-mdm3_5/controls/Channel 1 Dimming Level\t30\n"])
     result = MqttClient(MagicMock()).subscribe("topic/+", timeout=2.0)
-    assert result == [("topic/a", "value-a"), ("topic/b", "value-b")]
+    assert result == [("/devices/wb-mdm3_5/controls/Channel 1 Dimming Level", "30")]
 
 
 def test_subscribe_raises_mqtt_timeout_when_nothing_arrives(monkeypatch):
-    proc = _FakePopen([])
-    _install_popen(monkeypatch, proc)
-    # select never reports ready -> deadline trips, no messages collected.
-    _install_select(monkeypatch, [False] * 100)
+    _install_popen(monkeypatch, _FakePopen())
+    _install_io(monkeypatch, [], ready_pattern=[False] * 100)
     with pytest.raises(WbCliError) as exc:
         MqttClient(MagicMock()).subscribe("topic/+", timeout=0.2)
     assert exc.value.code == "MQTT_TIMEOUT"

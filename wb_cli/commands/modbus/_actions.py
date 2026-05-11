@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import select
 import subprocess
 import time
 
@@ -13,65 +14,123 @@ from wb_cli.lib.progress import ProgressBar
 _BROKER_SETTLE_S = 1.0
 _SUB_CONNECT_S = 0.5
 _SCAN_STOP_TIMEOUT_S = 2.0
+# After progress=100 wb-device-manager may still publish another state with
+# more devices (the final tally trickles in). Wait this long for the list to
+# stop growing before declaring the scan done.
+_FINAL_STABLE_S = 1.5
 
 
 def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=too-many-statements
     """Register all modbus subcommand parsers."""
-    _common = [
-        ("-q", {"action": "store_true", "dest": "quiet"}),
-    ]
-
-    p = sub.add_parser("scan", help="scan RS-485 bus for devices")
+    p = sub.add_parser(
+        "scan",
+        help="scan the RS-485 bus and list every device that answers",
+        description=(
+            "Runs wb-device-manager's bus scan and returns what answered. Same flow\n"
+            "the web UI's three scan buttons trigger.\n"
+            "\n"
+            "  (default)     web-UI «Поиск устройств». WB Fast Modbus — an extension\n"
+            "                of standard Modbus, supported by current WB firmware.\n"
+            "                Finds every device on the bus that speaks Fast Modbus\n"
+            "                (typically all of them on a modern setup).\n"
+            "  --slow        web-UI «Начать медленное сканирование». Classic Modbus\n"
+            "                poll over every UART combo (8 baud × 3 parity × 2 stop).\n"
+            "                Use when the default Fast Modbus pass misses devices —\n"
+            "                older firmware without Fast Modbus, or non-default UART.\n"
+            "                Takes minutes; raise --timeout accordingly.\n"
+            "  --bootloader  web-UI «Поиск устройств в режиме загрузчика». Looks for\n"
+            "                devices stuck after a failed `modbus-fw update`.\n"
+            "\n"
+            "All three modes pass `preserve_old_results=false` so we get a fresh\n"
+            "result instead of the retained cache from the previous scan.\n"
+            "--slow and --bootloader are mutually exclusive."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  wb-cli modbus scan                                    # default — finds everything\n"
+            "  wb-cli modbus scan --slow --timeout 600               # exhaustive poll\n"
+            "  wb-cli modbus scan --bootloader --port /dev/ttyRS485-1\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--slow",
+        dest="scan_type",
+        action="store_const",
+        const="standard",
+        help="exhaustive UART-combo poll (web UI's «Медленное сканирование»)",
+    )
+    mode.add_argument(
+        "--bootloader",
+        dest="scan_type",
+        action="store_const",
+        const="bootloader",
+        help="look for devices in bootloader mode after a failed fw-update",
+    )
+    p.set_defaults(scan_type="extended")
     p.add_argument(
         "--port",
         default=None,
-        help="filter results to this serial port path; scan still runs over all ports",
+        help="serial port path; if set, wb-device-manager scans only that port",
     )
     p.add_argument(
         "--timeout",
         type=float,
         default=60.0,
-        help="seconds to wait for bus-scan completion (default: 60)",
+        help="seconds to wait for completion (default: 60; bump for --type extended)",
     )
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
 
     p = sub.add_parser(
         "probe",
         help="probe a single Modbus address (assumes 9600-N-8-2)",
-        description="Probe one slave address. Uses bus defaults: 9600 baud, N parity, 8 data, 2 stop.",
+        description="Send a single Probe request to one slave address on one port. Uses 9600-N-8-2 defaults.",
     )
-    p.add_argument("--port", required=True, help="serial port path")
-    p.add_argument("--address", type=int, required=True, help="slave address (1-247)")
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
+    p.add_argument("--port", required=True, help="serial port path, e.g. /dev/ttyRS485-1")
+    p.add_argument("--address", type=int, required=True, help="Modbus slave address (1-247)")
 
-    p = sub.add_parser("templates", help="list available device templates")
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
+    sub.add_parser(
+        "templates",
+        help="list available wb-mqtt-serial device templates",
+        description="Names of every JSON template under /usr/share/wb-mqtt-serial/templates/.",
+    )
 
-    p = sub.add_parser("template", help="show details of one template")
+    p = sub.add_parser(
+        "template",
+        help="dump one device template (registers, channels, defaults)",
+        description="Read a single template file from /usr/share/wb-mqtt-serial/templates/.",
+    )
     p.add_argument(
         "template_id",
-        help="template file name (with or without .json), e.g. config-wb-mr3",
+        help="template file name with or without .json, e.g. `config-wb-mr3`",
     )
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
 
-    p = sub.add_parser("device-info", help="show info about a configured device")
-    p.add_argument("device_id", help="device slave_id or id in serial config")
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
+    p = sub.add_parser(
+        "device-info",
+        help="show one configured device from /etc/wb-mqtt-serial.conf",
+        description="Look up a configured device by `slave_id` or by string `id`.",
+    )
+    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
 
-    p = sub.add_parser("ports", help="list configured serial ports")
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
+    sub.add_parser(
+        "ports",
+        help="list serial ports configured in wb-mqtt-serial",
+        description="Read /etc/wb-mqtt-serial.conf and dump every port stanza (path + UART params).",
+    )
 
-    p = sub.add_parser("add-devices", help="add scanned devices to config")
-    p.add_argument("--port", required=True, help="serial port path")
-    p.add_argument("--scan-results", required=True, help="JSON scan results")
-    for flag, kw in _common:
-        p.add_argument(flag, **kw)
+    p = sub.add_parser(
+        "add-devices",
+        help="add devices from `modbus scan` output to the serial config",
+        description=(
+            "Append entries to the `devices` list of one port in /etc/wb-mqtt-serial.conf.\n"
+            "Pass the JSON from `wb-cli --json modbus scan`."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("--port", required=True, help="target serial port path (must already exist in the config)")
+    p.add_argument(
+        "--scan-results", required=True, help="JSON list of devices (as produced by `modbus scan`)"
+    )
 
 
 def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
@@ -110,13 +169,44 @@ def _open_state_stream():
         ) from exc
 
 
-def _await_regular_scan(ctx, proc, progress_bar):
-    """Block until the *regular* (non-extended) bus scan reports progress=100."""
+def _reap(proc) -> None:
+    """Terminate a Popen safely with a kill fallback."""
+    proc.terminate()
+    try:
+        proc.wait(timeout=2.0)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def _await_scan(ctx, proc, progress_bar, scan_type: str):
+    """Stream wb-device-manager's scan state until done or timeout.
+
+    Returns ``(devices, completed, progress)`` — ``devices`` is the latest
+    snapshot we received, ``completed`` says whether the chosen scan finished
+    cleanly, and ``progress`` is the last percentage we saw. Partial finds
+    are returned even on timeout so the user keeps what was discovered.
+
+    Once we see the first progress=100 state for the chosen phase we keep
+    reading for ``_FINAL_STABLE_S`` more seconds, because wb-device-manager
+    sometimes publishes one or two more state messages with more devices
+    just after reporting 100%.
+    """
     deadline = time.monotonic() + ctx.args.timeout
+    saw_progress = False
+    devices: list = []
+    last_progress = 0
+    final_deadline: float = 0.0  # set once we first hit done(); read until it expires
     while time.monotonic() < deadline:
+        # Non-blocking peek so _FINAL_STABLE_S can fire even when no new
+        # state message arrives.
+        ready, _, _ = select.select([proc.stdout], [], [], 0.1)
+        if not ready:
+            if final_deadline and time.monotonic() >= final_deadline:
+                return devices, True, last_progress
+            continue
         line = proc.stdout.readline()
         if not line:
-            return None
+            return devices, final_deadline > 0, last_progress
         try:
             state = json.loads(line)
         except json.JSONDecodeError:
@@ -130,12 +220,47 @@ def _await_regular_scan(ctx, proc, progress_bar):
             )
         progress = state.get("progress", 0)
         is_ext = state.get("is_ext_scan", False)
-        dev_count = len(state.get("devices", []))
-        phase = "extended" if is_ext else "regular"
-        progress_bar.update(progress, suffix=f"{phase}, {dev_count} device(s)")
-        if progress >= 100 and not is_ext:
-            return state.get("devices", [])
-    return None
+        devices = state.get("devices", devices)
+        last_progress = progress
+        phase = "extended" if is_ext else "standard"
+        progress_bar.update(progress, suffix=f"{phase}, {len(devices)} device(s)")
+        if 0 < progress < 100:
+            saw_progress = True
+            final_deadline = 0.0  # ramp-up overrides any earlier stable window
+        if progress >= 100 and saw_progress and _is_done(scan_type, is_ext):
+            # Start the stable-window on first done() if not yet started;
+            # extend it on each subsequent matching state so the list of
+            # discovered devices keeps growing as long as updates arrive.
+            final_deadline = time.monotonic() + _FINAL_STABLE_S
+    return devices, final_deadline > 0, last_progress
+
+
+def _is_done(scan_type: str, is_ext: bool) -> bool:
+    # The phase flag in state messages mirrors the scan_type we requested:
+    #   extended (default)  → is_ext_scan=True throughout
+    #   standard (--slow)   → is_ext_scan=False throughout
+    #   bootloader          → no extended phase, any progress=100 is done
+    if scan_type == "extended":
+        return is_ext
+    if scan_type == "standard":
+        return not is_ext
+    return True
+
+
+def _rpc_scan_args(args) -> dict:
+    """Map CLI args to wb-device-manager's bus-scan/Start kwargs.
+
+    Always pass `preserve_old_results=false` to drop the retained cache from
+    the previous scan — otherwise the first state message we see is stale
+    and we exit immediately with whatever the previous scan happened to find.
+    """
+    out: dict = {
+        "scan_type": args.scan_type,
+        "preserve_old_results": False,
+    }
+    if args.port:
+        out["port"] = args.port
+    return out
 
 
 def _scan(ctx) -> dict:
@@ -147,43 +272,40 @@ def _scan(ctx) -> dict:
         pass
     time.sleep(_BROKER_SETTLE_S)
 
-    spinner_label = f"scanning {ctx.args.port}" if ctx.args.port else "scanning RS-485 bus"
+    scan_type = ctx.args.scan_type
+    spinner_label = f"{scan_type} scan of {ctx.args.port}" if ctx.args.port else f"{scan_type} RS-485 scan"
     proc = _open_state_stream()
     devices: list = []
-    # wb-device-manager replays the previous extended scan first, then runs
-    # the regular bus scan.  Wait for the regular scan to reach progress=100.
+    completed = False
+    last_progress = 0
     with proc, ProgressBar(spinner_label) as progress_bar:
         try:
             time.sleep(_SUB_CONNECT_S)
-            ctx.rpc.call("wb-device-manager/bus-scan/Start", {})
-            result = _await_regular_scan(ctx, proc, progress_bar)
-            if result is not None:
-                devices = result
+            ctx.rpc.call("wb-device-manager/bus-scan/Start", _rpc_scan_args(ctx.args))
+            devices, completed, last_progress = _await_scan(ctx, proc, progress_bar, scan_type)
         finally:
             try:
                 ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
             except WbCliError:
                 pass
-            proc.terminate()
-            try:
-                proc.wait(timeout=2.0)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+            _reap(proc)
 
-    if result is None:
-        raise WbCliError(
-            code="MODBUS_SCAN_TIMEOUT",
-            message=f"Bus scan did not finish within {ctx.args.timeout}s",
-            details={"port": ctx.args.port, "timeout_seconds": ctx.args.timeout},
-            exit_code=ExitCode.DOMAIN,
+    envelope: dict = {
+        "scan_type": scan_type,
+        "devices": devices,
+        "count": len(devices),
+        "completed": completed,
+    }
+    if not completed:
+        envelope["progress"] = last_progress
+        envelope["timeout_seconds"] = ctx.args.timeout
+        envelope["hint"] = (
+            "Scan did not finish in time. Re-run with a larger --timeout; "
+            "--slow scans typically need several minutes per port."
         )
-
     if ctx.args.port:
-        devices = [d for d in devices if d.get("port", {}).get("path") == ctx.args.port]
-    result: dict = {"devices": devices, "count": len(devices)}
-    if ctx.args.port:
-        result["port"] = ctx.args.port
-    return result
+        envelope["port"] = ctx.args.port
+    return envelope
 
 
 def _probe(ctx) -> dict:
@@ -260,8 +382,8 @@ def _device_info(ctx) -> dict:
         if str(dev.get("slave_id")) == str(ctx.args.device_id) or dev.get("id") == ctx.args.device_id:
             return {"device": dev}
     raise WbCliError(
-        code="DEVICES_DEVICE_NOT_FOUND",
-        message=f"Device '{ctx.args.device_id}' not in serial config",
+        code="MODBUS_DEVICE_NOT_FOUND",
+        message=f"Device '{ctx.args.device_id}' not in /etc/wb-mqtt-serial.conf",
         details={"device_id": ctx.args.device_id},
         exit_code=ExitCode.DOMAIN,
     )
@@ -278,14 +400,14 @@ def _add_devices(ctx) -> dict:
         scan_results = json.loads(ctx.args.scan_results)
     except json.JSONDecodeError as exc:
         raise WbCliError(
-            code="MODBUS_ADD_NO_DEVICES",
+            code="MODBUS_ADD_INVALID_JSON",
             message=f"--scan-results is not valid JSON: {exc}",
-            exit_code=ExitCode.DOMAIN,
+            exit_code=ExitCode.USAGE,
         ) from exc
 
     if not scan_results:
         raise WbCliError(
-            code="MODBUS_ADD_NO_DEVICES",
+            code="MODBUS_ADD_EMPTY",
             message="No devices in scan results to add",
             exit_code=ExitCode.DOMAIN,
         )
@@ -300,8 +422,8 @@ def _add_devices(ctx) -> dict:
             break
     if target_port is None:
         raise WbCliError(
-            code="MODBUS_ADD_NO_DEVICES",
-            message=f"Port '{ctx.args.port}' not found in serial config",
+            code="MODBUS_ADD_PORT_NOT_FOUND",
+            message=f"Port '{ctx.args.port}' not found in /etc/wb-mqtt-serial.conf",
             details={"port": ctx.args.port},
             exit_code=ExitCode.DOMAIN,
         )
