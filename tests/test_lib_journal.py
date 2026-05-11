@@ -52,5 +52,5 @@ def test_read_invalid_time_string_raises_journal_invalid_time(shell_returning):
 
 def test_read_other_shell_error_propagates(shell_raising):
     with pytest.raises(WbCliError) as exc:
-        JournalReader(shell_raising("TIMEOUT")).read()
-    assert exc.value.code == "TIMEOUT"
+        JournalReader(shell_raising("SHELL_TIMEOUT")).read()
+    assert exc.value.code == "SHELL_TIMEOUT"

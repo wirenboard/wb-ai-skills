@@ -74,9 +74,9 @@ If `jq` isn't there (minimal image or very old release) — `python3 -c '...'` a
 
 ```bash
 # New wb-mqtt-zigbee converter:
-ssh root@<HOST> wb-cli devices controls zigbee_<id>
+ssh root@<HOST> wb-cli dev zigbee_<id>
 # Old wb-zigbee2mqtt converter:
-ssh root@<HOST> 'wb-cli devices controls "0x<ieee>"'
+ssh root@<HOST> 'wb-cli dev "0x<ieee>"'
 ```
 
 Returns all controls with current values, types, and error flags in JSON.
@@ -98,7 +98,7 @@ ssh root@<HOST> "mosquitto_sub -t '/devices/0x<ieee>/controls/+' -C 50 -W 3"
 
 **Via wb-cli (if `wb-mqtt-zigbee` converter is present):**
 ```bash
-ssh root@<HOST> wb-cli devices set zigbee_<id> <channel> <value>
+ssh root@<HOST> wb-cli dev zigbee_<id>/<channel> <value>
 ```
 
 **Via raw MQTT (WB converter):**

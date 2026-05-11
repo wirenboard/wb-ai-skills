@@ -1,3 +1,88 @@
+wb-cli (0.3.0) stable; urgency=medium
+
+  * `modbus scan` now mirrors the three buttons in the web UI:
+      (default)     «Поиск устройств» — WB Fast Modbus pass; on a modern
+                    bus this is what finds everything.
+      --slow        «Начать медленное сканирование» — classic Modbus poll
+                    over every UART combo. Use when the default misses
+                    devices (old firmware without Fast Modbus, non-default
+                    UART). Raise --timeout (default 60s isn't enough).
+      --bootloader  «Поиск устройств в режиме загрузчика» — for devices
+                    stuck after a failed `modbus-fw update`.
+    Always passes `preserve_old_results=false` so the result is fresh;
+    waits a short stable window after progress=100 so the trickle of
+    last-second device updates makes it into the output. `--port` goes
+    into the RPC instead of being a post-filter. Output is a proper
+    aligned table with a header and includes `scan_type`. On timeout the
+    partial result is returned with `completed=false` + `progress`, not
+    discarded.
+
+  * NEW plugin `modbus-fw` — firmware update over RS-485 (the web UI's
+    "Check / Update" buttons):
+      wb-cli modbus-fw check <slave_id> --port <path>
+      wb-cli modbus-fw update <slave_id> --port <path> [--wait]
+      wb-cli modbus-fw restore <slave_id> --port <path> [--wait]
+      wb-cli modbus-fw clear-error <slave_id> --port <path>
+      wb-cli modbus-fw watch                  # live progress for everything
+      wb-cli modbus-fw state                  # one-shot status
+    `--wait` blocks until the device finishes/errors, drawing a stderr
+    progress bar; otherwise the call returns once wb-device-manager
+    accepts the request and the user can `modbus-fw watch` later.
+
+  * lib/rpc: server error messages from `mqtt-rpc-client` go to *stdout*,
+    not stderr — fall back to stdout when stderr is empty so the caller
+    actually sees what the RPC server said.
+
+  * BREAKING — `devices` plugin is gone. Everything now lives under one verb:
+      wb-cli dev                                # every <device>/<control>
+                                                 with value/type/readonly/error
+      wb-cli dev <device>                       # controls of one device
+      wb-cli dev <device>/<control>             # read one
+      wb-cli dev <device>/<control> <value>     # write one
+      wb-cli dev --all                          # include system_* devices
+    The wb-rules-style `<device>/<control>` address handles spaces in
+    control names — quote them. List output is a compact three-column
+    table (`address`, `value`, `type/flags`) so it fits in a stock 120-col
+    terminal; the `error` column appears only when at least one row has
+    one.
+
+  * BREAKING — human is now the default output mode everywhere, including
+    pipes (so `wb-cli dev | grep` works the unix way). LLM agents and
+    scripts must pass `--json` (or set `WB_CLI_OUTPUT=json`) — already
+    documented in the wiren-board skill.
+  * Subscribe is correct under wildcard+spaces. mosquitto_sub was
+    full-buffering stdout under a pipe, and Python's BufferedReader was
+    eating subsequent lines, so meta/+ for "Input 0" returned partial
+    results (and `devices set` could silently skip the readonly check).
+    We now run mosquitto_sub through stdbuf -oL and read the raw fd via
+    os.read().
+  * Help screens rewritten in plain English with concrete examples,
+    including how to quote control names with spaces and values with
+    spaces (`wb-cli dev 'wb-mdm3_5/Channel 1 Dimming Level' 30`).
+  * Error code cleanup (post-0.2 audit):
+      AUDIT_BASELINE_NOT_FOUND  -> SNAPSHOT_BASELINE_NOT_FOUND
+      AUDIT_INVALID_SNAPSHOT    -> SNAPSHOT_INVALID
+      HISTORY_INVALID_PERIOD    -> HISTORY_INVALID_CHANNEL
+      MODBUS_ADD_NO_DEVICES     -> split into MODBUS_ADD_INVALID_JSON
+                                              MODBUS_ADD_EMPTY
+                                              MODBUS_ADD_PORT_NOT_FOUND
+      modbus device-info uses    MODBUS_DEVICE_NOT_FOUND (was DEVICES_*)
+      shell.py: TIMEOUT/INTERNAL renamed to SHELL_TIMEOUT/SHELL_COMMAND_FAILED
+      cli.py:   INTERNAL -> CLI_INTERNAL
+  * `snapshot save` now returns {"ok": true} like every other side-effect
+    command; timestamp label is UTC.
+  * `mqtt list` envelope renamed: `topics` -> `messages` (consistent with
+    `mqtt read`'s `{topic, payload}` shape).
+  * `history`: `point_count` -> `count`; timestamp filter no longer leaks
+    a stray `{"timestamp": {}}` when neither --from nor --to is set.
+  * `rules disable` renames .js -> .js.disabled (used to overwrite the
+    file with empty content, losing the source).
+  * Dead code removed: per-subparser `-q/--quiet` (unused; only the
+    top-level CliContext.quiet was ever read), `args.human=False` in
+    every test Namespace.
+
+ -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 20:30:00 +0000
+
 wb-cli (0.2.1) stable; urgency=medium
 
   * MQTT subscribe is now ~10x faster. Previously `-W <timeout>` kept the

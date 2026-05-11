@@ -10,34 +10,44 @@ from wb_cli.plugin import BasePlugin
 
 class HistoryPlugin(BasePlugin):
     name = "history"
-    help = "historical data: time-series values and Mermaid charts"
+    help = "time-series history of a control's values"
 
     def register(self, subparsers: argparse._SubParsersAction) -> None:
         parser = subparsers.add_parser(
             self.name,
             help=self.help,
-            description="Query historical data from wb-mqtt-db.",
+            description=(
+                "Read recorded values of a control from wb-mqtt-db. The channel is\n"
+                "addressed in wb-rules style: `<device>/<control>` (same as `dev`)."
+            ),
+            epilog=(
+                "Examples:\n"
+                "  wb-cli history get   wb-map6s_34/P\\ 1 --limit 50\n"
+                "  wb-cli history chart wb-adc/A1 --from '2026-05-11 00:00:00'\n"
+            ),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         sub = parser.add_subparsers(dest="subcmd", metavar="<action>")
 
-        p = sub.add_parser("get", help="get time-series data for a channel")
-        p.add_argument("channel", help="device/control (e.g. wb-adc/A1)")
-        p.add_argument("--from", dest="from_ts", help="start time (ISO-8601)")
-        p.add_argument("--to", dest="to_ts", help="end time (ISO-8601)")
-        p.add_argument(
-            "--limit",
-            type=int,
-            default=1000,
-            help="max rows (default: 1000)",
-        )
-        p.add_argument("-q", "--quiet", action="store_true")
-
-        p = sub.add_parser("chart", help="Mermaid xychart for a channel")
-        p.add_argument("channel", help="device/control")
-        p.add_argument("--from", dest="from_ts", help="start time")
-        p.add_argument("--to", dest="to_ts", help="end time")
-        p.add_argument("--limit", type=int, default=100)
-        p.add_argument("-q", "--quiet", action="store_true")
+        for action, default_limit in (("get", 1000), ("chart", 100)):
+            p = sub.add_parser(
+                action,
+                help=("rows of (timestamp, value)" if action == "get" else "Mermaid xychart of the channel"),
+                description=(
+                    "Return raw rows; pipe through jq for ad-hoc filtering."
+                    if action == "get"
+                    else "Render a small Mermaid xychart from the latest points."
+                ),
+            )
+            p.add_argument("channel", help="<device>/<control>, e.g. wb-adc/A1")
+            p.add_argument("--from", dest="from_ts", help="start time (ISO-8601 or what db_logger accepts)")
+            p.add_argument("--to", dest="to_ts", help="end time (ISO-8601)")
+            p.add_argument(
+                "--limit",
+                type=int,
+                default=default_limit,
+                help=f"max rows (default: {default_limit})",
+            )
 
     def dispatch(self, ctx) -> dict:
         if ctx.args.subcmd == "get":
@@ -48,10 +58,7 @@ class HistoryPlugin(BasePlugin):
 
     def _get(self, ctx) -> dict:
         params = _build_params(ctx)
-        result = ctx.rpc.call(
-            "db_logger/history/get_values",
-            params,
-        )
+        result = ctx.rpc.call("db_logger/history/get_values", params)
         values = result if isinstance(result, list) else result.get("values", [])
         return {
             "channel": ctx.args.channel,
@@ -61,10 +68,7 @@ class HistoryPlugin(BasePlugin):
 
     def _chart(self, ctx) -> dict:
         params = _build_params(ctx)
-        result = ctx.rpc.call(
-            "db_logger/history/get_values",
-            params,
-        )
+        result = ctx.rpc.call("db_logger/history/get_values", params)
         values = result if isinstance(result, list) else result.get("values", [])
         if not values:
             raise WbCliError(
@@ -77,7 +81,7 @@ class HistoryPlugin(BasePlugin):
         return {
             "channel": ctx.args.channel,
             "mermaid": chart,
-            "point_count": len(values),
+            "count": len(values),
         }
 
 
@@ -86,20 +90,23 @@ def _build_params(ctx) -> dict:
         "channels": [_split_channel(ctx.args.channel)],
         "limit": ctx.args.limit,
     }
+    timestamp: dict = {}
     if ctx.args.from_ts:
-        params["timestamp"] = {"gt": ctx.args.from_ts}
+        timestamp["gt"] = ctx.args.from_ts
     if ctx.args.to_ts:
-        params.setdefault("timestamp", {})["lt"] = ctx.args.to_ts
+        timestamp["lt"] = ctx.args.to_ts
+    if timestamp:
+        params["timestamp"] = timestamp
     return params
 
 
 def _split_channel(channel: str) -> list:
     if "/" not in channel:
         raise WbCliError(
-            code="HISTORY_INVALID_PERIOD",
-            message=f"Channel must be device/control, got '{channel}'",
+            code="HISTORY_INVALID_CHANNEL",
+            message=f"Channel must be <device>/<control>, got '{channel}'",
             details={"channel": channel},
-            exit_code=ExitCode.DOMAIN,
+            exit_code=ExitCode.USAGE,
         )
     device, _, control = channel.partition("/")
     return [device, control]

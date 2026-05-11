@@ -16,25 +16,56 @@ class MqttPlugin(BasePlugin):
         parser = subparsers.add_parser(
             self.name,
             help=self.help,
-            description="Low-level MQTT operations.",
+            description=(
+                "Direct access to the MQTT broker. Prefer `devices` for /devices/<id>/\n"
+                "topics — it understands metadata and refuses bad writes. Use `mqtt`\n"
+                "for everything else: /rpc/, /scenarios/, custom topics."
+            ),
+            epilog=(
+                "Examples:\n"
+                "  wb-cli mqtt read  /devices/wb-mr6c_2/controls/K1\n"
+                "  wb-cli mqtt write /devices/wb-mr6c_2/controls/K1/on 1\n"
+                "  wb-cli mqtt write -r /my-app/config '{\"foo\":1}'   # retained\n"
+                "  wb-cli mqtt list '/devices/+/meta/name'             # one wildcard level\n"
+            ),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         sub = parser.add_subparsers(dest="subcmd", metavar="<action>")
 
-        p = sub.add_parser("read", help="read retained value from a topic")
-        p.add_argument("topic", help="MQTT topic")
-        p.add_argument("--timeout", type=float, default=5.0)
-        p.add_argument("-q", "--quiet", action="store_true")
+        p = sub.add_parser(
+            "read",
+            help="read the retained value of one topic",
+            description=(
+                "Print the retained payload of <topic>. " "Wildcards (+, #) are rejected — use `mqtt list`."
+            ),
+        )
+        p.add_argument("topic", help="exact MQTT topic, no wildcards")
+        p.add_argument("--timeout", type=float, default=5.0, help="seconds to wait (default: 5)")
 
-        p = sub.add_parser("write", help="publish a value to a topic")
-        p.add_argument("topic", help="MQTT topic")
-        p.add_argument("payload", help="value to publish")
-        p.add_argument("-r", "--retain", action="store_true")
-        p.add_argument("-q", "--quiet", action="store_true")
+        p = sub.add_parser(
+            "write",
+            help="publish a value to a topic (use -r for retained)",
+            description=(
+                "Publish one message. Without -r the message is volatile — fine "
+                "for command topics like .../on."
+            ),
+        )
+        p.add_argument("topic", help="MQTT topic to publish to")
+        p.add_argument("payload", help="payload string")
+        p.add_argument("-r", "--retain", action="store_true", help="set the retain flag")
 
-        p = sub.add_parser("list", help="list retained topics matching a pattern")
-        p.add_argument("topic", nargs="?", default="#", help="topic filter (default: #)")
-        p.add_argument("--timeout", type=float, default=5.0)
-        p.add_argument("-q", "--quiet", action="store_true")
+        p = sub.add_parser(
+            "list",
+            help="list retained topics matching a wildcard pattern",
+            description="Subscribe to <pattern> and dump every retained topic with its payload.",
+        )
+        p.add_argument(
+            "topic",
+            nargs="?",
+            default="#",
+            help="MQTT wildcard pattern (default: # — everything; can be heavy)",
+        )
+        p.add_argument("--timeout", type=float, default=5.0, help="max seconds to wait (default: 5)")
 
     def dispatch(self, ctx) -> dict:
         subcmd = ctx.args.subcmd
@@ -74,23 +105,20 @@ class MqttPlugin(BasePlugin):
         return {"topic": ctx.args.topic, "ok": True}
 
     def _list(self, ctx) -> dict:
-        msgs = ctx.mqtt.subscribe(
-            ctx.args.topic,
-            timeout=ctx.args.timeout,
-        )
-        topics = [{"topic": t, "payload": p} for t, p in msgs]
-        return {"topics": topics, "count": len(topics)}
+        msgs = ctx.mqtt.subscribe(ctx.args.topic, timeout=ctx.args.timeout)
+        messages = [{"topic": t, "payload": p} for t, p in msgs]
+        return {"messages": messages, "count": len(messages)}
 
     def render(self, result):
         # `mqtt read`: just print the payload.
-        if "payload" in result and "topic" in result and "topics" not in result:
+        if "payload" in result and "topic" in result and "messages" not in result:
             return str(result["payload"])
         # `mqtt write`: confirm.
         if "ok" in result:
             return f"ok  {result.get('topic', '')}"
         # `mqtt list`: line per topic.
-        if "topics" in result:
-            return "\n".join(f"{t['topic']}\t{t['payload']}" for t in result["topics"])
+        if "messages" in result:
+            return "\n".join(f"{m['topic']}\t{m['payload']}" for m in result["messages"])
         return None
 
 

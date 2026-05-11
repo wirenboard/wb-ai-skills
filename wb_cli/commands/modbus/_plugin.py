@@ -27,28 +27,66 @@ class ModbusPlugin(BasePlugin):
         return _actions.dispatch(ctx)
 
     def render(self, result):
-        # `modbus scan`: compact one-line-per-device.
+        # `modbus scan`: header + table.
         if "devices" in result and result["devices"] and "cfg" in result["devices"][0]:
-            lines = [f"found {result.get('count', len(result['devices']))} device(s):"]
+            rows = []
             for dev in result["devices"]:
                 cfg = dev.get("cfg", {})
                 fw = dev.get("fw", {})
-                port = dev.get("port", {}).get("path", "?")
-                lines.append(
-                    f"  slave_id={cfg.get('slave_id', '?'):<4} "
-                    f"{dev.get('device_signature', '?'):<10} "
-                    f"sn={dev.get('sn', '?'):<12} "
-                    f"port={port} "
-                    f"fw={fw.get('version', '?')}"
+                rows.append(
+                    {
+                        "slave_id": str(cfg.get("slave_id", "?")),
+                        "signature": dev.get("device_signature", "?"),
+                        "sn": str(dev.get("sn", "?")),
+                        "port": dev.get("port", {}).get("path", "?"),
+                        "baud": str(cfg.get("baud_rate", "?")),
+                        "uart": (
+                            f"{cfg.get('data_bits', '?')}{cfg.get('parity', '?')}"
+                            f"{cfg.get('stop_bits', '?')}"
+                        ),
+                        "fw": fw.get("version", "?"),
+                    }
                 )
-            return "\n".join(lines)
+            return _scan_table(
+                rows,
+                scan_type=result.get("scan_type"),
+                completed=result.get("completed", True),
+                progress=result.get("progress"),
+                hint=result.get("hint"),
+            )
+        if "devices" in result and not result["devices"]:
+            scan_type = result.get("scan_type", "")
+            kind = f" {scan_type}" if scan_type and scan_type != "full" else ""
+            if not result.get("completed", True):
+                return (
+                    f"no devices yet — {scan_type} scan timed out at "
+                    f"{result.get('progress', 0)}%. " + (result.get("hint") or "")
+                ).rstrip()
+            return f"no devices found by{kind} scan"
         # `modbus probe`: yes/no plus details.
         if "found" in result:
             if not result["found"]:
                 return f"not found at slave_id={result.get('address')} on {result.get('port')}"
             sub = result.get("result") or {}
-            return f"found  {sub.get('device_signature', '?')} " f"sn={sub.get('sn', '?')}"
+            return f"found  {sub.get('device_signature', '?')} sn={sub.get('sn', '?')}"
         return None
+
+
+def _scan_table(rows, *, scan_type=None, completed=True, progress=None, hint=None):
+    columns = ["slave_id", "signature", "sn", "port", "baud", "uart", "fw"]
+    widths = {col: max(len(col), *(len(r[col]) for r in rows)) for col in columns}
+    header = "  ".join(col.ljust(widths[col]) for col in columns)
+    sep = "  ".join("-" * widths[col] for col in columns)
+    body = ["  ".join(r[col].ljust(widths[col]) for col in columns) for r in rows]
+    title = f"{scan_type} scan — {len(rows)} device(s):" if scan_type else f"{len(rows)} device(s):"
+    if not completed:
+        title = (
+            f"{scan_type or ''} scan — TIMEOUT at {progress}%, " f"{len(rows)} device(s) seen so far:"
+        ).strip()
+    out = [title, header, sep, *body]
+    if not completed and hint:
+        out.append(f"hint: {hint}")
+    return "\n".join(out)
 
 
 PLUGIN = ModbusPlugin()

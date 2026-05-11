@@ -67,16 +67,19 @@ def _pop_global_flags(argv: list) -> tuple[list, Optional[str]]:
 def _resolve_output_mode(flag_override: Optional[str]) -> str:
     """Decide between JSON and human output.
 
-    Priority: CLI flag > ``WB_CLI_OUTPUT`` env > stdout TTY heuristic.
-    Default for a non-TTY stdout (pipes, SSH without ``-t``, files) is JSON,
-    so LLM agents and scripts get machine-readable output without thinking.
+    Priority: CLI flag > ``WB_CLI_OUTPUT`` env > human (the default).
+
+    Human output is the default everywhere — including pipes (``wb-cli dev |
+    grep``) and SSH without a TTY — because Unix tools should pipe like text.
+    LLM agents and scripts that want JSON pass ``--json`` (or set
+    ``WB_CLI_OUTPUT=json``); this is documented in the wiren-board skill.
     """
     if flag_override:
         return flag_override
     env = os.environ.get("WB_CLI_OUTPUT", "").strip().lower()
     if env in ("json", "human"):
         return env
-    return "human" if sys.stdout.isatty() else "json"
+    return "human"
 
 
 # pylint: disable-next=too-many-return-statements,too-many-locals
@@ -153,7 +156,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     except Exception as exc:  # pylint: disable=broad-except
         emit_error(
             WbCliError(
-                code="INTERNAL",
+                code="CLI_INTERNAL",
                 message=f"Unhandled exception in '{cmd_name}': {exc}",
                 details={"traceback": traceback.format_exc()},
                 exit_code=ExitCode.ENVIRONMENT,

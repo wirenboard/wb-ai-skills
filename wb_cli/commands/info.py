@@ -13,15 +13,17 @@ from wb_cli.plugin import BasePlugin
 
 class InfoPlugin(BasePlugin):
     name = "info"
-    help = "controller identity: serial number, firmware, board revision, uptime"
+    help = "what this controller is: serial, firmware, board, uptime"
 
     def register(self, subparsers: argparse._SubParsersAction) -> None:
-        parser = subparsers.add_parser(
+        subparsers.add_parser(
             self.name,
             help=self.help,
-            description="Show controller identity and basic system facts.",
+            description=(
+                "Identity card of the controller: serial number, firmware version,\n"
+                "board revision, hostname, uptime, device-tree metadata. Read-only."
+            ),
         )
-        parser.add_argument("-q", "--quiet", action="store_true")
 
     def dispatch(self, ctx) -> dict:
         return ctx.controller.to_dict()
