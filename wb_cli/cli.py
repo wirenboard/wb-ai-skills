@@ -34,7 +34,12 @@ def _build_parser(
 def main(argv: Optional[list[str]] = None) -> int:  # pylint: disable=too-many-return-statements
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    if not argv or argv[0] in ("-h", "--help", "--version"):
+    if not argv:
+        root, _ = _build_parser()
+        root.print_help()
+        return ExitCode.SUCCESS
+
+    if argv[0] in ("-h", "--help", "--version"):
         root, _ = _build_parser()
         root.parse_args(argv)
         return ExitCode.SUCCESS
