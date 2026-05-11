@@ -1,3 +1,16 @@
+wb-cli (0.1.3) stable; urgency=medium
+
+  * devices set: now refuses to publish if the control doesn't exist
+    (previously returned ok=true even for typos like `wb-mr6c_52` instead
+    of `wb-mr6c_2`) and refuses to write to readonly controls.
+  * devices get <device> <control>: new subcommand that returns the
+    current value along with type/readonly metadata.
+  * tests: full coverage of error paths in lib/mqtt, lib/rpc, lib/job,
+    lib/journal, and modbus probe/template/device-info/add-devices plus
+    serial-debug's finally-clause restore — 109 tests total.
+
+ -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 19:00:00 +0000
+
 wb-cli (0.1.2) stable; urgency=medium
 
   * `wb-cli` with no arguments now prints the top-level help (was silent).

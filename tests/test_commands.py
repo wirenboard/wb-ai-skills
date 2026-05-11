@@ -182,9 +182,99 @@ def test_devices_set():
             value="1",
         )
     )
+    # 1st subscribe: value-topic probe; 2nd: meta (readonly check).
+    ctx.mqtt.subscribe.side_effect = [
+        [("/devices/wb-mr6c_52/controls/K1", "0")],
+        [("/devices/wb-mr6c_52/controls/K1/meta/type", "switch")],
+    ]
     result = DevicesPlugin().dispatch(ctx)
     assert result["ok"] is True
     ctx.mqtt.publish.assert_called_once_with("/devices/wb-mr6c_52/controls/K1/on", "1")
+
+
+def test_devices_set_refuses_unknown_control():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="set",
+            device="wb-mr6c_52",
+            control="K1",
+            value="1",
+        )
+    )
+    ctx.mqtt.subscribe.return_value = []  # value topic is empty -> not found
+    with pytest.raises(WbCliError) as exc:
+        DevicesPlugin().dispatch(ctx)
+    assert exc.value.code == "DEVICES_CONTROL_NOT_FOUND"
+    ctx.mqtt.publish.assert_not_called()
+
+
+def test_devices_set_refuses_readonly_control():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="set",
+            device="wb-gpio",
+            control="D1_IN",
+            value="1",
+        )
+    )
+    ctx.mqtt.subscribe.side_effect = [
+        [("/devices/wb-gpio/controls/D1_IN", "0")],
+        [
+            ("/devices/wb-gpio/controls/D1_IN/meta/type", "switch"),
+            ("/devices/wb-gpio/controls/D1_IN/meta/readonly", "1"),
+        ],
+    ]
+    with pytest.raises(WbCliError) as exc:
+        DevicesPlugin().dispatch(ctx)
+    assert exc.value.code == "DEVICES_CONTROL_READONLY"
+    ctx.mqtt.publish.assert_not_called()
+
+
+def test_devices_get_returns_value_and_meta():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="get",
+            device="wb-mr6c_2",
+            control="K1",
+        )
+    )
+    ctx.mqtt.subscribe.side_effect = [
+        [("/devices/wb-mr6c_2/controls/K1", "1")],
+        [
+            ("/devices/wb-mr6c_2/controls/K1/meta/type", "switch"),
+            ("/devices/wb-mr6c_2/controls/K1/meta/readonly", "0"),
+        ],
+    ]
+    result = DevicesPlugin().dispatch(ctx)
+    assert result == {
+        "device": "wb-mr6c_2",
+        "control": "K1",
+        "value": "1",
+        "type": "switch",
+        "readonly": False,
+    }
+
+
+def test_devices_get_missing_control():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="get",
+            device="wb-mr6c_2",
+            control="nope",
+        )
+    )
+    ctx.mqtt.subscribe.return_value = []
+    with pytest.raises(WbCliError) as exc:
+        DevicesPlugin().dispatch(ctx)
+    assert exc.value.code == "DEVICES_CONTROL_NOT_FOUND"
 
 
 def test_devices_controls_with_meta():
@@ -475,10 +565,203 @@ def test_modbus_templates():
     assert result["count"] == 2
 
 
+def test_modbus_template_reads_file_from_disk():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="template",
+            template_id="config-wb-mr3",
+        )
+    )
+    ctx.shell.run.return_value = (0, '{"device_type": "WB-MR3"}', "")
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["template"] == {"device_type": "WB-MR3"}
+    cmd = ctx.shell.run.call_args.args[0]
+    assert cmd[0] == "cat"
+    assert cmd[1].endswith("config-wb-mr3.json")
+
+
+def test_modbus_template_missing_file():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="template",
+            template_id="nonexistent",
+        )
+    )
+    ctx.shell.run.return_value = (1, "", "No such file")
+    with pytest.raises(WbCliError) as exc:
+        ModbusPlugin().dispatch(ctx)
+    assert exc.value.code == "MODBUS_TEMPLATE_NOT_FOUND"
+
+
+def test_modbus_template_invalid_json():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="template",
+            template_id="broken",
+        )
+    )
+    ctx.shell.run.return_value = (0, "not-json", "")
+    with pytest.raises(WbCliError) as exc:
+        ModbusPlugin().dispatch(ctx)
+    assert exc.value.code == "MODBUS_TEMPLATE_INVALID"
+
+
+def test_modbus_device_info_finds_device_by_slave_id():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="device-info",
+            device_id="5",
+        )
+    )
+    ctx.rpc.call.return_value = {
+        "content": {
+            "ports": [
+                {"path": "/dev/ttyRS485-1", "devices": [{"slave_id": 5, "device_type": "WB-MDM3"}]},
+                {"path": "/dev/ttyRS485-2", "devices": []},
+            ]
+        }
+    }
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["device"]["device_type"] == "WB-MDM3"
+
+
+def test_modbus_device_info_not_found():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="device-info",
+            device_id="999",
+        )
+    )
+    ctx.rpc.call.return_value = {"content": {"ports": []}}
+    with pytest.raises(WbCliError) as exc:
+        ModbusPlugin().dispatch(ctx)
+    assert exc.value.code == "DEVICES_DEVICE_NOT_FOUND"
+
+
+def test_modbus_probe_found():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="probe",
+            port="/dev/ttyRS485-1",
+            address=2,
+        )
+    )
+    ctx.rpc.call.return_value = {"device_signature": "WBMR6C", "sn": "abc"}
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["found"] is True
+    assert result["result"]["device_signature"] == "WBMR6C"
+
+
+def test_modbus_probe_empty_response_means_not_found():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="probe",
+            port="/dev/ttyRS485-1",
+            address=99,
+        )
+    )
+    ctx.rpc.call.return_value = {}
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["found"] is False
+    assert result["result"] is None
+
+
+def test_modbus_probe_rpc_failure_surfaces_as_not_found():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="probe",
+            port="/dev/ttyRS485-1",
+            address=2,
+        )
+    )
+    ctx.rpc.call.side_effect = WbCliError(code="RPC_ERROR_RESPONSE", message="boom", exit_code=1)
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["found"] is False
+    assert "boom" in result["error"]
+
+
+def test_modbus_add_devices_appends_to_target_port():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="add-devices",
+            port="/dev/ttyRS485-1",
+            scan_results='[{"slave_id": 7, "device_type": "WB-MR6C"}]',
+        )
+    )
+    ctx.rpc.call.side_effect = [
+        # Editor/Load
+        {
+            "content": {
+                "ports": [
+                    {"path": "/dev/ttyRS485-1", "devices": [{"slave_id": 1}]},
+                    {"path": "/dev/ttyRS485-2", "devices": []},
+                ]
+            }
+        },
+        # Editor/Save
+        {"ok": True},
+    ]
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["count"] == 1
+    save_call = ctx.rpc.call.call_args_list[1]
+    saved_content = save_call.args[1]["content"]
+    rs1_devices = next(p for p in saved_content["ports"] if p["path"] == "/dev/ttyRS485-1")["devices"]
+    assert {"slave_id": 7, "device_type": "WB-MR6C"} in rs1_devices
+
+
+def test_modbus_add_devices_unknown_port():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="add-devices",
+            port="/dev/ttyNOPE",
+            scan_results='[{"slave_id": 1}]',
+        )
+    )
+    ctx.rpc.call.return_value = {"content": {"ports": []}}
+    with pytest.raises(WbCliError) as exc:
+        ModbusPlugin().dispatch(ctx)
+    assert exc.value.code == "MODBUS_ADD_NO_DEVICES"
+
+
+def test_modbus_add_devices_rejects_invalid_json():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            subcmd="add-devices",
+            port="/dev/ttyRS485-1",
+            scan_results="not-json",
+        )
+    )
+    with pytest.raises(WbCliError) as exc:
+        ModbusPlugin().dispatch(ctx)
+    assert exc.value.code == "MODBUS_ADD_NO_DEVICES"
+
+
 # --- serial-debug ---
 
 
-def test_serial_debug():
+def test_serial_debug(monkeypatch):
     ctx = _ctx(
         args=argparse.Namespace(
             human=False,
@@ -488,8 +771,27 @@ def test_serial_debug():
         )
     )
     ctx.journal.read.return_value = [{"MESSAGE": "debug line"}]
+    monkeypatch.setattr("wb_cli.commands.serial_debug.countdown", lambda *a, **kw: None)
     result = SerialDebugPlugin().dispatch(ctx)
     assert result["port"] == "/dev/ttyRS485-1"
     assert result["count"] == 1
-    # Проверяем что debug включился и выключился
     assert ctx.mqtt.publish.call_count == 2
+
+
+def test_serial_debug_restores_debug_off_when_journal_raises(monkeypatch):
+    ctx = _ctx(
+        args=argparse.Namespace(
+            human=False,
+            quiet=False,
+            port="/dev/ttyRS485-1",
+            seconds=10,
+        )
+    )
+    monkeypatch.setattr("wb_cli.commands.serial_debug.countdown", lambda *a, **kw: None)
+    ctx.journal.read.side_effect = WbCliError(code="JOURNAL_UNAVAILABLE", message="oops", exit_code=3)
+    with pytest.raises(WbCliError):
+        SerialDebugPlugin().dispatch(ctx)
+    # Both publishes must have fired: enable (1) and the restore in finally (0).
+    assert ctx.mqtt.publish.call_count == 2
+    last_call = ctx.mqtt.publish.call_args_list[-1]
+    assert last_call.args[1] == "0"

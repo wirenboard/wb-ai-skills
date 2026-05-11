@@ -28,6 +28,11 @@ class DevicesPlugin(BasePlugin):
         p.add_argument("device", help="device id")
         p.add_argument("-q", "--quiet", action="store_true")
 
+        p = sub.add_parser("get", help="read a single control's current value")
+        p.add_argument("device", help="device id")
+        p.add_argument("control", help="control name")
+        p.add_argument("-q", "--quiet", action="store_true")
+
         p = sub.add_parser("set", help="set a control value (turn on/off, write)")
         p.add_argument("device", help="device id")
         p.add_argument("control", help="control name")
@@ -43,6 +48,8 @@ class DevicesPlugin(BasePlugin):
             return self._list_devices(ctx)
         if subcmd == "controls":
             return self._controls(ctx)
+        if subcmd == "get":
+            return self._get(ctx)
         if subcmd == "set":
             return self._set(ctx)
         if subcmd == "inventory":
@@ -68,12 +75,51 @@ class DevicesPlugin(BasePlugin):
         controls = _build_controls(vals, metas)
         return {"device": device, "controls": controls, "count": len(controls)}
 
+    def _get(self, ctx) -> dict:
+        device = ctx.args.device
+        control = ctx.args.control
+        topic = f"/devices/{device}/controls/{control}"
+        msgs = ctx.mqtt.subscribe(topic, timeout=5.0)
+        if not msgs:
+            _raise_control_not_found(device, control)
+        meta = ctx.mqtt.subscribe(f"{topic}/meta/+", timeout=5.0)
+        readonly = any(t.endswith("/readonly") and p == "1" for t, p in meta)
+        ctrl_type = next((p for t, p in meta if t.endswith("/type")), None)
+        return {
+            "device": device,
+            "control": control,
+            "value": msgs[0][1],
+            "type": ctrl_type,
+            "readonly": readonly,
+        }
+
     def _set(self, ctx) -> dict:
         device = ctx.args.device
         control = ctx.args.control
         value = ctx.args.value
-        topic = f"/devices/{device}/controls/{control}/on"
-        ctx.mqtt.publish(topic, value)
+        # Guard against typos: refuse to publish if the control isn't visible
+        # on the broker. Reading the value topic is cheaper than reading meta
+        # and works for every control wb-mqtt-serial / wb-mqtt-* expose.
+        existing = ctx.mqtt.subscribe(
+            f"/devices/{device}/controls/{control}",
+            timeout=3.0,
+        )
+        if not existing:
+            _raise_control_not_found(device, control)
+        # Refuse to write to readonly controls — wb-mqtt-serial would just
+        # ignore the publish and the caller would never know.
+        meta = ctx.mqtt.subscribe(
+            f"/devices/{device}/controls/{control}/meta/+",
+            timeout=3.0,
+        )
+        if any(t.endswith("/readonly") and p == "1" for t, p in meta):
+            raise WbCliError(
+                code="DEVICES_CONTROL_READONLY",
+                message=f"Control '{device}/{control}' is read-only",
+                details={"device": device, "control": control},
+                exit_code=ExitCode.DOMAIN,
+            )
+        ctx.mqtt.publish(f"/devices/{device}/controls/{control}/on", value)
         return {
             "device": device,
             "control": control,
@@ -87,6 +133,16 @@ class DevicesPlugin(BasePlugin):
         ctrl_meta = ctx.mqtt.subscribe("/devices/+/controls/+/meta/+", timeout=5.0)
         devices = _build_inventory(dev_meta, ctrl_vals, ctrl_meta)
         return {"devices": devices, "count": len(devices)}
+
+
+def _raise_control_not_found(device: str, control: str) -> None:
+    raise WbCliError(
+        code="DEVICES_CONTROL_NOT_FOUND",
+        message=f"Control '{device}/{control}' not found",
+        hint="Run `wb-cli devices controls <device>` to list available controls.",
+        details={"device": device, "control": control},
+        exit_code=ExitCode.DOMAIN,
+    )
 
 
 def _build_device_list(meta_msgs: List[tuple]) -> List[Dict[str, Any]]:
