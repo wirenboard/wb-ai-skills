@@ -424,6 +424,12 @@ def test_modbus_scan(monkeypatch):
         def __init__(self):
             self.stdout = io.StringIO(final_state)
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
         def terminate(self):
             pass
 
