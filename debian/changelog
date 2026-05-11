@@ -1,3 +1,17 @@
+wb-cli (0.1.1) stable; urgency=medium
+
+  * modbus scan: drop retained "stale" state from a prior scan, stop and
+    settle before starting, and wait for genuine progress before accepting
+    progress=100 — fixes early returns with only the first few devices.
+  * modbus probe: report found=false when wb-mqtt-serial returns an empty
+    response (previously reported every empty address as a hit).
+  * Documentation: collapse DECISIONS.md and CLAUDE.md into README.md, add a
+    Skills section with the install-skills.sh matrix.
+  * install-skills.sh: new "manual --dest <dir>" target; --dest available
+    for claude/opencode too; embedded usage help.
+
+ -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 17:45:00 +0000
+
 wb-cli (0.1.0) stable; urgency=medium
 
   * Initial release.

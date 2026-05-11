@@ -145,18 +145,60 @@ Conventions:
 
 Adding a new command? Drop `wb_cli/commands/<name>.py` with `PLUGIN = MyPlugin()`, run `make registry`, write a test.
 
-## Release
+## Versioning
 
-`debian/changelog` is the single source of version truth. To cut a release:
+`wb-cli` follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`):
+
+- **PATCH** (`0.1.0 → 0.1.1`) — bug fix, internal refactor, doc-only or CI-only change that ships in the next release.
+- **MINOR** (`0.1.0 → 0.2.0`) — new command, new subcommand, new option, new error code, new field in a JSON envelope. Existing callers keep working.
+- **MAJOR** (`0.1.0 → 1.0.0`) — backwards-incompatible change: a removed or renamed command, a changed JSON shape, a changed/removed error code, a changed exit code.
+
+### When to bump
+
+Bump the version **in the same commit that introduces a user-visible change** — anything that affects the `.deb` contents or the JSON contract. Don't batch unrelated fixes under one bump; cut a fresh patch release per round of fixes.
+
+You can skip the bump for changes that don't affect what installs on a controller:
+
+- CI / GitHub Actions workflow tweaks
+- Tests that don't change behaviour
+- README / SKILL.md / commit-message wording
+- `tests/fixtures/` snapshot updates
+
+### How to bump
+
+Three files have to agree (a test in `tests/test_version.py` enforces this):
+
+```
+debian/changelog       # authoritative; release.yml verifies tag matches
+pyproject.toml         # `version = "X.Y.Z"`
+wb_cli/__init__.py     # `__version__ = "X.Y.Z"`
+```
+
+Either run `dch -i` (Debian helper) and mirror the version into the two Python files, or edit all three by hand.
+
+### Cutting a release
 
 ```bash
-dch -i             # bump version (or edit debian/changelog by hand)
+# 1. bump versions in lockstep, write a changelog entry
+dch -i                                          # or edit debian/changelog
+sed -i 's/version = "[^"]\+"/version = "X.Y.Z"/' pyproject.toml
+sed -i 's/__version__ = "[^"]\+"/__version__ = "X.Y.Z"/' wb_cli/__init__.py
+
+# 2. commit + tag + push
 git commit -am "release X.Y.Z"
 git tag -a vX.Y.Z -m "wb-cli vX.Y.Z"
 git push && git push origin vX.Y.Z
 ```
 
-The `release.yml` workflow checks that the tag matches the changelog version, builds the `.deb`, and publishes a GitHub Release with the package attached.
+`release.yml` checks that the tag matches `debian/changelog`, builds the `.deb`, and publishes a GitHub Release with the package attached.
+
+## Contributing
+
+- Open a PR against `main`. CI (`make lint` + `make test` on Python 3.9 / 3.11, plus `.deb` build) must be green.
+- Keep modules under 250 lines (`max-module-lines` in pylint).
+- Tests live next to the code they exercise; aim for one test per success path and one per error code.
+- Adding a plugin: create `wb_cli/commands/<name>.py` with `PLUGIN = MyPlugin()`, run `make registry`, add tests, bump the version.
+- Don't introduce a new error code unless the caller actually needs to branch on it — reuse what's there.
 
 ## License
 
