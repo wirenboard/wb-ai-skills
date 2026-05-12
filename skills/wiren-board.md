@@ -39,22 +39,28 @@ nmap -sn 192.168.1.0/24 2>/dev/null | awk '/wirenboard/{print}'
 
 ## SSH convention
 
-Default credentials: **user `root`, password `wirenboard`**. Key-based auth is preferred for automation; password auth works out of the box.
+Default credentials: **user `root`, password `wirenboard`**.
+
+**IMPORTANT — always follow this order when connecting:**
 
 ```bash
-# Key-based (preferred for scripts)
-ssh root@wirenboard-A25NDEMJ wb-cli --json info
+# Step 1: try key-based auth (BatchMode=yes prevents GUI password prompts)
+ssh -o BatchMode=yes -o ConnectTimeout=5 root@<HOST> wb-cli --json info
 
-# Password auth (default, no prior setup needed)
-sshpass -p wirenboard ssh root@wirenboard-A25NDEMJ wb-cli --json info
+# Step 2: if step 1 fails — try default password (never wait for a GUI prompt)
+sshpass -p wirenboard ssh -o ConnectTimeout=5 root@<HOST> wb-cli --json info
+
+# Step 3: only if both fail — ask the user for credentials
 ```
+
+**Never run plain `ssh root@<HOST>` without `BatchMode=yes`** — it may trigger a GUI password dialog (ksshaskpass, SSH_ASKPASS) that blocks execution.
 
 ## SSH key-based auth
 
 ```bash
 ssh-copy-id root@<HOST>          # copies ~/.ssh/id_*.pub
 ```
-After this, password is not needed. To disable password auth — edit `/etc/ssh/sshd_config`: set `PasswordAuthentication no`, then `systemctl restart sshd`.
+After this, step 1 succeeds and password is never needed. To disable password auth — edit `/etc/ssh/sshd_config`: set `PasswordAuthentication no`, then `systemctl restart sshd`.
 
 ## wb-cli — the primary tool
 
