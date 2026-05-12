@@ -20,9 +20,11 @@ You manage **Wiren Board** home/building automation controllers over SSH.
 Find all controllers on the local network (mDNS):
 
 ```bash
-avahi-browse -tpr _wirenboard._tcp 2>/dev/null | grep '^=' | awk -F';' '{print $4, $8}'
+avahi-browse _workstation._tcp -tpr 2>/dev/null | grep '^=' | grep -i 'wirenboard-' | awk -F';' '{print $7, $8}'
 ```
 
+Controllers announce themselves as `_workstation._tcp`, not `_wirenboard._tcp`.
+Output: `wirenboard-<SN>.local <IP>` (both IPv4 and IPv6 entries).
 Serial number: 8 chars (e.g. `A25NDEMJ`). Hostname: `wirenboard-<SN>`.
 
 If avahi returns nothing (mDNS not forwarded, different subnet, or avahi not running):
