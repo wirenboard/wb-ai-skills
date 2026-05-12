@@ -12,10 +12,6 @@ BUILTIN_PLUGINS: dict = {
     "history": ("wb_cli.commands.history", "time-series history of a control's values"),
     "info": ("wb_cli.commands.info", "what this controller is: serial, firmware, board, uptime"),
     "job": ("wb_cli.commands.job_cmd", "run long-running commands in the background, watch them, fetch logs"),
-    "modbus": (
-        "wb_cli.commands.modbus._plugin",
-        "RS-485 / Modbus: scan, probe, templates, device-info, ports, add-devices",
-    ),
     "modbus-fw": (
         "wb_cli.commands.modbus_fw",
         "firmware update of Modbus devices (check, update, restore, watch)",
@@ -27,8 +23,9 @@ BUILTIN_PLUGINS: dict = {
         "manage wb-rules automation scripts (list / read / save / disable / delete)",
     ),
     "serial": (
-        "wb_cli.commands.serial_cmd",
-        "serial port operations: send raw bytes to the bus via wb-mqtt-serial RPC",
+        "wb_cli.commands.serial._plugin",
+        "serial port operations: send, wb-scan, device-params, device-set,"
+        " add-devices, templates, devices, ports",
     ),
     "serial-debug": (
         "wb_cli.commands.serial_debug",

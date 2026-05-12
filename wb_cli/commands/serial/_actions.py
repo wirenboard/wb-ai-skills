@@ -1,15 +1,17 @@
-"""Modbus subcommand definitions and dispatch."""
+"""Serial subcommand definitions and dispatch."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import select
+import struct
 import subprocess
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
 from wb_cli.lib import serial_conf
+from wb_cli.lib.modbus_crc import modbus_crc16 as _modbus_crc16
 from wb_cli.lib.progress import ProgressBar
 
 _BROKER_SETTLE_S = 1.0
@@ -22,10 +24,10 @@ _FINAL_STABLE_S = 1.5
 
 
 def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=too-many-statements
-    """Register all modbus subcommand parsers."""
+    """Register all serial subcommand parsers."""
     p = sub.add_parser(
-        "scan",
-        help="scan the RS-485 bus and list every device that answers",
+        "wb-scan",
+        help="Finds WB Fast Modbus devices (WB, Onokom and compatible)",
         description=(
             "Runs wb-device-manager's bus scan and returns what answered. Same flow\n"
             "the web UI's three scan buttons trigger.\n"
@@ -48,9 +50,9 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
         ),
         epilog=(
             "Examples:\n"
-            "  wb-cli modbus scan                                    # default — finds everything\n"
-            "  wb-cli modbus scan --slow --timeout 600               # exhaustive poll\n"
-            "  wb-cli modbus scan --bootloader --port /dev/ttyRS485-1\n"
+            "  wb-cli serial wb-scan                                    # default — finds everything\n"
+            "  wb-cli serial wb-scan --slow --timeout 600               # exhaustive poll\n"
+            "  wb-cli serial wb-scan --bootloader --port /dev/ttyRS485-1\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -82,14 +84,6 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
         help="seconds to wait for completion (default: 60; bump for --type extended)",
     )
 
-    p = sub.add_parser(
-        "probe",
-        help="probe a single Modbus address (assumes 9600-N-8-2)",
-        description="Send a single Probe request to one slave address on one port. Uses 9600-N-8-2 defaults.",
-    )
-    p.add_argument("--port", required=True, help="serial port path, e.g. /dev/ttyRS485-1")
-    p.add_argument("--address", type=int, required=True, help="Modbus slave address (1-247)")
-
     sub.add_parser(
         "templates",
         help="list available wb-mqtt-serial device templates",
@@ -112,6 +106,33 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
         description="Look up a configured device by `slave_id` or by string `id`.",
     )
     p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
+
+    p = sub.add_parser(
+        "device-params",
+        help="read configurable parameters from device hardware",
+        description="Read device parameters from hardware via wb-mqtt-serial/device/LoadConfig RPC.",
+    )
+    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="bypass driver cache, read directly from device",
+    )
+
+    p = sub.add_parser(
+        "device-set",
+        help="write parameters to device hardware",
+        description="Write parameters to hardware via wb-mqtt-serial/device/Set RPC.",
+    )
+    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
+    p.add_argument(
+        "--set",
+        metavar="KEY=VALUE",
+        action="append",
+        dest="params",
+        required=True,
+        help="parameter to write (repeat for multiple): --set input1_mode=1",
+    )
 
     p = sub.add_parser(
         "devices",
@@ -143,6 +164,14 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
             "so the config is always valid after adding. Devices already present (same\n"
             "slave_id on the same port) are silently skipped — safe to re-run.\n"
             "\n"
+            "Automatic fixups applied to scan-mode devices before adding:\n"
+            "  Baud mismatch — if a device runs at a different speed than the port, its\n"
+            "    baud rate is changed to match the port (Modbus reg 110 write).\n"
+            "  Address collision — if two devices share a slave_id, the duplicate gets a\n"
+            "    free address via Fast Modbus by SN (WB/Onokom devices) or reg 128 write\n"
+            "    (standard fallback). Config conflicts (new device at an address already\n"
+            "    in config) are resolved the same way.\n"
+            "\n"
             "Three modes, in order of precedence:\n"
             "\n"
             "  --device-type + --slave-id\n"
@@ -151,12 +180,12 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
             "      Example: --device-type WB-MAI6 --slave-id 19\n"
             "\n"
             "  --scan-results JSON\n"
-            "      Use an explicit JSON list of devices (output of `wb-cli --json modbus\n"
-            "      scan` → .data.devices). For scripting and agent use.\n"
+            "      Use an explicit JSON list of devices (output of `wb-cli --json serial\n"
+            "      wb-scan` → .data.devices). For scripting and agent use.\n"
             "\n"
             "  (default — no extra flags)\n"
             "      Read the retained wb-device-manager state (result of the last scan).\n"
-            "      Run `wb-cli modbus scan` or `wb-cli modbus scan --slow` first, then\n"
+            "      Run `wb-cli serial wb-scan` or `wb-cli serial wb-scan --slow` first, then\n"
             "      call this command. Slow-scan results (third-party devices) are\n"
             "      picked up without re-scanning.\n"
         ),
@@ -164,18 +193,18 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
         epilog=(
             "Examples:\n"
             "  # scan → add (typical workflow)\n"
-            "  wb-cli modbus scan\n"
-            "  wb-cli modbus add-devices --port /dev/ttyRS485-1\n"
+            "  wb-cli serial wb-scan\n"
+            "  wb-cli serial add-devices --port /dev/ttyRS485-1\n"
             "\n"
             "  # slow scan for third-party devices, then add\n"
-            "  wb-cli modbus scan --slow --timeout 300\n"
-            "  wb-cli modbus add-devices --port /dev/ttyRS485-1\n"
+            "  wb-cli serial wb-scan --slow --timeout 300\n"
+            "  wb-cli serial add-devices --port /dev/ttyRS485-1\n"
             "\n"
             "  # add a single device by model (no scan needed)\n"
-            "  wb-cli modbus add-devices --port /dev/ttyRS485-1 --device-type WB-MAI6 --slave-id 19\n"
+            "  wb-cli serial add-devices --port /dev/ttyRS485-1 --device-type WB-MAI6 --slave-id 19\n"
             "\n"
             "  # agent/scripted use\n"
-            "  wb-cli --json modbus add-devices --port /dev/ttyRS485-1\n"
+            "  wb-cli --json serial add-devices --port /dev/ttyRS485-1\n"
         ),
     )
     p.add_argument("--port", required=True, help="target serial port path (must already exist in the config)")
@@ -183,7 +212,7 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
         "--scan-results",
         default=None,
         help=(
-            "explicit JSON list of devices (.data.devices from `wb-cli --json modbus scan`); "
+            "explicit JSON list of devices (.data.devices from `wb-cli --json serial wb-scan`); "
             "if omitted, reads the retained state from the last scan"
         ),
     )
@@ -199,19 +228,113 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
         help="Modbus slave address to assign when using --device-type",
     )
 
+    p = sub.add_parser(
+        "send",
+        help="send raw bytes to the serial bus and read the response",
+        description=(
+            "Sends arbitrary bytes to a serial port through wb-mqtt-serial's port/Load\n"
+            "RPC and returns the response. The driver keeps running — the request is\n"
+            "queued alongside regular polling. No restart needed.\n"
+            "\n"
+            "Useful for Fast Modbus frames (address changes, scan), non-Modbus\n"
+            "protocols, and low-level debugging without stopping the serial driver.\n"
+            "\n"
+            "Message format: hex string, spaces and 0x-prefixes are stripped.\n"
+            "Use --add-modbus-crc to append a Modbus CRC-16 automatically.\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  # Fast Modbus scan start — ask all WB devices to identify themselves\n"
+            "  wb-cli serial send --port /dev/ttyRS485-1 \\\n"
+            "      --msg 'FD 46 01' --add-modbus-crc --response-size 10\n"
+            "\n"
+            "  # Change slave_id of device SN=0x00020B86 to 5 (Fast Modbus by SN)\n"
+            "  wb-cli serial send --port /dev/ttyRS485-1 \\\n"
+            "      --msg 'FD 46 08 00 02 0B 86 06 00 80 00 05' --add-modbus-crc --response-size 14\n"
+            "\n"
+            "  # Read holding registers 0-19 from slave_id=2 (standard Modbus FC3)\n"
+            "  wb-cli serial send --port /dev/ttyRS485-1 \\\n"
+            "      --msg '02 03 00 00 00 14' --add-modbus-crc --response-size 45\n"
+            "\n"
+            "  # Broadcast baud-rate change to 115200 for all WB devices (reg 110 = 1152)\n"
+            "  wb-cli serial send --port /dev/ttyRS485-1 \\\n"
+            "      --msg '00 06 00 6E 04 80' --add-modbus-crc\n"
+        ),
+    )
+    p.add_argument("--port", required=True, help="serial port path (e.g. /dev/ttyRS485-1)")
+    p.add_argument("--baud", type=int, default=9600, help="baud rate (default: 9600)")
+    p.add_argument(
+        "--parity",
+        default="N",
+        choices=["N", "E", "O"],
+        help="parity: N=none, E=even, O=odd (default: N)",
+    )
+    p.add_argument(
+        "--stop-bits",
+        type=int,
+        default=2,
+        dest="stop_bits",
+        choices=[1, 2],
+        help="stop bits (default: 2)",
+    )
+    p.add_argument(
+        "--msg",
+        required=True,
+        help="bytes to send as a hex string, spaces allowed (e.g. 'FD 46 01' or 'fd4601')",
+    )
+    p.add_argument(
+        "--add-modbus-crc",
+        action="store_true",
+        dest="add_modbus_crc",
+        help="append Modbus CRC-16 (little-endian) to the message before sending",
+    )
+    p.add_argument(
+        "--response-size",
+        type=int,
+        default=0,
+        dest="response_size",
+        help="bytes to read back (0 = fire-and-forget; default: 0)",
+    )
+    p.add_argument(
+        "--response-timeout",
+        type=int,
+        default=500,
+        dest="response_timeout",
+        help="ms to wait for the first response byte (default: 500)",
+    )
+    p.add_argument(
+        "--frame-timeout",
+        type=int,
+        default=20,
+        dest="frame_timeout",
+        help="ms inter-byte gap that ends the frame (default: 20)",
+    )
+    p.add_argument(
+        "--total-timeout",
+        type=int,
+        default=5000,
+        dest="total_timeout",
+        help="ms total timeout for the whole operation (default: 5000)",
+    )
+
 
 def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
     subcmd = ctx.args.subcmd
-    if subcmd == "scan":
+    if subcmd == "send":
+        return _send(ctx)
+    if subcmd == "wb-scan":
         return _scan(ctx)
-    if subcmd == "probe":
-        return _probe(ctx)
     if subcmd == "templates":
         return _templates(ctx)
     if subcmd == "template":
         return _template(ctx)
     if subcmd == "device-info":
         return _device_info(ctx)
+    if subcmd == "device-params":
+        return _device_params(ctx)
+    if subcmd == "device-set":
+        return _device_set(ctx)
     if subcmd == "devices":
         return _devices(ctx)
     if subcmd == "ports":
@@ -219,6 +342,106 @@ def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
     if subcmd == "add-devices":
         return _add_devices(ctx)
     return {}
+
+
+def _parse_hex_msg(raw: str) -> bytes:
+    """Strip spaces and 0x-prefixes, parse as hex bytes."""
+    cleaned = raw.replace(" ", "").replace("0x", "").replace("0X", "")
+    try:
+        return bytes.fromhex(cleaned)
+    except ValueError as exc:
+        raise ValueError(f"invalid hex message {raw!r}: {exc}") from exc
+
+
+def _fmt_hex(data: bytes) -> str:
+    return " ".join(f"{b:02X}" for b in data)
+
+
+def _send(ctx) -> dict:
+    args = ctx.args
+    msg = _parse_hex_msg(args.msg)
+    if args.add_modbus_crc:
+        msg += _modbus_crc16(msg)
+    params = {
+        "path": args.port,
+        "baud_rate": args.baud,
+        "parity": args.parity,
+        "data_bits": 8,
+        "stop_bits": args.stop_bits,
+        "protocol": "raw",
+        "format": "HEX",
+        "msg": msg.hex(),
+        "response_size": args.response_size,
+        "response_timeout": args.response_timeout,
+        "frame_timeout": args.frame_timeout,
+        "total_timeout": args.total_timeout,
+    }
+    rpc_timeout = args.total_timeout / 1000 + 5
+    result = ctx.rpc.call("wb-mqtt-serial/port/Load", params, timeout=rpc_timeout)
+    return {"port": args.port, "request": msg.hex(), "response": result.get("response", "").lower()}
+
+
+def _resolve_device_from_config(ctx) -> dict:
+    content = serial_conf.load_config(ctx)
+    for dev in serial_conf.iter_devices(content):
+        if str(dev.get("slave_id")) == str(ctx.args.device_id) or dev.get("id") == ctx.args.device_id:
+            return dev
+    raise WbCliError(
+        code="SERIAL_DEVICE_NOT_FOUND",
+        message=f"Device '{ctx.args.device_id}' not in {serial_conf.CONFIG_PATH}",
+        details={"device_id": ctx.args.device_id},
+        exit_code=ExitCode.DOMAIN,
+    )
+
+
+def _build_device_rpc_params(dev: dict) -> dict:
+    port = dev["port"]
+    return {
+        "path": port["path"],
+        "baud_rate": port["baud_rate"],
+        "parity": port.get("parity", "N"),
+        "data_bits": port.get("data_bits", 8),
+        "stop_bits": port.get("stop_bits", 2),
+        "slave_id": dev["slave_id"],
+        "device_type": dev["device_type"],
+    }
+
+
+def _device_params(ctx) -> dict:
+    dev = _resolve_device_from_config(ctx)
+    params = _build_device_rpc_params(dev)
+    if getattr(ctx.args, "force", False):
+        params["force"] = True
+    result = ctx.rpc.call("wb-mqtt-serial/device/LoadConfig", params, timeout=30.0)
+    return {"slave_id": dev["slave_id"], "device_type": dev["device_type"], **result}
+
+
+def _parse_param_assignments(args) -> dict:
+    result = {}
+    for kv in args.params or []:
+        if "=" not in kv:
+            raise WbCliError(
+                code="SERIAL_INVALID_PARAM",
+                message=f"invalid --set value {kv!r}: expected KEY=VALUE",
+                exit_code=ExitCode.USAGE,
+            )
+        k, v = kv.split("=", 1)
+        try:
+            result[k] = int(v)
+        except ValueError:
+            try:
+                result[k] = float(v)
+            except ValueError:
+                result[k] = v
+    return result
+
+
+def _device_set(ctx) -> dict:
+    dev = _resolve_device_from_config(ctx)
+    params = _build_device_rpc_params(dev)
+    params["parameters"] = _parse_param_assignments(ctx.args)
+    ctx.rpc.call("wb-mqtt-serial/device/Set", params, timeout=30.0)
+    return {"slave_id": dev["slave_id"], "device_type": dev["device_type"], "set": params["parameters"]}
 
 
 def _open_state_stream():
@@ -378,7 +601,7 @@ def _scan(ctx) -> dict:
             envelope["hint"] = (
                 "wb-device-manager published no scan state — it may have no ports to scan. "
                 "Check that wb-mqtt-serial is running and its config is valid: "
-                "`systemctl is-active wb-mqtt-serial` and `wb-cli --json modbus ports`."
+                "`systemctl is-active wb-mqtt-serial` and `wb-cli --json serial ports`."
             )
         else:
             envelope["hint"] = (
@@ -389,37 +612,8 @@ def _scan(ctx) -> dict:
         envelope["port"] = ctx.args.port
     if devices and completed:
         ports_seen = sorted({d.get("port", {}).get("path") for d in devices if d.get("port", {}).get("path")})
-        envelope["add_hint"] = "  ".join(f"wb-cli modbus add-devices --port {p}" for p in ports_seen)
+        envelope["add_hint"] = "  ".join(f"wb-cli serial add-devices --port {p}" for p in ports_seen)
     return envelope
-
-
-def _probe(ctx) -> dict:
-    params = {
-        "path": ctx.args.port,
-        "baud_rate": 9600,
-        "parity": "N",
-        "data_bits": 8,
-        "stop_bits": 2,
-        "slave_id": ctx.args.address,
-    }
-    try:
-        result = ctx.rpc.call("wb-mqtt-serial/device/Probe", params)
-    except WbCliError as exc:
-        return {
-            "port": ctx.args.port,
-            "address": ctx.args.address,
-            "found": False,
-            "error": exc.message,
-        }
-    # device/Probe returns `{}` when nothing answers on that address —
-    # treat an empty result as "no device", not a successful probe.
-    found = bool(result) and bool(result.get("device_signature") or result.get("sn"))
-    return {
-        "port": ctx.args.port,
-        "address": ctx.args.address,
-        "found": found,
-        "result": result if found else None,
-    }
 
 
 def _templates(ctx) -> dict:
@@ -537,6 +731,140 @@ def _required_params_from_template(template: dict) -> dict:
     return result
 
 
+def _change_device_baud(ctx, port_path: str, slave_id: int, cfg: dict, to_baud: int) -> bool:
+    """Send Modbus FC6 write to register 110 to change device baud rate.
+
+    Communicates at the device's current baud rate (from cfg). WB devices use
+    baud//100 as the abbreviated register value (9600→96, 115200→1152).
+    """
+    from_baud = cfg.get("baud_rate", 9600)
+    target_abbrev = to_baud // 100
+    frame = struct.pack(">BBHH", slave_id, 0x06, 110, target_abbrev)
+    frame += _modbus_crc16(frame)
+    params = {
+        "path": port_path,
+        "baud_rate": from_baud,
+        "parity": cfg.get("parity", "N"),
+        "data_bits": cfg.get("data_bits", 8),
+        "stop_bits": cfg.get("stop_bits", 2),
+        "protocol": "raw",
+        "format": "HEX",
+        "msg": frame.hex(),
+        "response_size": 8,
+        "response_timeout": 500,
+        "frame_timeout": 20,
+        "total_timeout": 3000,
+    }
+    try:
+        ctx.rpc.call("wb-mqtt-serial/port/Load", params, timeout=8.0)
+        return True
+    except Exception:  # pylint: disable=broad-except
+        return False
+
+
+def _find_free_slave_id(used_ids: set) -> int | None:
+    for sid in range(1, 248):
+        if sid not in used_ids:
+            return sid
+    return None
+
+
+def _change_slave_id_by_sn(ctx, port_path: str, sn: int, new_id: int, cfg: dict) -> bool:
+    """Fast Modbus: change slave_id by SN (safe even when address collision exists).
+
+    Frame: FD 46 08 <SN 4B BE> 06 00 80 00 <new_id> + CRC-16.
+    """
+    payload = bytes([0xFD, 0x46, 0x08]) + struct.pack(">I", sn) + bytes([0x06, 0x00, 0x80, 0x00, new_id])
+    frame = payload + _modbus_crc16(payload)
+    params = {
+        "path": port_path,
+        "baud_rate": cfg.get("baud_rate", 9600),
+        "parity": cfg.get("parity", "N"),
+        "data_bits": cfg.get("data_bits", 8),
+        "stop_bits": cfg.get("stop_bits", 2),
+        "protocol": "raw",
+        "format": "HEX",
+        "msg": frame.hex(),
+        "response_size": 14,
+        "response_timeout": 500,
+        "frame_timeout": 20,
+        "total_timeout": 3000,
+    }
+    try:
+        ctx.rpc.call("wb-mqtt-serial/port/Load", params, timeout=8.0)
+        return True
+    except Exception:  # pylint: disable=broad-except
+        return False
+
+
+def _change_slave_id_standard(ctx, port_path: str, old_id: int, new_id: int, cfg: dict) -> bool:
+    """Standard Modbus: write register 128 to change slave_id.
+
+    Unsafe when two devices share the address — both would change. Use only when
+    the bus_collision flag is False (unique address on bus, conflict is config-only).
+    """
+    frame = struct.pack(">BBHH", old_id, 0x06, 128, new_id)
+    frame += _modbus_crc16(frame)
+    params = {
+        "path": port_path,
+        "baud_rate": cfg.get("baud_rate", 9600),
+        "parity": cfg.get("parity", "N"),
+        "data_bits": cfg.get("data_bits", 8),
+        "stop_bits": cfg.get("stop_bits", 2),
+        "protocol": "raw",
+        "format": "HEX",
+        "msg": frame.hex(),
+        "response_size": 8,
+        "response_timeout": 500,
+        "frame_timeout": 20,
+        "total_timeout": 3000,
+    }
+    try:
+        ctx.rpc.call("wb-mqtt-serial/port/Load", params, timeout=8.0)
+        return True
+    except Exception:  # pylint: disable=broad-except
+        return False
+
+
+def _reassign_slave_id(  # pylint: disable=too-many-arguments
+    ctx, dev: dict, all_used_ids: set, warnings: list, port_path: str, *, bus_collision: bool
+) -> bool:
+    """Find a free slave_id and change the device's address. Updates dev['cfg'] in-place.
+
+    bus_collision=True means two physical devices share the address — standard Modbus
+    write is unsafe (hits both). Must use Fast Modbus by SN or fail.
+    bus_collision=False means config conflict only — standard write is safe as fallback.
+    """
+    cfg = dev.get("cfg", {})
+    old_id = cfg.get("slave_id")
+    new_id = _find_free_slave_id(all_used_ids)
+    if new_id is None:
+        warnings.append(f"slave_id={old_id}: no free address on bus (1–247 exhausted)")
+        return False
+    ok = False
+    sn_raw = dev.get("sn")
+    if sn_raw is not None:
+        try:
+            ok = _change_slave_id_by_sn(ctx, port_path, int(sn_raw), new_id, cfg)
+        except (ValueError, TypeError):
+            pass
+    if not ok and not bus_collision:
+        ok = _change_slave_id_standard(ctx, port_path, old_id, new_id, cfg)
+    if not ok:
+        if bus_collision:
+            warnings.append(
+                f"slave_id={old_id}: physical address collision, no SN available — "
+                "cannot reassign safely. Assign a unique address manually."
+            )
+        else:
+            warnings.append(f"slave_id={old_id}: could not reassign to {new_id}")
+        return False
+    cfg["slave_id"] = new_id
+    dev["_old_slave_id"] = old_id
+    all_used_ids.add(new_id)
+    return True
+
+
 def _transform_scan_device(dev: dict, port_config: dict, template: dict | None) -> dict:
     """Convert a wb-device-manager scan result entry to a wb-mqtt-serial device config."""
     cfg = dev.get("cfg", {})
@@ -572,7 +900,7 @@ def _load_cached_scan_devices(ctx) -> list:
             code="MODBUS_NO_SCAN_STATE",
             message=(
                 "No scan results available from wb-device-manager. "
-                "Run `wb-cli modbus scan` first, then retry."
+                "Run `wb-cli serial wb-scan` first, then retry."
             ),
             exit_code=ExitCode.DOMAIN,
         )
@@ -659,20 +987,65 @@ def _add_devices(ctx) -> dict:  # pylint: disable=too-many-branches,too-many-sta
         if not scan_devices:
             raise WbCliError(
                 code="MODBUS_ADD_EMPTY",
-                message="No devices in scan results. Run `wb-cli modbus scan` first.",
+                message="No devices in scan results. Run `wb-cli serial wb-scan` first.",
                 exit_code=ExitCode.DOMAIN,
             )
 
         # Filter to the target port.
         scan_devices = [d for d in scan_devices if d.get("port", {}).get("path") == ctx.args.port]
 
+        # All slave_ids currently in use: physical bus + existing config.
+        all_used_ids: set = {
+            d.get("cfg", {}).get("slave_id") for d in scan_devices if d.get("cfg", {}).get("slave_id")
+        } | existing_slave_ids
+
+        # Pre-pass: resolve physical bus address collisions (two scan entries, same slave_id).
+        # Fast Modbus by SN is required here — standard write would hit both devices.
+        seen_scan_ids: set = set()
         for dev in scan_devices:
             sid = dev.get("cfg", {}).get("slave_id")
             if sid is None:
                 continue
-            if sid in existing_slave_ids:
-                skipped.append(sid)
+            if sid in seen_scan_ids:
+                if not _reassign_slave_id(
+                    ctx, dev, all_used_ids, warnings, ctx.args.port, bus_collision=True
+                ):
+                    dev["cfg"]["slave_id"] = None  # unresolvable — skip in main loop
+            else:
+                seen_scan_ids.add(sid)
+
+        for dev in scan_devices:
+            cfg = dev.get("cfg", {})
+            sid = cfg.get("slave_id")
+            if sid is None:
                 continue
+
+            if sid in existing_slave_ids:
+                # wb-device-manager sets configured_device_type when it matched the device
+                # to an existing config entry → already configured, skip.
+                if dev.get("configured_device_type") is not None:
+                    skipped.append(sid)
+                    continue
+                # Different physical device at a conflicting address → reassign it.
+                if not _reassign_slave_id(
+                    ctx, dev, all_used_ids, warnings, ctx.args.port, bus_collision=False
+                ):
+                    continue
+                sid = cfg.get("slave_id")
+
+            dev_baud = cfg.get("baud_rate")
+            port_baud = target_port.get("baud_rate", 9600)
+            baud_changed = None
+            if dev_baud and dev_baud != port_baud:
+                if _change_device_baud(ctx, ctx.args.port, sid, cfg, port_baud):
+                    baud_changed = f"{dev_baud} → {port_baud}"
+                    cfg["baud_rate"] = port_baud
+                else:
+                    warnings.append(
+                        f"slave_id={sid}: could not change baud from {dev_baud} to {port_baud} — "
+                        "skipping. Check device connectivity."
+                    )
+                    continue
             identifier = dev.get("configured_device_type") or dev.get("device_signature", "")
             template = _find_template(ctx, identifier)
             if template is None:
@@ -683,7 +1056,13 @@ def _add_devices(ctx) -> dict:  # pylint: disable=too-many-branches,too-many-sta
             device = _transform_scan_device(dev, target_port, template)
             target_port.setdefault("devices", []).append(device)
             existing_slave_ids.add(sid)
-            added.append({"slave_id": sid, "device_type": device["device_type"]})
+            all_used_ids.add(sid)
+            entry = {"slave_id": sid, "device_type": device["device_type"]}
+            if "_old_slave_id" in dev:
+                entry["slave_id_changed"] = f"{dev['_old_slave_id']} → {sid}"
+            if baud_changed:
+                entry["baud_changed"] = baud_changed
+            added.append(entry)
 
     if added:
         ctx.rpc.call(

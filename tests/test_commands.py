@@ -16,16 +16,17 @@ from wb_cli.commands.cloud import CloudPlugin
 from wb_cli.commands.confed import ConfedPlugin
 from wb_cli.commands.history import HistoryPlugin
 from wb_cli.commands.job_cmd import JobPlugin
-from wb_cli.commands.modbus._plugin import ModbusPlugin
 from wb_cli.commands.modbus_fw import ModbusFwPlugin
 from wb_cli.commands.mqtt_cmd import MqttPlugin
 from wb_cli.commands.rules import RulesPlugin
-from wb_cli.commands.serial_cmd import SerialPlugin, _modbus_crc16, _parse_hex_msg
+from wb_cli.commands.serial._actions import _parse_hex_msg
+from wb_cli.commands.serial._plugin import SerialPlugin as ModbusPlugin
 from wb_cli.commands.serial_debug import SerialDebugPlugin
 from wb_cli.commands.snapshot import SnapshotPlugin
 from wb_cli.context import CliContext
 from wb_cli.errors import WbCliError
 from wb_cli.lib.controller import ControllerInfo
+from wb_cli.lib.modbus_crc import modbus_crc16 as _modbus_crc16
 
 
 def _ctx(**overrides):  # pylint: disable=protected-access
@@ -449,7 +450,7 @@ def _scan_ctx(*, port="/dev/ttyRS485-1", timeout=5.0, scan_type="extended"):
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="scan",
+            subcmd="wb-scan",
             port=port,
             timeout=timeout,
             scan_type=scan_type,
@@ -492,13 +493,13 @@ def test_modbus_scan(monkeypatch):
         "]}\n"
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.subprocess.Popen",
+        "wb_cli.commands.serial._actions.subprocess.Popen",
         lambda *a, **kw: _fake_proc_class(final_state)(),
     )
     # The real _await_scan uses select() on the subprocess fd; with a StringIO
     # stand-in we short-circuit to "always ready" so readline does the work.
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.select.select",
+        "wb_cli.commands.serial._actions.select.select",
         lambda r, w, x, t=None: (r, w, x),
     )
     result = ModbusPlugin().dispatch(ctx)
@@ -514,26 +515,26 @@ def test_modbus_scan_has_add_hint_when_devices_found(monkeypatch):
         "]}\n"
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.subprocess.Popen",
+        "wb_cli.commands.serial._actions.subprocess.Popen",
         lambda *a, **kw: _fake_proc_class(state)(),
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.select.select",
+        "wb_cli.commands.serial._actions.select.select",
         lambda r, w, x, t=None: (r, w, x),
     )
     result = ModbusPlugin().dispatch(ctx)
-    assert result.get("add_hint") == "wb-cli modbus add-devices --port /dev/ttyRS485-1"
+    assert result.get("add_hint") == "wb-cli serial add-devices --port /dev/ttyRS485-1"
 
 
 def test_modbus_scan_no_add_hint_when_no_devices(monkeypatch):
     ctx = _scan_ctx()
     state = '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": []}\n'
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.subprocess.Popen",
+        "wb_cli.commands.serial._actions.subprocess.Popen",
         lambda *a, **kw: _fake_proc_class(state)(),
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.select.select",
+        "wb_cli.commands.serial._actions.select.select",
         lambda r, w, x, t=None: (r, w, x),
     )
     result = ModbusPlugin().dispatch(ctx)
@@ -549,11 +550,11 @@ def test_modbus_scan_instant_0_to_100_completes(monkeypatch):
         "]}\n"
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.subprocess.Popen",
+        "wb_cli.commands.serial._actions.subprocess.Popen",
         lambda *a, **kw: _fake_proc_class(state)(),
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.select.select",
+        "wb_cli.commands.serial._actions.select.select",
         lambda r, w, x, t=None: (r, w, x),
     )
     result = ModbusPlugin().dispatch(ctx)
@@ -564,16 +565,16 @@ def test_modbus_scan_timeout_no_state_hint_mentions_ports(monkeypatch):
     """When wb-device-manager publishes nothing, hint must mention ports/wb-mqtt-serial."""
     ctx = _scan_ctx(timeout=0.01)
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.subprocess.Popen",
+        "wb_cli.commands.serial._actions.subprocess.Popen",
         lambda *a, **kw: _fake_proc_class("")(),
     )
     monkeypatch.setattr(
-        "wb_cli.commands.modbus._actions.select.select",
+        "wb_cli.commands.serial._actions.select.select",
         lambda r, w, x, t=None: (r, w, x),
     )
     result = ModbusPlugin().dispatch(ctx)
     assert result["completed"] is False
-    assert "modbus ports" in result.get("hint", "")
+    assert "serial ports" in result.get("hint", "")
 
 
 def test_modbus_ports():
@@ -676,51 +677,6 @@ def test_modbus_device_info_not_found():
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_DEVICE_NOT_FOUND"
-
-
-def test_modbus_probe_found():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            quiet=False,
-            subcmd="probe",
-            port="/dev/ttyRS485-1",
-            address=2,
-        )
-    )
-    ctx.rpc.call.return_value = {"device_signature": "WBMR6C", "sn": "abc"}
-    result = ModbusPlugin().dispatch(ctx)
-    assert result["found"] is True
-    assert result["result"]["device_signature"] == "WBMR6C"
-
-
-def test_modbus_probe_empty_response_means_not_found():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            quiet=False,
-            subcmd="probe",
-            port="/dev/ttyRS485-1",
-            address=99,
-        )
-    )
-    ctx.rpc.call.return_value = {}
-    result = ModbusPlugin().dispatch(ctx)
-    assert result["found"] is False
-    assert result["result"] is None
-
-
-def test_modbus_probe_rpc_failure_surfaces_as_not_found():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            quiet=False,
-            subcmd="probe",
-            port="/dev/ttyRS485-1",
-            address=2,
-        )
-    )
-    ctx.rpc.call.side_effect = WbCliError(code="RPC_ERROR_RESPONSE", message="boom", exit_code=1)
-    result = ModbusPlugin().dispatch(ctx)
-    assert result["found"] is False
-    assert "boom" in result["error"]
 
 
 _SCAN_DEV_7 = {
@@ -883,6 +839,138 @@ def test_modbus_add_devices_accepts_scan_envelope():
     ctx.rpc.call.side_effect = [_conf_with_rs1(), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
+
+
+_SCAN_DEV_7_HS = {
+    "port": {"path": "/dev/ttyRS485-1"},
+    "cfg": {"slave_id": 7, "baud_rate": 115200, "parity": "N", "data_bits": 8, "stop_bits": 2},
+    "configured_device_type": "WB-MR6C",
+    "device_signature": "WBMR6C",
+    "sn": "12345",
+}
+
+
+def test_modbus_add_devices_changes_baud_to_port_speed():
+    """Device at 115200 on a 9600 port → FC6 write to reg 110, then add without baud override."""
+    scan = json.dumps([_SCAN_DEV_7_HS])
+    ctx = _add_ctx(scan_results=scan)
+    ctx.shell.run.return_value = (1, "", "")  # template not found
+    # calls: Load, port/Load (baud change), Save
+    ctx.rpc.call.side_effect = [_conf_with_rs1(), {"response": ""}, {"ok": True}]
+    result = ModbusPlugin().dispatch(ctx)
+
+    assert result["count"] == 1
+    assert result["added"][0]["baud_changed"] == "115200 → 9600"
+
+    baud_change_call = ctx.rpc.call.call_args_list[1]
+    assert baud_change_call.args[0] == "wb-mqtt-serial/port/Load"
+    params = baud_change_call.args[1]
+    assert params["baud_rate"] == 115200  # talks to device at its current speed
+    assert params["path"] == "/dev/ttyRS485-1"
+    # Frame: slave=7 FC6 reg=110(0x6E) val=96(0x60) — 9600//100
+    assert params["msg"].startswith("070600")
+    assert params["msg"][6:10] == "6e00"  # reg 110, value hi byte 0
+
+    save_call = ctx.rpc.call.call_args_list[2]
+    rs1 = next(p for p in save_call.args[1]["content"]["ports"] if p["path"] == "/dev/ttyRS485-1")
+    added = next(d for d in rs1["devices"] if d["slave_id"] == 7)
+    assert "baud_rate" not in added  # no per-device override — port baud matches now
+
+
+def test_modbus_add_devices_skips_when_baud_change_fails():
+    """If FC6 baud change RPC fails, device is skipped with a warning."""
+    scan = json.dumps([_SCAN_DEV_7_HS])
+    ctx = _add_ctx(scan_results=scan)
+    ctx.shell.run.return_value = (1, "", "")
+    # baud change raises → device skipped, no Save call
+    ctx.rpc.call.side_effect = [_conf_with_rs1(), Exception("port busy")]
+    result = ModbusPlugin().dispatch(ctx)
+    assert result["count"] == 0
+    assert any("could not change baud" in w for w in result.get("warnings", []))
+    assert ctx.rpc.call.call_count == 2  # Load + failed port/Load, no Save
+
+
+_SCAN_DEV_7B = {
+    "port": {"path": "/dev/ttyRS485-1"},
+    "cfg": {"slave_id": 7, "baud_rate": 9600, "parity": "N", "data_bits": 8, "stop_bits": 2},
+    "configured_device_type": None,
+    "device_signature": "WBMAO4",
+    "sn": "99999",
+}
+
+_SCAN_DEV_7B_NO_SN = {
+    "port": {"path": "/dev/ttyRS485-1"},
+    "cfg": {"slave_id": 7, "baud_rate": 9600, "parity": "N", "data_bits": 8, "stop_bits": 2},
+    "configured_device_type": None,
+    "device_signature": "THIRD-PARTY",
+    "sn": None,
+}
+
+
+def test_modbus_add_devices_resolves_bus_collision_via_sn():
+    """Two scan devices same slave_id → second gets new address via Fast Modbus by SN."""
+    scan = json.dumps([_SCAN_DEV_7, _SCAN_DEV_7B])
+    ctx = _add_ctx(scan_results=scan)
+    ctx.shell.run.return_value = (1, "", "")  # no template
+    # calls: Load, port/Load (SN reassign), Save
+    ctx.rpc.call.side_effect = [_conf_with_rs1(), {"response": ""}, {"ok": True}]
+    result = ModbusPlugin().dispatch(ctx)
+
+    assert result["count"] == 2
+    added_ids = {e["slave_id"] for e in result["added"]}
+    assert 7 in added_ids
+    assert len(added_ids) == 2  # second device got a different id
+
+    reassigned = next(e for e in result["added"] if "slave_id_changed" in e)
+    assert reassigned["slave_id_changed"].startswith("7 →")
+
+    # pre-pass call: Fast Modbus by SN — FD 46 08 + SN(99999) in big-endian
+    sn_call = ctx.rpc.call.call_args_list[1]
+    assert sn_call.args[0] == "wb-mqtt-serial/port/Load"
+    msg = sn_call.args[1]["msg"]
+    assert msg.startswith("fd4608")  # Fast Modbus prefix
+
+
+def test_modbus_add_devices_bus_collision_no_sn_warns_and_skips():
+    """Physical collision without SN — cannot use standard write (unsafe), warn and skip duplicate."""
+    scan = json.dumps([_SCAN_DEV_7, _SCAN_DEV_7B_NO_SN])
+    ctx = _add_ctx(scan_results=scan)
+    ctx.shell.run.return_value = (1, "", "")
+    ctx.rpc.call.side_effect = [_conf_with_rs1(), {"ok": True}]  # Load + Save (only first device added)
+    result = ModbusPlugin().dispatch(ctx)
+
+    assert result["count"] == 1  # only the first (non-duplicate) device added
+    assert any("physical address collision" in w for w in result.get("warnings", []))
+
+
+def test_modbus_add_devices_config_conflict_reassigns_via_standard_modbus():
+    """Scan finds new device at slave_id already in config (different type) → reassign via reg 128."""
+    # Config has slave_id=7 as WB-MR6C; scan finds a different device at slave_id=7
+    scan_dev = {
+        "port": {"path": "/dev/ttyRS485-1"},
+        "cfg": {"slave_id": 7, "baud_rate": 9600, "parity": "N", "data_bits": 8, "stop_bits": 2},
+        "configured_device_type": None,  # not matched to existing config
+        "device_signature": "WBMAO4",
+        "sn": None,
+    }
+    scan = json.dumps([scan_dev])
+    ctx = _add_ctx(scan_results=scan)
+    ctx.shell.run.return_value = (1, "", "")
+    existing = [{"slave_id": 7, "device_type": "WB-MR6C"}]
+    # calls: Load, port/Load (reg 128 write to reassign), Save
+    ctx.rpc.call.side_effect = [_conf_with_rs1(existing), {"response": ""}, {"ok": True}]
+    result = ModbusPlugin().dispatch(ctx)
+
+    assert result["count"] == 1
+    added = result["added"][0]
+    assert added["slave_id"] != 7  # got a free address
+    assert "slave_id_changed" in added
+    assert added["slave_id_changed"].startswith("7 →")
+
+    reg128_call = ctx.rpc.call.call_args_list[1]
+    msg = reg128_call.args[1]["msg"]
+    # Frame: 07 06 00 80 <new_id_hi> <new_id_lo> + CRC — starts with 070600 80
+    assert msg[:8] == "07060080"
 
 
 def test_modbus_devices_lists_from_serial_conf():
@@ -1165,7 +1253,7 @@ def _serial_send_ctx(msg="FD 46 01", add_modbus_crc=True, response_size=10, baud
 def test_serial_send_builds_correct_rpc_params():
     ctx = _serial_send_ctx(msg="FD 46 01", add_modbus_crc=True, response_size=10)
     ctx.rpc.call.return_value = {"response": "fd460313900ccedc"}
-    SerialPlugin().dispatch(ctx)
+    ModbusPlugin().dispatch(ctx)
 
     call_args = ctx.rpc.call.call_args
     params = call_args.args[1]
@@ -1188,7 +1276,7 @@ def test_serial_send_crc_correct():
 def test_serial_send_no_crc():
     ctx = _serial_send_ctx(msg="fd4601", add_modbus_crc=False, response_size=0)
     ctx.rpc.call.return_value = {"response": ""}
-    SerialPlugin().dispatch(ctx)
+    ModbusPlugin().dispatch(ctx)
 
     params = ctx.rpc.call.call_args.args[1]
     assert params["msg"] == "fd4601"
@@ -1197,7 +1285,7 @@ def test_serial_send_no_crc():
 def test_serial_send_returns_request_and_response():
     ctx = _serial_send_ctx(msg="FD 46 01", add_modbus_crc=True, response_size=10)
     ctx.rpc.call.return_value = {"response": "fd4603001eb3700ccedc"}
-    result = SerialPlugin().dispatch(ctx)
+    result = ModbusPlugin().dispatch(ctx)
 
     assert "request" in result
     assert "response" in result
@@ -1205,7 +1293,7 @@ def test_serial_send_returns_request_and_response():
 
 
 def test_serial_send_render_human():
-    plugin = SerialPlugin()
+    plugin = ModbusPlugin()
     result = {
         "port": "/dev/ttyRS485-1",
         "request": "fd460113 90".replace(" ", ""),
@@ -1217,7 +1305,7 @@ def test_serial_send_render_human():
 
 
 def test_serial_send_render_no_response():
-    plugin = SerialPlugin()
+    plugin = ModbusPlugin()
     result = {"port": "/dev/ttyRS485-1", "request": "fd4601", "response": ""}
     out = plugin.render(result)
     assert "no response" in out.lower()

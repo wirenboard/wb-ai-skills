@@ -56,6 +56,7 @@ def iter_devices(content: Dict[str, Any]) -> Iterator[Dict[str, Any]]:
                 "slave_id": dev.get("slave_id"),
                 "device_type": dev.get("device_type"),
                 "id": dev.get("id"),
+                "protocol": dev.get("protocol") or port.get("protocol") or "modbus",
                 "port_path": port_path,
                 "port": {"path": port_path, **uart},
             }

@@ -232,9 +232,10 @@ def _port_arg(args) -> dict:
 def _check(ctx) -> dict:
     if ctx.args.slave_id is not None:
         port_str = ctx.args.port or "all ports"
+        device_type = _lookup_device_type(ctx, ctx.args.slave_id, ctx.args.port)
         with ProgressBar(f"checking slave_id={ctx.args.slave_id}") as pb:
             pb.update(0, suffix=port_str)
-            return _check_one(ctx, ctx.args.slave_id, _port_arg(ctx.args))
+            return _check_one(ctx, ctx.args.slave_id, _port_arg(ctx.args), device_type=device_type)
     # Bulk: walk every device in /etc/wb-mqtt-serial.conf.
     content = serial_conf.load_config(ctx)
     targets = serial_conf.list_devices(content, port=ctx.args.port)
@@ -247,11 +248,39 @@ def _check(ctx) -> dict:
                 int(i / total * 100) if total else 100,
                 suffix=f"{i + 1}/{total}  slave_id={dev['slave_id']}  {port_path}",
             )
-            rows.append(_check_one(ctx, dev["slave_id"], dev["port"], _swallow=True))
+            rows.append(
+                _check_one(
+                    ctx,
+                    dev["slave_id"],
+                    dev["port"],
+                    device_type=dev.get("device_type"),
+                    _swallow=True,
+                )
+            )
     return {"devices": rows, "count": len(rows)}
 
 
-def _check_one(ctx, slave_id: int, port: dict, *, _swallow: bool = False) -> dict:
+def _lookup_device_type(ctx, slave_id: int, port: str | None) -> str | None:
+    """Try to find device_type in config for (slave_id, port); return None if not found."""
+    try:
+        content = serial_conf.load_config(ctx)
+        for dev in serial_conf.iter_devices(content):
+            if dev.get("slave_id") == slave_id:
+                if port is None or dev.get("port_path") == port:
+                    return dev.get("device_type")
+    except Exception:  # pylint: disable=broad-except
+        pass
+    return None
+
+
+def _check_one(
+    ctx,
+    slave_id: int,
+    port: dict,
+    *,
+    device_type: str | None = None,
+    _swallow: bool = False,
+) -> dict:
     """Probe one slave; on bulk failure (``_swallow``) attach the error instead of raising."""
     try:
         info = ctx.rpc.call(
@@ -264,6 +293,7 @@ def _check_one(ctx, slave_id: int, port: dict, *, _swallow: bool = False) -> dic
             raise
         return {
             "slave_id": slave_id,
+            "device_type": device_type or "",
             "port": port.get("path"),
             "error": exc.message,
         }
@@ -271,6 +301,7 @@ def _check_one(ctx, slave_id: int, port: dict, *, _swallow: bool = False) -> dic
         info = {}
     return {
         "slave_id": slave_id,
+        "device_type": device_type or "",
         "port": port.get("path"),
         "fw": info.get("fw"),
         "available_fw": info.get("available_fw"),
@@ -495,9 +526,14 @@ def _all_done(state: dict) -> bool:
 
 def _render_check_one(result: dict) -> str:
     verdict = "update available" if result["can_update"] else "up to date"
+    device_type = result.get("device_type") or ""
+    header = f"{verdict}  (slave_id={result['slave_id']}, port={result['port']}"
+    if device_type:
+        header += f", {device_type}"
+    header += ")"
     return "\n".join(
         [
-            f"{verdict}  (slave_id={result['slave_id']}, port={result['port']})",
+            header,
             f"  firmware:   {result.get('fw', '?')} -> {result.get('available_fw', '?')}",
             f"  bootloader: {result.get('bootloader', '?')} -> " f"{result.get('available_bootloader', '?')}",
         ]
@@ -505,7 +541,16 @@ def _render_check_one(result: dict) -> str:
 
 
 def _render_check_bulk(rows) -> str:
-    cols = ["slave_id", "port", "fw", "available_fw", "bootloader", "available_bootloader", "status"]
+    cols = [
+        "slave_id",
+        "device_type",
+        "port",
+        "fw",
+        "available_fw",
+        "bootloader",
+        "available_bootloader",
+        "status",
+    ]
     has_error = any("error" in row for row in rows)
     if has_error:
         cols.append("error")
@@ -514,6 +559,7 @@ def _render_check_bulk(rows) -> str:
         status = "ERROR" if "error" in row else ("update" if row.get("can_update") else "ok")
         entry = {
             "slave_id": str(row.get("slave_id", "?")),
+            "device_type": row.get("device_type") or "",
             "port": row.get("port", "?"),
             "fw": str(row.get("fw") or ""),
             "available_fw": str(row.get("available_fw") or ""),

@@ -32,8 +32,9 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 ```bash
 ssh root@<HOST> wb-cli --json serial-debug --port /dev/ttyRS485-1 --seconds 60
-ssh root@<HOST> wb-cli --json modbus scan --port /dev/ttyRS485-1
-ssh root@<HOST> wb-cli --json modbus probe --port /dev/ttyRS485-1 --address 52
+ssh root@<HOST> wb-cli --json serial wb-scan --port /dev/ttyRS485-1
+ssh root@<HOST> wb-cli --json serial devices
+ssh root@<HOST> wb-cli --json serial device-params 52
 ssh root@<HOST> wb-cli --json dev wb-mr6c_52
 ```
 
@@ -172,8 +173,8 @@ Modbus is byte big-endian, but for u32/s32/float the **word** order (16-bit regi
 ### 2. List existing templates and pick a starter
 
 ```bash
-ssh root@<HOST> wb-cli --json modbus templates                  # list all template filenames
-ssh root@<HOST> wb-cli --json modbus template wb-mr6c           # show full JSON of a template
+ssh root@<HOST> wb-cli --json serial templates                  # list all template filenames
+ssh root@<HOST> wb-cli --json serial template wb-mr6c           # show full JSON of a template
 ```
 
 Copy a similar one as a starter:
@@ -218,28 +219,36 @@ A custom template won't survive FIT. Goes into backup automatically via `wb-cont
 > wb-mqtt-serial templates have required parameters that must be present in the config.
 > Missing them causes config validation failure → `ports/Load` returns `[]` →
 > **all bus scans stop working** until the config is fixed.
-> Always use `wb-cli modbus add-devices` — it fills required params from template defaults automatically.
+> Always use `wb-cli serial add-devices` — it fills required params from template defaults automatically.
 
 ### Standard workflow: scan → add
 
 ```bash
 # Extended scan (WB Fast Modbus devices — default, fast)
-ssh root@<HOST> wb-cli --json modbus scan
+ssh root@<HOST> wb-cli --json serial wb-scan
 
 # Slow scan (third-party devices without Fast Modbus support)
-ssh root@<HOST> wb-cli --json modbus scan --slow --timeout 300
+ssh root@<HOST> wb-cli --json serial wb-scan --slow --timeout 300
 
 # Add all found devices on a port (reads last scan result, no re-scan)
-ssh root@<HOST> wb-cli --json modbus add-devices --port /dev/ttyRS485-1
+ssh root@<HOST> wb-cli --json serial add-devices --port /dev/ttyRS485-1
 ```
 
 `add-devices` reads the retained wb-device-manager state — so you can run any scan type
 (extended or slow) and then add without re-scanning. Devices already in config are skipped.
 
+**Automatic fixups** applied before adding (scan mode only):
+
+| Issue | Action |
+|---|---|
+| Device baud ≠ port baud | Writes reg 110 at device's current speed → device switches to port's baud |
+| Two scan devices same slave_id | Reassigns duplicate via Fast Modbus by SN (WB/Onokom) or reg 128; without SN — warns and skips |
+| Scan device slave_id conflicts with existing config (different device_type) | Reassigns via Fast Modbus by SN or reg 128 |
+
 ### Add a single device by model (no scan needed)
 
 ```bash
-ssh root@<HOST> wb-cli --json modbus add-devices \
+ssh root@<HOST> wb-cli --json serial add-devices \
   --port /dev/ttyRS485-1 --device-type WB-MAI6 --slave-id 19
 ```
 
@@ -250,17 +259,60 @@ Looks up the template, fills required parameters from defaults, appends to confi
 ```json
 {
   "port": "/dev/ttyRS485-1",
-  "added": [{"slave_id": 19, "device_type": "WB-MAI6"}],
+  "added": [
+    {"slave_id": 7,  "device_type": "WB-MR6C"},
+    {"slave_id": 1,  "device_type": "WB-MAO4-20mA", "slave_id_changed": "18 → 1", "baud_changed": "115200 → 9600"}
+  ],
   "skipped": [],
-  "count": 1,
+  "count": 2,
   "warnings": []
 }
 ```
 
-`warnings` is present only when a template was not found and required parameters could not
-be filled — validate the config manually in that case.
+`warnings` is present when:
+- Template not found — required parameters not filled; validate config manually.
+- Address collision without SN — cannot reassign safely; device skipped.
+- Baud change failed — device unreachable; check connectivity and skip.
 
 After adding, `wb-mqtt-serial` reloads automatically. Verify: `wb-cli --json dev <device_id>`.
+
+## Reading and writing device parameters
+
+`device-params` reads the `parameters` section (firmware settings) from the device hardware via the driver's `device/LoadConfig` RPC. The device must already be in the config.
+
+```bash
+# Read parameters by slave_id or by device id
+ssh root@<HOST> wb-cli --json serial device-params 52
+ssh root@<HOST> wb-cli --json serial device-params wb-mr6c-52
+
+# Bypass driver cache (force re-read from hardware)
+ssh root@<HOST> wb-cli --json serial device-params 52 --force
+```
+
+Returns `{"slave_id": 52, "device_type": "WB-MR6C", "model": "...", "fw": {"version": "..."}, "parameters": {"in0_mode": 0, ...}}`.
+
+`device-set` writes one or more parameters to the device via `device/Set` RPC:
+
+```bash
+ssh root@<HOST> wb-cli --json serial device-set 52 --set in0_mode=1 --set in1_mode=3
+```
+
+`KEY=VALUE` — values are coerced: integers first, then floats, then strings. Returns the parameters that were written.
+
+**Note:** Both commands look up the device by `slave_id` or `id` field from `/etc/wb-mqtt-serial.conf`. The driver uses the template's `parameters` section to know which registers to read/write — so the device must be in config with the correct `device_type`.
+
+## Listing devices and ports
+
+```bash
+# All devices from /etc/wb-mqtt-serial.conf (with protocol column)
+ssh root@<HOST> wb-cli --json serial devices
+
+# Filter to one port
+ssh root@<HOST> wb-cli --json serial devices --port /dev/ttyRS485-1
+
+# Active ports (driver-side, only what's currently open)
+ssh root@<HOST> wb-cli --json serial ports
+```
 
 ## Loading / testing without restart
 
@@ -544,14 +596,28 @@ Use the MQTT RPC base pattern with:
 
 **Modbus CRC-16** (LE): polynomial `0xA001`, init `0xFFFF`, append low byte then high byte.
 
-This is how `wb-cli modbus add-devices` and `modbus_client_rpc` work internally — they go through the same queue and don't conflict with the driver's ongoing polling.
+This is how `wb-cli serial add-devices` and `modbus_client_rpc` work internally — they go through the same queue and don't conflict with the driver's ongoing polling.
 
 ### When to use Fast Modbus in diagnostics
 
-- **Duplicate slave_id** on scan — identify both devices by SN, reassign one
+- **Duplicate slave_id** on scan — `wb-cli serial add-devices` resolves automatically via SN. If you need to do it manually: `wb-cli serial send --port ... --msg 'FD 46 08 <SN 4B> 06 00 80 00 <new_id>' --add-modbus-crc --response-size 14`
 - **Device in scan but won't respond to modbus_client_rpc** — address conflict; use `0x08` by SN to read model/firmware first
 - **Event-based debugging** — instead of polling, subscribe to device events for input changes, counter ticks, resets. Useful to catch rare events without log noise.
 - **wb-modbus-scanner** (`apt install wb-modbus-ext-scanner`) — reference CLI tool for Fast Modbus. Not installed by default; conflicts with driver while running.
+
+### Reading device parameters during diagnostics
+
+When you suspect misconfigured firmware settings, read them directly from hardware:
+
+```bash
+ssh root@<HOST> wb-cli --json serial device-params <slave_id>
+```
+
+Returns the current `parameters` values (e.g. input modes, relay behaviours, thresholds). Compare with expected values from the template or user settings. To apply a fix in-place without editing the config file:
+
+```bash
+ssh root@<HOST> wb-cli --json serial device-set <slave_id> --set <param>=<value>
+```
 
 Protocol spec: <https://github.com/wirenboard/wb-modbus-ext-scanner/blob/main/docs/protocol.en.md>
 

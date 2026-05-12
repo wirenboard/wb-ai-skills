@@ -1,3 +1,30 @@
+wb-cli (1.2.0) stable; urgency=medium
+
+  * serial: renamed from `modbus` — wb-cli now uses `wb-cli serial` for all
+    RS-485 operations, reflecting multi-protocol support (modbus, mercury23x,
+    and others). `wb-cli modbus` is removed.
+  * serial wb-scan: renamed from `scan`; --slow and --bootloader modes work
+    correctly — slow scan now waits for standard phase, not extended.
+  * serial device-params: new command — reads configurable parameters from
+    device hardware via wb-mqtt-serial/device/LoadConfig RPC (slave_id or
+    string id lookup, optional --force to bypass driver cache).
+  * serial device-set: new command — writes parameters to device hardware via
+    wb-mqtt-serial/device/Set RPC; values are type-coerced (int/float/string).
+  * serial add-devices: automatic baud-rate fixup — if a device runs at a
+    different speed than the port, Modbus reg 110 is written before adding so
+    no per-device baud override is stored in config.
+  * serial add-devices: automatic slave_id collision resolution — physical bus
+    collisions resolved via Fast Modbus by SN; config-only conflicts via
+    standard Modbus reg 128 write; unresolvable cases warned and skipped.
+  * serial devices: added protocol column (default: modbus).
+  * modbus-fw check: added device_type column to table output.
+  * lib/modbus_crc.py: shared modbus_crc16 helper extracted to avoid
+    duplication between serial and other modules.
+  * Tests: 53 new tests in test_serial.py covering all serial domain utilities
+    and commands; 236 tests total.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 02:29:43 +0400
+
 wb-cli (1.1.0) stable; urgency=medium
 
   * serial send: new command for sending raw bytes to the serial bus via
@@ -136,7 +163,7 @@ wb-cli (0.3.1) stable; urgency=medium
     on the controller's system Python). The hint tells the user which
     package to `apt-get install`.
 
- -- Wiren Board Team <info@wirenboard.com>  Tue, 12 May 2026 00:30:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 12 May 2026 00:30:00 +0000
 
 wb-cli (0.3.0) stable; urgency=medium
 
@@ -221,7 +248,7 @@ wb-cli (0.3.0) stable; urgency=medium
     top-level CliContext.quiet was ever read), `args.human=False` in
     every test Namespace.
 
- -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 20:30:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Mon, 11 May 2026 20:30:00 +0000
 
 wb-cli (0.2.1) stable; urgency=medium
 
@@ -234,7 +261,7 @@ wb-cli (0.2.1) stable; urgency=medium
   * `devices list` now hides `system_*` wrappers (per-network connections,
     cloud-agent state, system_time) by default. Pass `--all` to keep them.
 
- -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 19:50:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Mon, 11 May 2026 19:50:00 +0000
 
 wb-cli (0.2.0) stable; urgency=medium
 
@@ -261,7 +288,7 @@ wb-cli (0.2.0) stable; urgency=medium
     serial-debug's restore-after-failure; render.auto_render shapes;
     CLI output-mode resolution. 123 tests total.
 
- -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 19:30:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Mon, 11 May 2026 19:30:00 +0000
 
 wb-cli (0.1.2) stable; urgency=medium
 
@@ -283,7 +310,7 @@ wb-cli (0.1.2) stable; urgency=medium
   * Internals: clean up dead `if ctx.controller` branches, extract scan
     timing constants, ensure the scan subprocess is reaped after terminate.
 
- -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 18:30:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Mon, 11 May 2026 18:30:00 +0000
 
 wb-cli (0.1.1) stable; urgency=medium
 
@@ -297,7 +324,7 @@ wb-cli (0.1.1) stable; urgency=medium
   * install-skills.sh: new "manual --dest <dir>" target; --dest available
     for claude/opencode too; embedded usage help.
 
- -- Wiren Board Team <info@wirenboard.com>  Mon, 11 May 2026 17:45:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Mon, 11 May 2026 17:45:00 +0000
 
 wb-cli (0.1.0) stable; urgency=medium
 
@@ -308,4 +335,4 @@ wb-cli (0.1.0) stable; urgency=medium
     serial-debug, snapshot, systemd.
   * 55 tests, pylint 10.00/10.
 
- -- Wiren Board Team <info@wirenboard.com>  Sat, 10 May 2026 14:00:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Sat, 10 May 2026 14:00:00 +0000
