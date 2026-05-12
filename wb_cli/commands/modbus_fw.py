@@ -231,11 +231,23 @@ def _port_arg(args) -> dict:
 
 def _check(ctx) -> dict:
     if ctx.args.slave_id is not None:
-        return _check_one(ctx, ctx.args.slave_id, _port_arg(ctx.args))
+        port_str = ctx.args.port or "all ports"
+        with ProgressBar(f"checking slave_id={ctx.args.slave_id}") as pb:
+            pb.update(0, suffix=port_str)
+            return _check_one(ctx, ctx.args.slave_id, _port_arg(ctx.args))
     # Bulk: walk every device in /etc/wb-mqtt-serial.conf.
     content = serial_conf.load_config(ctx)
     targets = serial_conf.list_devices(content, port=ctx.args.port)
-    rows = [_check_one(ctx, dev["slave_id"], dev["port"], _swallow=True) for dev in targets]
+    total = len(targets)
+    rows = []
+    with ProgressBar("checking firmware") as pb:
+        for i, dev in enumerate(targets):
+            port_path = dev.get("port_path", dev.get("port", {}).get("path", ""))
+            pb.update(
+                int(i / total * 100) if total else 100,
+                suffix=f"{i + 1}/{total}  slave_id={dev['slave_id']}  {port_path}",
+            )
+            rows.append(_check_one(ctx, dev["slave_id"], dev["port"], _swallow=True))
     return {"devices": rows, "count": len(rows)}
 
 

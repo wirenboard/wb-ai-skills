@@ -53,6 +53,7 @@ class ModbusPlugin(BasePlugin):
                 completed=result.get("completed", True),
                 progress=result.get("progress"),
                 hint=result.get("hint"),
+                add_hint=result.get("add_hint"),
             )
         if "devices" in result and not result["devices"]:
             scan_type = result.get("scan_type", "")
@@ -76,6 +77,9 @@ class ModbusPlugin(BasePlugin):
                 return f"not found at slave_id={result.get('address')} on {result.get('port')}"
             sub = result.get("result") or {}
             return f"found  {sub.get('device_signature', '?')} sn={sub.get('sn', '?')}"
+        # `modbus add-devices`: summary of what was added / skipped.
+        if "added" in result and "port" in result:
+            return _add_devices_summary(result)
         return None
 
 
@@ -102,7 +106,30 @@ def _devices_table(rows):
     return "\n".join([f"{len(rows)} device(s) in /etc/wb-mqtt-serial.conf:", header, sep, *body])
 
 
-def _scan_table(rows, *, scan_type=None, completed=True, progress=None, hint=None):
+def _add_devices_summary(result):
+    port = result.get("port", "?")
+    added = result.get("added", [])
+    skipped = result.get("skipped", [])
+    warnings = result.get("warnings", [])
+    lines = []
+    if added:
+        lines.append(f"Added {len(added)} device(s) to {port}:")
+        for dev in added:
+            lines.append(f"  slave_id={dev['slave_id']}  {dev['device_type']}")
+    else:
+        lines.append(f"No new devices added to {port}")
+    if skipped:
+        lines.append(
+            f"Skipped {len(skipped)} already in config: slave_id={', '.join(str(s) for s in skipped)}"
+        )
+    for w in warnings:
+        lines.append(f"WARNING: {w}")
+    return "\n".join(lines)
+
+
+def _scan_table(  # pylint: disable=too-many-arguments
+    rows, *, scan_type=None, completed=True, progress=None, hint=None, add_hint=None
+):
     columns = ["slave_id", "signature", "sn", "port", "baud", "uart", "fw"]
     widths = {col: max(len(col), *(len(r[col]) for r in rows)) for col in columns}
     header = "  ".join(col.ljust(widths[col]) for col in columns)
@@ -116,6 +143,8 @@ def _scan_table(rows, *, scan_type=None, completed=True, progress=None, hint=Non
     out = [title, header, sep, *body]
     if not completed and hint:
         out.append(f"hint: {hint}")
+    if completed and add_hint:
+        out.append(f"\nTo add to config: {add_hint}")
     return "\n".join(out)
 
 

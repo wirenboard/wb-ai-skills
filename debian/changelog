@@ -1,3 +1,33 @@
+wb-cli (1.1.0) stable; urgency=medium
+
+  * serial send: new command for sending raw bytes to the serial bus via
+    wb-mqtt-serial port/Load RPC. No driver restart needed — request is queued
+    alongside regular polling. Supports --add-crc (Modbus CRC-16), configurable
+    baud/parity/stop-bits, response size and timeouts. Useful for Fast Modbus
+    frames, protocol exploration, and low-level debugging.
+  * modbus scan: fixed extended (Fast Modbus) scan — was reporting "standard"
+    due to saw_progress bug; now correctly detects scan type from state.
+  * modbus scan: added "To add to config: wb-cli modbus add-devices --port ..."
+    hint after a successful scan.
+  * modbus scan: improved timeout hint — mentions "wb-cli modbus ports" when
+    no state received at all (driver not running / port not configured).
+  * modbus add-devices: complete rewrite — three modes:
+    - default: reads cached wb-device-manager state (no extra scan needed),
+      filters by --port;
+    - --scan-results JSON: accepts bare device list or full {data:{devices:[]}}
+      envelope from wb-cli --json output;
+    - --device-type + --slave-id: adds a single device directly by template
+      name, no scan required.
+    Required template parameters are now filled automatically from the template
+    definition; missing template → warning surfaced, device still added with
+    best-effort config. Duplicate slave_ids are skipped with a report.
+  * modbus-fw check: added ProgressBar — shows current slave_id and port while
+    checking each device; no more silent hangs on bulk checks.
+  * Tests: 174 tests, all passing; new modbus tests cover scan hint, add-devices
+    all three modes, duplicate skip, cached-state mode, template warnings.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 12 May 2026 00:00:00 +0000
+
 wb-cli (1.0.0) stable; urgency=medium
 
   * BREAKING: `fw_version` removed from `wb-cli info` and `wb-cli audit` JSON
@@ -16,7 +46,7 @@ wb-cli (1.0.0) stable; urgency=medium
   * Contributing rules: tests required for every new command; manual
     verification on real hardware required before merge.
 
- -- Alexander Degtyarev <wb-claude-mail-00003@proton.me>  Tue, 13 May 2026 00:00:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 13 May 2026 00:00:00 +0000
 
 wb-cli (0.4.0) stable; urgency=medium
 
@@ -37,7 +67,7 @@ wb-cli (0.4.0) stable; urgency=medium
   * README: skill count and table updated (nine → eight, new wb-serial).
   * README: mqtt sub added to command table.
 
- -- Alexander Degtyarev <wb-claude-mail-00003@proton.me>  Tue, 13 May 2026 00:00:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 13 May 2026 00:00:00 +0000
 
 wb-cli (0.3.2) stable; urgency=medium
 
@@ -64,7 +94,7 @@ wb-cli (0.3.2) stable; urgency=medium
     Key commands section replaced with pointer to wb-cli --help.
   * skills/wb-scenarios removed.
 
- -- Alexander Degtyarev <wb-claude-mail-00003@proton.me>  Tue, 12 May 2026 00:00:00 +0000
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 12 May 2026 00:00:00 +0000
 
 wb-cli (0.3.1) stable; urgency=medium
 

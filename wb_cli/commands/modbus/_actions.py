@@ -136,16 +136,67 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
 
     p = sub.add_parser(
         "add-devices",
-        help="add devices from `modbus scan` output to the serial config",
+        help="add discovered (or named) devices to the serial config",
         description=(
             "Append entries to the `devices` list of one port in /etc/wb-mqtt-serial.conf.\n"
-            "Pass the JSON from `wb-cli --json modbus scan`."
+            "Required template parameters are filled from template defaults automatically,\n"
+            "so the config is always valid after adding. Devices already present (same\n"
+            "slave_id on the same port) are silently skipped — safe to re-run.\n"
+            "\n"
+            "Three modes, in order of precedence:\n"
+            "\n"
+            "  --device-type + --slave-id\n"
+            "      Add a single device by model without scanning. Looks up the template\n"
+            "      by device_type and fills required parameters from template defaults.\n"
+            "      Example: --device-type WB-MAI6 --slave-id 19\n"
+            "\n"
+            "  --scan-results JSON\n"
+            "      Use an explicit JSON list of devices (output of `wb-cli --json modbus\n"
+            "      scan` → .data.devices). For scripting and agent use.\n"
+            "\n"
+            "  (default — no extra flags)\n"
+            "      Read the retained wb-device-manager state (result of the last scan).\n"
+            "      Run `wb-cli modbus scan` or `wb-cli modbus scan --slow` first, then\n"
+            "      call this command. Slow-scan results (third-party devices) are\n"
+            "      picked up without re-scanning.\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  # scan → add (typical workflow)\n"
+            "  wb-cli modbus scan\n"
+            "  wb-cli modbus add-devices --port /dev/ttyRS485-1\n"
+            "\n"
+            "  # slow scan for third-party devices, then add\n"
+            "  wb-cli modbus scan --slow --timeout 300\n"
+            "  wb-cli modbus add-devices --port /dev/ttyRS485-1\n"
+            "\n"
+            "  # add a single device by model (no scan needed)\n"
+            "  wb-cli modbus add-devices --port /dev/ttyRS485-1 --device-type WB-MAI6 --slave-id 19\n"
+            "\n"
+            "  # agent/scripted use\n"
+            "  wb-cli --json modbus add-devices --port /dev/ttyRS485-1\n"
+        ),
     )
     p.add_argument("--port", required=True, help="target serial port path (must already exist in the config)")
     p.add_argument(
-        "--scan-results", required=True, help="JSON list of devices (as produced by `modbus scan`)"
+        "--scan-results",
+        default=None,
+        help=(
+            "explicit JSON list of devices (.data.devices from `wb-cli --json modbus scan`); "
+            "if omitted, reads the retained state from the last scan"
+        ),
+    )
+    p.add_argument(
+        "--device-type",
+        default=None,
+        help="device_type from the template (e.g. WB-MAI6); requires --slave-id; skips scanning",
+    )
+    p.add_argument(
+        "--slave-id",
+        type=int,
+        default=None,
+        help="Modbus slave address to assign when using --device-type",
     )
 
 
@@ -210,7 +261,11 @@ def _await_scan(ctx, proc, progress_bar, scan_type: str):
     just after reporting 100%.
     """
     deadline = time.monotonic() + ctx.args.timeout
-    saw_progress = False
+    # Once we receive any state message after calling bus-scan/Start, we know
+    # it is fresh (mosquitto_sub -R already dropped the retained message).
+    # So any progress>=100 with the right phase means the scan is done — no
+    # need for the old saw_progress guard that broke 0→100 instant completions.
+    received_state = False
     devices: list = []
     last_progress = 0
     final_deadline: float = 0.0  # set once we first hit done(); read until it expires
@@ -220,11 +275,11 @@ def _await_scan(ctx, proc, progress_bar, scan_type: str):
         ready, _, _ = select.select([proc.stdout], [], [], 0.1)
         if not ready:
             if final_deadline and time.monotonic() >= final_deadline:
-                return devices, True, last_progress
+                return devices, True, last_progress, received_state
             continue
         line = proc.stdout.readline()
         if not line:
-            return devices, final_deadline > 0, last_progress
+            return devices, final_deadline > 0, last_progress, received_state
         try:
             state = json.loads(line)
         except json.JSONDecodeError:
@@ -240,17 +295,17 @@ def _await_scan(ctx, proc, progress_bar, scan_type: str):
         is_ext = state.get("is_ext_scan", False)
         devices = state.get("devices", devices)
         last_progress = progress
+        received_state = True
         phase = "extended" if is_ext else "standard"
         progress_bar.update(progress, suffix=f"{phase}, {len(devices)} device(s)")
         if 0 < progress < 100:
-            saw_progress = True
             final_deadline = 0.0  # ramp-up overrides any earlier stable window
-        if progress >= 100 and saw_progress and _is_done(scan_type, is_ext):
+        if progress >= 100 and received_state and _is_done(scan_type, is_ext):
             # Start the stable-window on first done() if not yet started;
             # extend it on each subsequent matching state so the list of
             # discovered devices keeps growing as long as updates arrive.
             final_deadline = time.monotonic() + _FINAL_STABLE_S
-    return devices, final_deadline > 0, last_progress
+    return devices, final_deadline > 0, last_progress, received_state
 
 
 def _is_done(scan_type: str, is_ext: bool) -> bool:
@@ -300,7 +355,9 @@ def _scan(ctx) -> dict:
         try:
             time.sleep(_SUB_CONNECT_S)
             ctx.rpc.call("wb-device-manager/bus-scan/Start", _rpc_scan_args(ctx.args))
-            devices, completed, last_progress = _await_scan(ctx, proc, progress_bar, scan_type)
+            devices, completed, last_progress, received_state = _await_scan(
+                ctx, proc, progress_bar, scan_type
+            )
         finally:
             try:
                 ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
@@ -317,12 +374,23 @@ def _scan(ctx) -> dict:
     if not completed:
         envelope["progress"] = last_progress
         envelope["timeout_seconds"] = ctx.args.timeout
-        envelope["hint"] = (
-            "Scan did not finish in time. Re-run with a larger --timeout; "
-            "--slow scans typically need several minutes per port."
-        )
+        if not received_state:
+            envelope["hint"] = (
+                "wb-device-manager published no scan state — it may have no ports to scan. "
+                "Check that wb-mqtt-serial is running and its config is valid: "
+                "`systemctl is-active wb-mqtt-serial` and `wb-cli --json modbus ports`."
+            )
+        else:
+            envelope["hint"] = (
+                "Scan did not finish in time. Re-run with a larger --timeout; "
+                "--slow scans typically need several minutes per port."
+            )
     if ctx.args.port:
         envelope["port"] = ctx.args.port
+    if devices and completed:
+        ports_seen = list({d.get("port", {}).get("path") for d in devices if d.get("port", {}).get("path")})
+        hint_port = ports_seen[0] if len(ports_seen) == 1 else "<port>"
+        envelope["add_hint"] = f"wb-cli modbus add-devices --port {hint_port}"
     return envelope
 
 
@@ -415,45 +483,198 @@ def _ports(ctx) -> dict:
     return {"ports": ports, "count": len(ports)}
 
 
-def _add_devices(ctx) -> dict:
-    try:
-        scan_results = json.loads(ctx.args.scan_results)
-    except json.JSONDecodeError as exc:
-        raise WbCliError(
-            code="MODBUS_ADD_INVALID_JSON",
-            message=f"--scan-results is not valid JSON: {exc}",
-            exit_code=ExitCode.USAGE,
-        ) from exc
+def _find_template(ctx, device_type: str) -> dict | None:
+    """Return the template dict for device_type, checking custom dir before packaged."""
+    template_dirs = [
+        "/etc/wb-mqtt-serial.conf.d/templates",
+        "/usr/share/wb-mqtt-serial/templates",
+    ]
+    for template_dir in template_dirs:
+        rc, stdout, _ = ctx.shell.run(
+            ["grep", "-rl", f'"device_type": "{device_type}"', template_dir],
+            timeout=5.0,
+        )
+        if rc != 0 or not stdout.strip():
+            continue
+        first_file = stdout.strip().splitlines()[0]
+        rc2, content, _ = ctx.shell.run(["cat", first_file], timeout=3.0)
+        if rc2 != 0:
+            continue
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+    return None
 
-    if not scan_results:
+
+def _required_params_from_template(template: dict) -> dict:
+    """Return {param_id: default_value} for all required parameters in a template."""
+    result = {}
+    for param in template.get("device", {}).get("parameters", []):
+        param_id = param.get("id")
+        if param.get("required") and param_id and param_id not in result and "default" in param:
+            result[param_id] = param["default"]
+    return result
+
+
+def _transform_scan_device(dev: dict, port_config: dict, template: dict | None) -> dict:
+    """Convert a wb-device-manager scan result entry to a wb-mqtt-serial device config."""
+    cfg = dev.get("cfg", {})
+    device = {
+        "device_type": dev.get("configured_device_type", ""),
+        "slave_id": cfg["slave_id"],
+        "enabled": True,
+    }
+    # Include UART params only when they differ from the port's defaults.
+    for key in ("baud_rate", "parity", "data_bits", "stop_bits"):
+        val = cfg.get(key)
+        if val is not None and val != port_config.get(key):
+            device[key] = val
+    # Fill required template parameters with their defaults.
+    if template:
+        for param_id, default in _required_params_from_template(template).items():
+            device.setdefault(param_id, default)
+    return device
+
+
+def _load_cached_scan_devices(ctx) -> list:
+    """Read the retained /wb-device-manager/state and return its devices list."""
+    with ProgressBar("reading last scan state") as pb:
+        pb.update(0)
+        rc, stdout, _ = ctx.shell.run(
+            ["mosquitto_sub", "-t", "/wb-device-manager/state", "-C", "1", "-W", "3"],
+            timeout=5.0,
+        )
+    if rc != 0 or not stdout.strip():
         raise WbCliError(
-            code="MODBUS_ADD_EMPTY",
-            message="No devices in scan results to add",
+            code="MODBUS_NO_SCAN_STATE",
+            message=(
+                "No scan results available from wb-device-manager. "
+                "Run `wb-cli modbus scan` first, then retry."
+            ),
             exit_code=ExitCode.DOMAIN,
         )
+    try:
+        state = json.loads(stdout.strip())
+    except json.JSONDecodeError as exc:
+        raise WbCliError(
+            code="MODBUS_SCAN_STATE_INVALID",
+            message=f"wb-device-manager state is not valid JSON: {exc}",
+            exit_code=ExitCode.DOMAIN,
+        ) from exc
+    return state.get("devices", [])
+
+
+def _load_target_port(ctx, content: dict) -> dict:
+    ports = content.get("ports", []) if isinstance(content, dict) else []
+    for port in ports:
+        if port.get("path") == ctx.args.port:
+            return port
+    raise WbCliError(
+        code="MODBUS_ADD_PORT_NOT_FOUND",
+        message=f"Port '{ctx.args.port}' not found in /etc/wb-mqtt-serial.conf",
+        details={"port": ctx.args.port},
+        exit_code=ExitCode.DOMAIN,
+    )
+
+
+def _add_devices(ctx) -> dict:  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
+    device_type = getattr(ctx.args, "device_type", None)
+    slave_id = getattr(ctx.args, "slave_id", None)
+    scan_results_arg = getattr(ctx.args, "scan_results", None)
 
     result = ctx.rpc.call("confed/Editor/Load", {"path": "/etc/wb-mqtt-serial.conf"})
     content = result.get("content", {}) if isinstance(result, dict) else {}
-    ports = content.get("ports", []) if isinstance(content, dict) else []
-    target_port = None
-    for port in ports:
-        if port.get("path") == ctx.args.port:
-            target_port = port
-            break
-    if target_port is None:
-        raise WbCliError(
-            code="MODBUS_ADD_PORT_NOT_FOUND",
-            message=f"Port '{ctx.args.port}' not found in /etc/wb-mqtt-serial.conf",
-            details={"port": ctx.args.port},
-            exit_code=ExitCode.DOMAIN,
-        )
-    added = []
-    for dev in scan_results:
-        target_port.setdefault("devices", []).append(dev)
-        added.append(dev.get("id", dev.get("slave_id", "unknown")))
+    target_port = _load_target_port(ctx, content)
+    existing_slave_ids = {d.get("slave_id") for d in target_port.get("devices", [])}
 
-    ctx.rpc.call(
-        "confed/Editor/Save",
-        {"path": "/etc/wb-mqtt-serial.conf", "content": content},
-    )
-    return {"port": ctx.args.port, "added": added, "count": len(added)}
+    added = []
+    skipped = []
+    warnings = []
+
+    if device_type is not None:
+        # Mode 1: add a single device by model name, no scan needed.
+        if slave_id is None:
+            raise WbCliError(
+                code="MODBUS_ADD_MISSING_SLAVE_ID",
+                message="--slave-id is required when --device-type is given",
+                exit_code=ExitCode.USAGE,
+            )
+        if slave_id in existing_slave_ids:
+            skipped.append(slave_id)
+        else:
+            template = _find_template(ctx, device_type)
+            if template is None:
+                warnings.append(
+                    f"Template for '{device_type}' not found — required parameters not filled. "
+                    "Validate the config manually after adding."
+                )
+            device = {"device_type": device_type, "slave_id": slave_id, "enabled": True}
+            if template:
+                for param_id, default in _required_params_from_template(template).items():
+                    device.setdefault(param_id, default)
+            target_port.setdefault("devices", []).append(device)
+            added.append({"slave_id": slave_id, "device_type": device_type})
+    else:
+        # Mode 2: from explicit --scan-results JSON, or Mode 3: from cached state.
+        if scan_results_arg is not None:
+            try:
+                raw = json.loads(scan_results_arg)
+            except json.JSONDecodeError as exc:
+                raise WbCliError(
+                    code="MODBUS_ADD_INVALID_JSON",
+                    message=f"--scan-results is not valid JSON: {exc}",
+                    exit_code=ExitCode.USAGE,
+                ) from exc
+            # Accept both the full scan envelope ({data: {devices: [...]}}) and a bare list.
+            if isinstance(raw, dict):
+                scan_devices = raw.get("data", raw).get("devices", [])
+            else:
+                scan_devices = raw
+        else:
+            scan_devices = _load_cached_scan_devices(ctx)
+
+        if not scan_devices:
+            raise WbCliError(
+                code="MODBUS_ADD_EMPTY",
+                message="No devices in scan results. Run `wb-cli modbus scan` first.",
+                exit_code=ExitCode.DOMAIN,
+            )
+
+        # Filter to the target port.
+        scan_devices = [d for d in scan_devices if d.get("port", {}).get("path") == ctx.args.port]
+
+        for dev in scan_devices:
+            sid = dev.get("cfg", {}).get("slave_id")
+            if sid is None:
+                continue
+            if sid in existing_slave_ids:
+                skipped.append(sid)
+                continue
+            dev_type = dev.get("configured_device_type", "")
+            template = _find_template(ctx, dev_type)
+            if template is None:
+                warnings.append(
+                    f"slave_id={sid}: template for '{dev_type}' not found — "
+                    "required parameters not filled. Validate config manually."
+                )
+            device = _transform_scan_device(dev, target_port, template)
+            target_port.setdefault("devices", []).append(device)
+            existing_slave_ids.add(sid)
+            added.append({"slave_id": sid, "device_type": dev_type})
+
+    if added:
+        ctx.rpc.call(
+            "confed/Editor/Save",
+            {"path": "/etc/wb-mqtt-serial.conf", "content": content},
+        )
+
+    result = {
+        "port": ctx.args.port,
+        "added": added,
+        "skipped": skipped,
+        "count": len(added),
+    }
+    if warnings:
+        result["warnings"] = warnings
+    return result

@@ -26,6 +26,10 @@ BUILTIN_PLUGINS: dict = {
         "wb_cli.commands.rules",
         "manage wb-rules automation scripts (list / read / save / disable / delete)",
     ),
+    "serial": (
+        "wb_cli.commands.serial_cmd",
+        "serial port operations: send raw bytes to the bus via wb-mqtt-serial RPC",
+    ),
     "serial-debug": (
         "wb_cli.commands.serial_debug",
         "turn on RS-485 debug logging, capture for N seconds, then restore",
