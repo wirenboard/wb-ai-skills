@@ -23,8 +23,6 @@ htmlcov/
 # opencode
 .opencode/
 
-# Codestyle (sibling clone)
-/codestyle/
 
 # Debian build artifacts
 debian/wb-cli/
