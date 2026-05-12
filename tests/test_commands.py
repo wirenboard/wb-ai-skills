@@ -330,7 +330,9 @@ def test_history_get():
 
 
 def test_history_get_from_ts_converted_to_unix_seconds():
-    from wb_cli.commands.history import _parse_ts  # pylint: disable=import-outside-toplevel
+    from wb_cli.commands.history import (  # pylint: disable=import-outside-toplevel
+        _parse_ts,
+    )
 
     ts = _parse_ts("2026-05-11T00:00:00", "--from")
     assert isinstance(ts, int)
@@ -338,8 +340,9 @@ def test_history_get_from_ts_converted_to_unix_seconds():
 
 
 def test_history_get_from_ts_invalid_raises():
-    from wb_cli.commands.history import _parse_ts  # pylint: disable=import-outside-toplevel
-    from wb_cli.errors import WbCliError  # pylint: disable=import-outside-toplevel
+    from wb_cli.commands.history import (  # pylint: disable=import-outside-toplevel
+        _parse_ts,
+    )
 
     with pytest.raises(WbCliError) as exc:
         _parse_ts("not-a-date", "--from")

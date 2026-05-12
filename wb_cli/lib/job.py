@@ -73,7 +73,7 @@ class JobManager:
 
     def status(self, unit: str, *, timeout: float = 5.0) -> Dict[str, Any]:
         """Return job status."""
-        rc, stdout, _ = self._sh.run(
+        _, stdout, _ = self._sh.run(
             ["systemctl", "is-active", unit],
             timeout=timeout,
         )
