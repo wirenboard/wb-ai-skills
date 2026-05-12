@@ -145,11 +145,13 @@ ssh root@<HOST> 'docker compose -f /mnt/data/homeassistant/docker-compose.yml up
 There is **no `wb-update-manager` command** — that does not exist. Use standard apt:
 
 ```bash
-# Check what can be updated
+# Check what can be updated (fast — plain SSH is fine)
 ssh root@<HOST> 'apt-get update -qq && apt-get --simulate upgrade | grep "^Inst"'
 
-# Install updates (controller may reboot after kernel/firmware packages)
-ssh root@<HOST> 'apt-get update && apt-get -y upgrade'
+# Install updates — takes minutes, use job:
+ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt-get update && apt-get -y upgrade 2>&1"'
+ssh root@<HOST> 'wb-cli --json job wait apt-upgrade'
+ssh root@<HOST> 'wb-cli --json job tail apt-upgrade'
 ```
 
 **Note:** `release_name` (e.g. `wb-2602` = February 2026) reflects the current release. To check if a newer release exists — see **https://github.com/wirenboard/wb-releases**. Do not judge "outdated" just from the date — check the releases page.
@@ -236,4 +238,14 @@ For components not covered by a dedicated skill — always start with `WebFetch`
 
 - **Back up before destructive operations** (confed save, rules delete, modbus add-devices).
 - **Never write to MQTT controls you don't understand** — some control physical outputs.
-- **Long operations** (apt upgrade, factoryreset) — use `wb-cli job run`, not raw SSH.
+- **Any operation expected to take more than 20–30 seconds** — use `wb-cli job run`, not plain SSH. This includes `apt-get update`, `apt-get upgrade`, `apt-get install`, tar archives, modbus firmware updates, factory reset. Plain SSH will appear to hang, block the agent, and may timeout mid-operation leaving the system in an inconsistent state.
+
+```bash
+# Wrong — blocks the agent for minutes:
+ssh root@<HOST> 'apt-get update && apt-get -y upgrade'
+
+# Correct — returns immediately, agent polls for completion:
+ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt-get update && apt-get -y upgrade 2>&1"'
+ssh root@<HOST> 'wb-cli --json job wait apt-upgrade'
+ssh root@<HOST> 'wb-cli --json job tail apt-upgrade'
+```
