@@ -1,6 +1,6 @@
 CODESTYLE ?= codestyle
-# Vendored controller snapshots under tests/fixtures/ are not ours to lint.
-PYTHON_FILES := $(shell WB_PYTHON_FILES_EXCLUDE=tests/fixtures/ $(CODESTYLE)/python/ci/find-python-files)
+# Exclude vendored snapshots and the codestyle submodule itself from lint.
+PYTHON_FILES := $(shell WB_PYTHON_FILES_EXCLUDE=tests/fixtures/ $(CODESTYLE)/python/ci/find-python-files | grep -v '^./codestyle/')
 
 .PHONY: fmt lint test cov clean registry
 
