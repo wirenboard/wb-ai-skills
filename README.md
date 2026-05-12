@@ -8,6 +8,13 @@ Runs **on the controller**. Built for LLM agents and operators: SSH in, call `wb
 
 ```bash
 ssh root@wirenboard-A25NDEMJ wb-cli info
+# serial_number   A25NDEMJ
+# release_name    wb-2602
+# fw_version      202411261637
+# hostname        wirenboard-A25NDEMJ
+# uptime_seconds  407130.59
+
+ssh root@wirenboard-A25NDEMJ wb-cli --json info
 # → {"data": {"serial_number": "A25NDEMJ", "release_name": "wb-2602", ...}}
 
 ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
