@@ -1,3 +1,23 @@
+wb-cli (1.0.0) stable; urgency=medium
+
+  * BREAKING: `fw_version` removed from `wb-cli info` and `wb-cli audit` JSON
+    output. The field was a factory build timestamp from /etc/wb-fw-version and
+    did not reflect current package state — agents misread it as firmware age.
+    `release_name` (e.g. wb-2602) remains and correctly reflects current release.
+  * Skills: mDNS discovery fixed — WB announces _workstation._tcp, not
+    _wirenboard._tcp. Updated avahi-browse command.
+  * Skills: SSH auth order — always try BatchMode=yes (key) first, then
+    sshpass -p wirenboard, never plain ssh (prevents GUI password dialogs).
+  * Skills: firmware upgrade section — removed hallucinated wb-update-manager,
+    replaced with standard apt-get upgrade. Link to wb-releases added.
+  * Skills: release_name explained — format wb-YYMM, link to
+    github.com/wirenboard/wb-releases for checking latest.
+  * codestyle added as git submodule; Dependabot configured for weekly updates.
+  * Contributing rules: tests required for every new command; manual
+    verification on real hardware required before merge.
+
+ -- Alexander Degtyarev <wb-claude-mail-00003@proton.me>  Tue, 13 May 2026 00:00:00 +0000
+
 wb-cli (0.4.0) stable; urgency=medium
 
   * NEW: `mqtt sub <topic> [-C N] [--timeout T]` — subscribe and print
