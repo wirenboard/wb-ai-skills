@@ -1,0 +1,3 @@
+[submodule "codestyle"]
+	path = codestyle
+	url = git@github.com:wirenboard/codestyle.git
