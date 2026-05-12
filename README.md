@@ -100,13 +100,27 @@ The `skills/` directory holds ten methodology guides for LLM agents working with
 
 Install for your agent runtime:
 
+**Linux / macOS** — use the install script:
+
 ```bash
-./install-skills.sh claude              # → ./.claude/commands/   (symlinks)
+./install-skills.sh claude              # → ./.claude/commands/
 ./install-skills.sh claude --global     # → ~/.claude/commands/
 ./install-skills.sh opencode            # → ./.opencode/agents/   (frontmatter rewritten)
 ./install-skills.sh opencode --global   # → ~/.config/opencode/agents/
-./install-skills.sh manual --dest <dir> # → <dir>                 (flat copy, no rewrites)
+./install-skills.sh manual --dest <dir> # → <dir>  (frontmatter stripped to name+description)
+
+./install-skills.sh uninstall claude --global   # remove installed skills
 ```
+
+**Windows** — copy the files from `skills/` manually to the agent's commands folder:
+
+| Agent | Destination |
+|---|---|
+| Claude Code (user-wide) | `%USERPROFILE%\.claude\commands\` |
+| Claude Code (project) | `.claude\commands\` inside the project |
+| OpenCode (user-wide) | `%APPDATA%\opencode\agents\` |
+
+For OpenCode, also replace `allowed-tools:` with `mode: primary` in each file's frontmatter.
 
 The `.deb` also installs the skills into `/usr/share/wb-cli/skills/` on the controller, so an LLM agent can read them over SSH.
 
@@ -123,7 +137,7 @@ wb_cli/
   lib/                subsystem handles (controller, mqtt, rpc, shell, systemd, journal, job)
   commands/           one plugin per command group; modbus/ is a subpackage
 tests/                pytest with FakeContext + a captured wb7 snapshot in tests/fixtures/
-skills/               LLM-facing SKILL.md guides (see above)
+skills/               LLM-facing skill guides, one .md per skill (see above)
 debian/               .deb packaging (Architecture: all)
 .github/workflows/    CI (lint + tests on py3.9/3.11, .deb build) and release on tag v*
 ```

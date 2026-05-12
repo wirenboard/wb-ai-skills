@@ -91,9 +91,10 @@ resolve_dest
 
 if [ "$ACTION" = "uninstall" ]; then
     count=0
-    for skill_dir in "$SKILLS_DIR"/*/; do
-        name="$(basename "$skill_dir")"
-        target="$DEST/$name.md"
+    for src in "$SKILLS_DIR"/*.md; do
+        [ -f "$src" ] || continue
+        name="$(basename "$src")"
+        target="$DEST/$name"
         if [ -e "$target" ] || [ -L "$target" ]; then
             rm -f "$target"
             count=$((count + 1))
@@ -106,19 +107,18 @@ fi
 mkdir -p "$DEST"
 
 count=0
-for skill_dir in "$SKILLS_DIR"/*/; do
-    name="$(basename "$skill_dir")"
-    src="$skill_dir/SKILL.md"
+for src in "$SKILLS_DIR"/*.md; do
     [ -f "$src" ] || continue
+    name="$(basename "$src")"
 
     case "$TARGET" in
         claude)
-            rm -f "$DEST/$name.md"
-            cp "$src" "$DEST/$name.md"
+            rm -f "$DEST/$name"
+            cp "$src" "$DEST/$name"
             ;;
         opencode)
             # opencode wants flat .md; replace `allowed-tools:` with `mode: primary`
-            sed 's/^allowed-tools:.*/mode: primary/' "$src" > "$DEST/$name.md"
+            sed 's/^allowed-tools:.*/mode: primary/' "$src" > "$DEST/$name"
             ;;
         manual)
             # Strip frontmatter to name+description only (agent-neutral)
@@ -134,7 +134,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
                     next
                 }
                 { print }
-            ' "$src" > "$DEST/$name.md"
+            ' "$src" > "$DEST/$name"
             ;;
     esac
     count=$((count + 1))
