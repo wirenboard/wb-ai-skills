@@ -166,9 +166,7 @@ class MqttClient:
             stderr = b""
 
         rc = proc.returncode
-        stderr_text = (
-            stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else ""
-        ).strip()
+        stderr_text = (stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else "").strip()
         if not results and rc is not None and rc > 0:
             raise WbCliError(
                 code="MQTT_BROKER_DOWN",
