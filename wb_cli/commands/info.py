@@ -29,7 +29,7 @@ class InfoPlugin(BasePlugin):
         return ctx.controller.to_dict()
 
     def render(self, result):
-        fields = ["serial_number", "release_name", "fw_version", "hostname", "uptime_seconds"]
+        fields = ["serial_number", "release_name", "hostname", "uptime_seconds"]
         rows = [(f, result.get(f, "")) for f in fields if f in result]
         if not rows:
             return None

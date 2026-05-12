@@ -152,6 +152,10 @@ ssh root@<HOST> 'apt-get update -qq && apt-get --simulate upgrade | grep "^Inst"
 ssh root@<HOST> 'apt-get update && apt-get -y upgrade'
 ```
 
+**Note:** `release_name` in `wb-cli --json info` (e.g. `wb-2602`) is the release that was flashed at the factory — it does NOT change after `apt upgrade`. Package versions may be newer than the base release. Do not use this field to judge whether the controller is "up to date".
+
+Releases and changelogs: **https://github.com/wirenboard/wb-releases**
+
 After a reboot, verify: `wb-cli --json info`. If kernel mismatch after upgrade — see `wb-troubleshooting` skill.
 
 ## Factory reset

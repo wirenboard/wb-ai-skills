@@ -45,7 +45,6 @@ class AuditPlugin(BasePlugin):
                 "ok": info.get("serial_number") is not None,
                 "serial_number": info.get("serial_number"),
                 "release_name": info.get("release_name"),
-                "fw_version": info.get("fw_version"),
             }
         )
 
@@ -64,7 +63,7 @@ class AuditPlugin(BasePlugin):
             if chk["check"] == "failed_units" and chk.get("units"):
                 extras.append(", ".join(chk["units"]))
             if chk["check"] == "controller_identity" and chk.get("serial_number"):
-                extras.append(f"SN {chk['serial_number']}, fw {chk.get('fw_version', '?')}")
+                extras.append(f"SN {chk['serial_number']}, release {chk.get('release_name', '?')}")
             tail = f" — {' | '.join(extras)}" if extras else ""
             lines.append(f"  [{mark}] {chk['check']}{tail}")
         return "\n".join(lines)

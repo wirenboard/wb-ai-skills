@@ -10,7 +10,6 @@ Runs **on the controller**. Built for LLM agents and operators: SSH in, call `wb
 ssh root@wirenboard-A25NDEMJ wb-cli info
 # serial_number   A25NDEMJ
 # release_name    wb-2602
-# fw_version      202411261637
 # hostname        wirenboard-A25NDEMJ
 # uptime_seconds  407130.59
 

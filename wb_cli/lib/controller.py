@@ -157,7 +157,6 @@ class ControllerInfo:  # pylint: disable=too-many-instance-attributes
             "release_name": self._release_name,
             "suite": self._suite,
             "target": self._target,
-            "fw_version": self._fw_version,
             "hostname": self._hostname,
             "uptime_seconds": self._uptime_seconds,
             "device_tree": dict(self._device_tree),

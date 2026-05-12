@@ -19,11 +19,6 @@ def test_release_fields(controller_root: Path):
     assert info.target == "wb7/bullseye"
 
 
-def test_fw_version(controller_root: Path):
-    info = ControllerInfo(root=controller_root)
-    assert info.fw_version == "202411261637"
-
-
 def test_hostname(controller_root: Path):
     info = ControllerInfo(root=controller_root)
     assert info.hostname == "wirenboard-A25NDEMJ"
@@ -51,7 +46,6 @@ def test_to_dict_keys(controller_root: Path):
         "release_name",
         "suite",
         "target",
-        "fw_version",
         "hostname",
         "uptime_seconds",
         "device_tree",
@@ -63,7 +57,6 @@ def test_missing_files(tmp_path: Path):
     info = ControllerInfo(root=tmp_path)
     assert info.serial_number is None
     assert info.release_name is None
-    assert info.fw_version is None
     assert info.hostname is None
     assert info.uptime_seconds is None
     assert not info.device_tree
