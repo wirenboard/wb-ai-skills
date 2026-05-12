@@ -54,6 +54,8 @@ def _format_scalar(value: Any) -> str:
         return ""
     if isinstance(value, bool):
         return "yes" if value else "no"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
     return str(value)
 
 

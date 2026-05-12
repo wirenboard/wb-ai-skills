@@ -329,6 +329,40 @@ def test_history_get():
     assert result["count"] == 1
 
 
+def test_history_get_from_ts_converted_to_unix_seconds():
+    from wb_cli.commands.history import _parse_ts  # pylint: disable=import-outside-toplevel
+
+    ts = _parse_ts("2026-05-11T00:00:00", "--from")
+    assert isinstance(ts, int)
+    assert ts > 0
+
+
+def test_history_get_from_ts_invalid_raises():
+    from wb_cli.commands.history import _parse_ts  # pylint: disable=import-outside-toplevel
+    from wb_cli.errors import WbCliError  # pylint: disable=import-outside-toplevel
+
+    with pytest.raises(WbCliError) as exc:
+        _parse_ts("not-a-date", "--from")
+    assert exc.value.code == "HISTORY_INVALID_TIMESTAMP"
+
+
+def test_history_get_passes_unix_ts_to_rpc():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="get",
+            channel="wb-adc/A1",
+            from_ts="2026-05-11T00:00:00",
+            to_ts=None,
+            limit=10,
+        )
+    )
+    ctx.rpc.call.return_value = {"values": []}
+    HistoryPlugin().dispatch(ctx)
+    call_params = ctx.rpc.call.call_args.args[1]
+    assert isinstance(call_params["timestamp"]["gt"], int)
+
+
 def test_history_chart():
     ctx = _ctx(
         args=argparse.Namespace(

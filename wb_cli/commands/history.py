@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 
 from wb_cli.errors import ExitCode, WbCliError
 from wb_cli.plugin import BasePlugin
@@ -92,12 +93,29 @@ def _build_params(ctx) -> dict:
     }
     timestamp: dict = {}
     if ctx.args.from_ts:
-        timestamp["gt"] = ctx.args.from_ts
+        timestamp["gt"] = _parse_ts(ctx.args.from_ts, "--from")
     if ctx.args.to_ts:
-        timestamp["lt"] = ctx.args.to_ts
+        timestamp["lt"] = _parse_ts(ctx.args.to_ts, "--to")
     if timestamp:
         params["timestamp"] = timestamp
     return params
+
+
+def _parse_ts(value: str, flag: str) -> int:
+    """Parse an ISO-8601 datetime string into a Unix timestamp (seconds)."""
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        raise WbCliError(
+            code="HISTORY_INVALID_TIMESTAMP",
+            message=f"Cannot parse {flag} value '{value}' as ISO-8601 datetime",
+            hint="Use format: 2026-05-11T00:00:00 or 2026-05-11 00:00:00",
+            details={"value": value, "flag": flag},
+            exit_code=ExitCode.USAGE,
+        )
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return int(dt.timestamp())
 
 
 def _split_channel(channel: str) -> list:
