@@ -84,7 +84,7 @@ The `.deb` is `Architecture: all` and works on any wb6/wb7 running Debian ≥ bu
 
 ## Skills for LLM agents
 
-The `skills/` directory holds ten methodology guides for LLM agents working with Wiren Board over SSH:
+The `skills/` directory holds nine methodology guides for LLM agents working with Wiren Board over SSH:
 
 | Skill | What it covers |
 |---|---|
@@ -152,7 +152,7 @@ Requires Python 3.9 (controller target) and [wirenboard/codestyle](https://githu
 git clone https://github.com/wirenboard/codestyle ../codestyle
 python3 -m venv .venv && .venv/bin/pip install -e . -r requirements-dev.txt
 
-make test      # pytest (52 tests via FakeContext)
+make test      # pytest
 make lint      # black --check + isort --check + pylint (must be 10.00)
 make fmt       # auto-format
 make registry  # regenerate wb_cli/_registry.py after adding/removing a plugin
