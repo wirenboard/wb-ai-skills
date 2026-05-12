@@ -159,7 +159,6 @@ Common pages: `Docker`, `Modbus`, `Home_Assistant`, `Wiren_Board_Cloud`, `wb-rul
 | wb-rules JavaScript automation (defineRule, virtual devices, cron, ES5) | `/wb-rules` |
 | General troubleshooting (failed services, disk, kernel, Docker) | `/wb-troubleshooting` |
 | RS-485 / Modbus bus debugging (CRC, timeouts, debug capture) | `/wb-troubleshooting-serial` |
-| No-code declarative scenarios (thermostat, lighting, schedule) | `/wb-scenarios` |
 | Custom Modbus device templates (registers, endianness, parameters) | `/wb-serial-templates` |
 | Network setup (WiFi, 4G/GSM, VPN, failover, modem diagnostics) | `/wb-network` |
 | MQTT broker config (auth, ACL, TLS, bridges to HA/cloud) | `/wb-mqtt-broker` |

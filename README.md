@@ -92,7 +92,6 @@ The `skills/` directory holds ten methodology guides for LLM agents working with
 | `wb-troubleshooting` | Failed units, disk, kernel mismatch, Docker, general diagnostics. |
 | `wb-troubleshooting-serial` | RS-485 / Modbus bus debugging (CRC, timeouts, debug capture). |
 | `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron). |
-| `wb-scenarios` | Declarative scenarios (thermostat, lighting, schedule). |
 | `wb-serial-templates` | Custom Modbus device templates. |
 | `wb-mqtt-broker` | MQTT broker config: auth, ACL, TLS, bridges. |
 | `wb-network` | WiFi, 4G/GSM, VPN, failover, modem diagnostics. |

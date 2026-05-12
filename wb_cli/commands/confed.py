@@ -26,7 +26,7 @@ class ConfedPlugin(BasePlugin):
             epilog=(
                 "Examples:\n"
                 "  wb-cli confed load /etc/wb-mqtt-serial.conf\n"
-                '  wb-cli confed save /etc/wb-scenarios.conf "$(jq -c . my-scenarios.json)"\n'
+                '  wb-cli confed save /etc/wb-mqtt-serial.conf "$(jq -c . my-serial.json)"\n'
             ),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
