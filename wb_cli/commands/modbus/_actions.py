@@ -388,9 +388,8 @@ def _scan(ctx) -> dict:
     if ctx.args.port:
         envelope["port"] = ctx.args.port
     if devices and completed:
-        ports_seen = list({d.get("port", {}).get("path") for d in devices if d.get("port", {}).get("path")})
-        hint_port = ports_seen[0] if len(ports_seen) == 1 else "<port>"
-        envelope["add_hint"] = f"wb-cli modbus add-devices --port {hint_port}"
+        ports_seen = sorted({d.get("port", {}).get("path") for d in devices if d.get("port", {}).get("path")})
+        envelope["add_hint"] = "  ".join(f"wb-cli modbus add-devices --port {p}" for p in ports_seen)
     return envelope
 
 
@@ -483,35 +482,56 @@ def _ports(ctx) -> dict:
     return {"ports": ports, "count": len(ports)}
 
 
-def _find_template(ctx, device_type: str) -> dict | None:
-    """Return the template dict for device_type, checking custom dir before packaged."""
+def _find_template(ctx, identifier: str) -> dict | None:
+    """Return the template dict for identifier, checking custom dir before packaged.
+
+    Tries two grep patterns in order:
+      1. "device_type": "<identifier>"   — direct device_type match
+      2. "signature": "<identifier>"     — wb-device-manager device_signature match
+    Returns the first template found (custom templates take priority).
+    Excludes deprecated templates unless no other match exists.
+    """
     template_dirs = [
         "/etc/wb-mqtt-serial.conf.d/templates",
         "/usr/share/wb-mqtt-serial/templates",
     ]
-    for template_dir in template_dirs:
-        rc, stdout, _ = ctx.shell.run(
-            ["grep", "-rl", f'"device_type": "{device_type}"', template_dir],
-            timeout=5.0,
-        )
-        if rc != 0 or not stdout.strip():
-            continue
-        first_file = stdout.strip().splitlines()[0]
-        rc2, content, _ = ctx.shell.run(["cat", first_file], timeout=3.0)
-        if rc2 != 0:
-            continue
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
+    patterns = [f'"device_type": "{identifier}"', f'"signature": "{identifier}"']
+    for pattern in patterns:
+        for template_dir in template_dirs:
+            rc, stdout, _ = ctx.shell.run(
+                ["grep", "-rl", pattern, template_dir],
+                timeout=5.0,
+            )
+            if rc != 0 or not stdout.strip():
+                continue
+            files = stdout.strip().splitlines()
+            # Prefer non-deprecated templates.
+            preferred = [f for f in files if "deprecated" not in f]
+            first_file = (preferred or files)[0]
+            rc2, content, _ = ctx.shell.run(["cat", first_file], timeout=3.0)
+            if rc2 != 0:
+                continue
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                pass
     return None
 
 
 def _required_params_from_template(template: dict) -> dict:
-    """Return {param_id: default_value} for all required parameters in a template."""
+    """Return {param_id: default_value} for all required parameters in a template.
+
+    Handles two parameter formats used across different template versions:
+      - list:  [{id, required, default, ...}]
+      - dict:  {param_id: {required, default, ...}}
+    """
     result = {}
-    for param in template.get("device", {}).get("parameters", []):
-        param_id = param.get("id")
+    params = template.get("device", {}).get("parameters", [])
+    if isinstance(params, dict):
+        items = ((k, v) for k, v in params.items() if isinstance(v, dict))
+    else:
+        items = ((p.get("id"), p) for p in params if isinstance(p, dict))
+    for param_id, param in items:
         if param.get("required") and param_id and param_id not in result and "default" in param:
             result[param_id] = param["default"]
     return result
@@ -521,7 +541,9 @@ def _transform_scan_device(dev: dict, port_config: dict, template: dict | None) 
     """Convert a wb-device-manager scan result entry to a wb-mqtt-serial device config."""
     cfg = dev.get("cfg", {})
     device = {
-        "device_type": dev.get("configured_device_type", ""),
+        "device_type": (template or {}).get("device_type")
+        or dev.get("configured_device_type")
+        or dev.get("device_signature", ""),
         "slave_id": cfg["slave_id"],
         "enabled": True,
     }
@@ -651,17 +673,17 @@ def _add_devices(ctx) -> dict:  # pylint: disable=too-many-branches,too-many-sta
             if sid in existing_slave_ids:
                 skipped.append(sid)
                 continue
-            dev_type = dev.get("configured_device_type", "")
-            template = _find_template(ctx, dev_type)
+            identifier = dev.get("configured_device_type") or dev.get("device_signature", "")
+            template = _find_template(ctx, identifier)
             if template is None:
                 warnings.append(
-                    f"slave_id={sid}: template for '{dev_type}' not found — "
+                    f"slave_id={sid}: template for '{identifier}' not found — "
                     "required parameters not filled. Validate config manually."
                 )
             device = _transform_scan_device(dev, target_port, template)
             target_port.setdefault("devices", []).append(device)
             existing_slave_ids.add(sid)
-            added.append({"slave_id": sid, "device_type": dev_type})
+            added.append({"slave_id": sid, "device_type": device["device_type"]})
 
     if added:
         ctx.rpc.call(

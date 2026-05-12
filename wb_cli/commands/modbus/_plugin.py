@@ -144,7 +144,12 @@ def _scan_table(  # pylint: disable=too-many-arguments
     if not completed and hint:
         out.append(f"hint: {hint}")
     if completed and add_hint:
-        out.append(f"\nTo add to config: {add_hint}")
+        cmds = add_hint.split("  ")
+        if len(cmds) == 1:
+            out.append(f"\nTo add to config: {add_hint}")
+        else:
+            out.append("\nTo add to config:")
+            out.extend(f"  {cmd}" for cmd in cmds)
     return "\n".join(out)
 
 
