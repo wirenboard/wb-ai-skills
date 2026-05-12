@@ -146,10 +146,10 @@ Background-job state lives at `/mnt/data/ai/wb-cli/jobs/<unit>.{sh,log,label,sta
 
 ## Development
 
-Requires Python 3.9 (controller target) and [wirenboard/codestyle](https://github.com/wirenboard/codestyle) cloned as `../codestyle`.
+Requires Python 3.9 (controller target). The [wirenboard/codestyle](https://github.com/wirenboard/codestyle) repo is included as a git submodule.
 
 ```bash
-git clone https://github.com/wirenboard/codestyle ../codestyle
+git clone --recurse-submodules git@github.com:wirenboard/wb-ai-skills.git
 python3 -m venv .venv && .venv/bin/pip install -e . -r requirements-dev.txt
 
 make test      # pytest

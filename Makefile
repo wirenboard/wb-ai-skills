@@ -1,4 +1,4 @@
-CODESTYLE ?= $(firstword $(wildcard codestyle ../codestyle))
+CODESTYLE ?= codestyle
 # Vendored controller snapshots under tests/fixtures/ are not ours to lint.
 PYTHON_FILES := $(shell WB_PYTHON_FILES_EXCLUDE=tests/fixtures/ $(CODESTYLE)/python/ci/find-python-files)
 
