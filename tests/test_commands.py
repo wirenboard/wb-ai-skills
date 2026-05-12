@@ -1168,7 +1168,7 @@ def test_serial_send_builds_correct_rpc_params():
     SerialPlugin().dispatch(ctx)
 
     call_args = ctx.rpc.call.call_args
-    params = call_args.args[3]
+    params = call_args.args[1]
     assert params["protocol"] == "raw"
     assert params["format"] == "HEX"
     assert params["response_size"] == 10
@@ -1190,7 +1190,7 @@ def test_serial_send_no_crc():
     ctx.rpc.call.return_value = {"response": ""}
     SerialPlugin().dispatch(ctx)
 
-    params = ctx.rpc.call.call_args.args[3]
+    params = ctx.rpc.call.call_args.args[1]
     assert params["msg"] == "fd4601"
 
 

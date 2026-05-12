@@ -176,7 +176,7 @@ def _send(ctx) -> dict:
     }
 
     rpc_timeout = args.total_timeout / 1000 + 5
-    result = ctx.rpc.call("wb-mqtt-serial", "port", "Load", params, timeout=rpc_timeout)
+    result = ctx.rpc.call("wb-mqtt-serial/port/Load", params, timeout=rpc_timeout)
     response_hex = result.get("response", "")
 
     return {
