@@ -140,18 +140,19 @@ Standard Docker CE installed via `wb-docker-manager.sh`. Key WB-specific rule: *
 ssh root@<HOST> 'docker compose -f /mnt/data/homeassistant/docker-compose.yml up -d'
 ```
 
-## Firmware upgrade
+## Firmware / package upgrade
 
-Check for available update:
+There is **no `wb-update-manager` command** — that does not exist. Use standard apt:
+
 ```bash
-ssh root@<HOST> wb-cli --json info
+# Check what can be updated
+ssh root@<HOST> 'apt-get update -qq && apt-get --simulate upgrade | grep "^Inst"'
+
+# Install updates (controller may reboot after kernel/firmware packages)
+ssh root@<HOST> 'apt-get update && apt-get -y upgrade'
 ```
-Upgrade (runs in background, controller reboots):
-```bash
-ssh root@<HOST> wb-cli --json job run fw-upgrade "wb-update-manager -y upgrade 2>&1"
-ssh root@<HOST> wb-cli --json job wait fw-upgrade
-```
-After reboot, verify: `wb-cli --json info`. If kernel mismatch after upgrade — see `wb-troubleshooting` skill.
+
+After a reboot, verify: `wb-cli --json info`. If kernel mismatch after upgrade — see `wb-troubleshooting` skill.
 
 ## Factory reset
 
