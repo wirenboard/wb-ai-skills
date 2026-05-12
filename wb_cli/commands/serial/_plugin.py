@@ -11,10 +11,7 @@ from wb_cli.plugin import BasePlugin
 
 class SerialPlugin(BasePlugin):
     name = "serial"
-    help = (
-        "serial port operations: send, wb-scan, device-params,"
-        " device-set, add-devices, templates, devices, ports"
-    )
+    help = "serial port ops: send, wb-scan, device-params, device-set, add-devices, templates, devices, ports"
     # `serial wb-scan` draws its own ProgressBar; don't double up.
     auto_spinner = False
 

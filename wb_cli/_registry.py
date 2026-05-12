@@ -24,8 +24,7 @@ BUILTIN_PLUGINS: dict = {
     ),
     "serial": (
         "wb_cli.commands.serial._plugin",
-        "serial port operations: send, wb-scan, device-params, device-set,"
-        " add-devices, templates, devices, ports",
+        "serial port ops: send, wb-scan, device-params, device-set, add-devices, templates, devices, ports",
     ),
     "serial-debug": (
         "wb_cli.commands.serial_debug",
