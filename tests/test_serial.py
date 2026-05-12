@@ -10,6 +10,10 @@ that are not already exercised in test_commands.py:
   modbus-fw check: device_type column
 """
 
+# pylint: disable=duplicate-code
+# Helpers (_ctx, _fake_proc_class, _scan_ctx) mirror test_commands.py on purpose —
+# keeping them local avoids coupling the test modules via conftest fixtures.
+
 from __future__ import annotations
 
 import argparse
@@ -17,7 +21,11 @@ import io
 from unittest.mock import MagicMock
 
 import pytest
-from wb_cli.commands.modbus_fw import ModbusFwPlugin, _render_check_bulk, _render_check_one
+from wb_cli.commands.modbus_fw import (
+    ModbusFwPlugin,
+    _render_check_bulk,
+    _render_check_one,
+)
 from wb_cli.commands.serial._actions import (
     _find_free_slave_id,
     _is_done,
@@ -28,7 +36,6 @@ from wb_cli.commands.serial._plugin import SerialPlugin
 from wb_cli.context import CliContext
 from wb_cli.errors import WbCliError
 from wb_cli.lib import serial_conf
-
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -48,7 +55,7 @@ def _ctx(**overrides):
     return ctx
 
 
-def _conf(
+def _conf(  # pylint: disable=too-many-arguments
     slave_id=5,
     device_type="WB-MDM3",
     port_path="/dev/ttyRS485-1",
@@ -150,7 +157,7 @@ def test_parse_param_invalid_format_raises():
 
 
 def test_parse_param_none_returns_empty():
-    assert _parse_param_assignments(argparse.Namespace(params=None)) == {}
+    assert not _parse_param_assignments(argparse.Namespace(params=None))
 
 
 def test_parse_param_zero_int():
@@ -201,12 +208,12 @@ def test_required_params_no_default_excluded():
             ]
         }
     }
-    assert _required_params_from_template(template) == {}
+    assert not _required_params_from_template(template)
 
 
 def test_required_params_empty_device():
-    assert _required_params_from_template({"device": {}}) == {}
-    assert _required_params_from_template({}) == {}
+    assert not _required_params_from_template({"device": {}})
+    assert not _required_params_from_template({})
 
 
 # ---------------------------------------------------------------------------
@@ -775,7 +782,7 @@ def test_modbus_fw_check_bulk_includes_device_type():
         }
     }
 
-    def _call(method, params, **_kw):
+    def _call(method, _params, **_kw):
         if method == "confed/Editor/Load":
             return serial_conf_payload
         if method == "wb-device-manager/fw-update/GetFirmwareInfo":
@@ -807,7 +814,7 @@ def test_modbus_fw_check_bulk_device_type_empty_when_missing():
         }
     }
 
-    def _call(method, params, **_kw):
+    def _call(method, _params, **_kw):
         if method == "confed/Editor/Load":
             return serial_conf_payload
         if method == "wb-device-manager/fw-update/GetFirmwareInfo":
