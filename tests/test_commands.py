@@ -129,6 +129,26 @@ def test_mqtt_list():
     assert result["count"] == 2
 
 
+def test_mqtt_sub():
+    ctx = _ctx(
+        args=argparse.Namespace(
+            quiet=False,
+            subcmd="sub",
+            topic="$SYS/#",
+            count=2,
+            timeout=3.0,
+        )
+    )
+    ctx.mqtt.subscribe_live.return_value = [
+        ("$SYS/broker/uptime", "123 seconds"),
+        ("$SYS/broker/clients/total", "5"),
+    ]
+    result = MqttPlugin().dispatch(ctx)
+    assert result["count"] == 2
+    assert result["messages"][0]["topic"] == "$SYS/broker/uptime"
+    ctx.mqtt.subscribe_live.assert_called_once_with("$SYS/#", count=2, timeout=3.0)
+
+
 # --- devices ---
 # Plugin removed in 0.3.0; everything moved to the `dev` plugin
 # (see tests/test_dev.py).

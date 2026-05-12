@@ -219,8 +219,10 @@ git push && git push origin vX.Y.Z
 
 - Open a PR against `main`. CI (`make lint` + `make test` on Python 3.9 / 3.11, plus `.deb` build) must be green.
 - Keep modules under 250 lines (`max-module-lines` in pylint).
+- **Every new command or behaviour change requires tests.** Cover the success path and every new error code. No exceptions.
+- **Every new command must be manually verified on a real controller** before merging. `ssh root@<controller> wb-cli <command>` — confirm it works end-to-end.
 - Tests live next to the code they exercise; aim for one test per success path and one per error code.
-- Adding a plugin: create `wb_cli/commands/<name>.py` with `PLUGIN = MyPlugin()`, run `make registry`, add tests, bump the version.
+- Adding a plugin: create `wb_cli/commands/<name>.py` with `PLUGIN = MyPlugin()`, run `make registry`, add tests, verify on hardware, bump the version.
 - Don't introduce a new error code unless the caller actually needs to branch on it — reuse what's there.
 
 ## License

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from unittest.mock import MagicMock
 
 import pytest
@@ -116,6 +117,89 @@ def test_subscribe_broker_down_when_popen_fails(monkeypatch):
     with pytest.raises(WbCliError) as exc:
         MqttClient(MagicMock()).subscribe("topic/+", timeout=1.0)
     assert exc.value.code == "MQTT_BROKER_DOWN"
+
+
+# ---------- subscribe_live ----------
+
+
+class _FakeLivePopen:
+    """Stand-in for subprocess.Popen used by subscribe_live (communicate-based)."""
+
+    def __init__(self, *, stdout=b"", stderr=b"", returncode=0, timeout_on_communicate=False):
+        self._stdout = stdout
+        self._stderr = stderr
+        self.returncode = returncode
+        self._timeout = timeout_on_communicate
+
+    def kill(self):
+        pass
+
+    def communicate(self, timeout=None):  # pylint: disable=unused-argument
+        if self._timeout:
+            raise subprocess.TimeoutExpired(cmd="mosquitto_sub", timeout=timeout)
+        return (self._stdout, self._stderr)
+
+
+def _install_live_popen(monkeypatch, proc):
+    monkeypatch.setattr("wb_cli.lib.mqtt.subprocess.Popen", lambda *a, **kw: proc)
+    monkeypatch.setattr("wb_cli.lib.mqtt.subprocess.TimeoutExpired", subprocess.TimeoutExpired)
+
+
+def test_subscribe_live_parses_tab_separated_lines(monkeypatch):
+    proc = _FakeLivePopen(stdout=b"topic/a\tvalue-a\ntopic/b\tvalue-b\n")
+    _install_live_popen(monkeypatch, proc)
+    result = MqttClient(MagicMock()).subscribe_live("topic/+", timeout=2.0)
+    assert result == [("topic/a", "value-a"), ("topic/b", "value-b")]
+
+
+def test_subscribe_live_returns_partial_on_timeout(monkeypatch):
+    """When communicate times out, kill + second communicate returns partial data."""
+
+    class _PartialPopen(_FakeLivePopen):
+        def __init__(self):
+            super().__init__(timeout_on_communicate=True)
+            self._calls = 0
+
+        def communicate(self, timeout=None):
+            self._calls += 1
+            if self._calls == 1:
+                raise subprocess.TimeoutExpired(cmd="mosquitto_sub", timeout=timeout)
+            return (b"topic/x\t99\n", b"")
+
+    proc = _PartialPopen()
+    _install_live_popen(monkeypatch, proc)
+    result = MqttClient(MagicMock()).subscribe_live("topic/+", timeout=0.1)
+    assert result == [("topic/x", "99")]
+
+
+def test_subscribe_live_empty_result_with_nonzero_rc_raises(monkeypatch):
+    proc = _FakeLivePopen(stdout=b"", stderr=b"connection refused", returncode=1)
+    _install_live_popen(monkeypatch, proc)
+    with pytest.raises(WbCliError) as exc:
+        MqttClient(MagicMock()).subscribe_live("topic/+", timeout=1.0)
+    assert exc.value.code == "MQTT_BROKER_DOWN"
+
+
+def test_subscribe_live_broker_down_when_popen_fails(monkeypatch):
+    monkeypatch.setattr(
+        "wb_cli.lib.mqtt.subprocess.Popen", lambda *a, **kw: (_ for _ in ()).throw(FileNotFoundError())
+    )
+    with pytest.raises(WbCliError) as exc:
+        MqttClient(MagicMock()).subscribe_live("topic/+", timeout=1.0)
+    assert exc.value.code == "MQTT_BROKER_DOWN"
+
+
+def test_subscribe_live_count_flag_added_to_cmd(monkeypatch):
+    captured = {}
+
+    def fake_popen(cmd, **_kw):
+        captured["cmd"] = cmd
+        return _FakeLivePopen(stdout=b"t\tv\n")
+
+    monkeypatch.setattr("wb_cli.lib.mqtt.subprocess.Popen", fake_popen)
+    MqttClient(MagicMock()).subscribe_live("topic/+", count=3, timeout=2.0)
+    assert "-C" in captured["cmd"]
+    assert "3" in captured["cmd"]
 
 
 # ---------- publish ----------
