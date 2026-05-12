@@ -6,6 +6,15 @@ allowed-tools: Bash Read WebFetch
 
 # zigbee
 
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
+**`<HOST>` variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
+
 Zigbee devices on a Wiren Board controller via zigbee2mqtt.
 
 ## Architecture
@@ -19,7 +28,11 @@ WB converters turn Z2M devices into native WB MQTT (`/devices/...`) so wb-rules 
 | **wb-mqtt-zigbee** (new) | `/devices/zigbee_*/controls/*` | Bidirectional controls, support via `/on` |
 | **wb-zigbee2mqtt** (old, `1.x`) | `/devices/0x<ieee>/controls/*` (topic name = full IEEE address) | Read-only bridge, control via `mosquitto_pub zigbee2mqtt/<friendly>/set` |
 
-Which one is installed — determine via `dpkg -l | grep -E 'wb-(mqtt-zigbee\|zigbee2mqtt)'` and `mosquitto_sub /devices/+/meta/name -C 50 -W 3` (look for `0x...` names or `zigbee_<id>`).
+Which one is installed — determine via `dpkg -l | grep -E 'wb-(mqtt-zigbee\|zigbee2mqtt)'` and check device names on the bus:
+```bash
+ssh root@<HOST> wb-cli --json mqtt list '/devices/+/meta/name'
+```
+In the output: `0x...` = old converter (`wb-zigbee2mqtt`), `zigbee_<id>` = new converter (`wb-mqtt-zigbee`).
 
 ## How to identify
 
@@ -33,7 +46,7 @@ Signs:
 **The true liveness check is `bridge/state`, not `systemctl`:**
 
 ```bash
-ssh root@<HOST> "mosquitto_sub -t 'zigbee2mqtt/bridge/state' -C 1 -W 5"
+ssh root@<HOST> wb-cli --json mqtt read 'zigbee2mqtt/bridge/state'
 ```
 
 Expected: `{"state":"online"}` (or just `online` on older versions). If empty/timeout — the bridge is dead or there's no MQTT connectivity.
@@ -51,8 +64,8 @@ One of the two (or both) will answer. Then — `journalctl -u zigbee2mqtt -n 50`
 `bridge/devices` is a large JSON (tens of KB). Don't try `head -c 200` — that gives broken JSON that can't be parsed. Write it whole right away:
 
 ```bash
-ssh root@<HOST> "mosquitto_sub -t 'zigbee2mqtt/bridge/devices' -C 1 -W 5" > /tmp/z2m-devices.json
-ssh root@<HOST> "mosquitto_sub -t 'zigbee2mqtt/bridge/info'    -C 1 -W 5" > /tmp/z2m-info.json
+ssh root@<HOST> wb-cli --json mqtt read 'zigbee2mqtt/bridge/devices' | jq -r '.data.payload' > /tmp/z2m-devices.json
+ssh root@<HOST> wb-cli --json mqtt read 'zigbee2mqtt/bridge/info'    | jq -r '.data.payload' > /tmp/z2m-info.json
 ```
 
 **Parsing — via jq** (available on all current WB firmwares):
@@ -74,31 +87,25 @@ If `jq` isn't there (minimal image or very old release) — `python3 -c '...'` a
 
 ```bash
 # New wb-mqtt-zigbee converter:
-ssh root@<HOST> wb-cli dev zigbee_<id>
+ssh root@<HOST> wb-cli --json dev zigbee_<id>
 # Old wb-zigbee2mqtt converter:
-ssh root@<HOST> 'wb-cli dev "0x<ieee>"'
+ssh root@<HOST> 'wb-cli --json dev "0x<ieee>"'
 ```
 
 Returns all controls with current values, types, and error flags in JSON.
 
-### Via raw MQTT (for Z2M-native data or unconverted devices)
+### Via raw MQTT (Z2M-native data only — no WB converter)
 
 ```bash
-# Current values via Z2M (raw JSON with all exposures):
-ssh root@<HOST> "mosquitto_sub -t 'zigbee2mqtt/<friendly_name>' -C 1 -W 5"
-
-# Via WB converter topics directly:
-# New wb-mqtt-zigbee:
-ssh root@<HOST> "mosquitto_sub -t '/devices/zigbee_<id>/controls/+' -C 50 -W 3"
-# Old wb-zigbee2mqtt:
-ssh root@<HOST> "mosquitto_sub -t '/devices/0x<ieee>/controls/+' -C 50 -W 3"
+# Current values via Z2M (raw JSON with all exposures, for devices without WB converter):
+ssh root@<HOST> wb-cli --json mqtt read 'zigbee2mqtt/<friendly_name>'
 ```
 
 ## Controlling a device
 
 **Via wb-cli (if `wb-mqtt-zigbee` converter is present):**
 ```bash
-ssh root@<HOST> wb-cli dev zigbee_<id>/<channel> <value>
+ssh root@<HOST> wb-cli --json dev zigbee_<id>/<channel> <value>
 ```
 
 **Via raw MQTT (WB converter):**
@@ -127,14 +134,14 @@ ssh root@<HOST> "mosquitto_pub -t 'zigbee2mqtt/bridge/request/permit_join' -m '{
 
 Verify it's disabled:
 ```bash
-ssh root@<HOST> "mosquitto_sub -t 'zigbee2mqtt/bridge/info' -C 1 -W 5" | jq '.permit_join'
+ssh root@<HOST> wb-cli --json mqtt read 'zigbee2mqtt/bridge/info' | jq -r '.data.payload | fromjson | .permit_join'
 # should be false
 ```
 
 ## Pitfalls
 
 - `systemctl is-active zigbee2mqtt` ≠ bridge probe. If Z2M is in Docker, the answer is always `inactive`. Use `bridge/state`.
-- `mosquitto_sub -t 'zigbee2mqtt/#'` — megabytes of data (full retained history). Don't.
+- `wb-cli mqtt list 'zigbee2mqtt/#'` — megabytes of data (full retained history). Don't.
 - `head -c 200` for `bridge/devices` — gives broken JSON, doesn't parse.
 - Absence of `last_seen` ≠ device offline. Check `bridge/info → config.availability.enabled`.
 - `bridge/request/permit_join` without user confirmation — destructive.

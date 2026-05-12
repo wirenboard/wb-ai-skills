@@ -26,6 +26,7 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 | `mqtt read <topic>` | Read retained MQTT value |
 | `mqtt write <topic> <val>` | Publish MQTT message (`-r` to retain) |
 | `mqtt list <pattern>` | List retained topics |
+| `mqtt sub <pattern> [-C N] [--timeout T]` | Subscribe and print messages (retained + live) |
 | `confed load <path>` | Load config via wb-mqtt-confed |
 | `confed save <path> <json>` | Save config via wb-mqtt-confed |
 | `rules list\|load\|save\|enable\|disable\|delete` | Manage wb-rules automation scripts |
@@ -84,17 +85,16 @@ The `.deb` is `Architecture: all` and works on any wb6/wb7 running Debian ≥ bu
 
 ## Skills for LLM agents
 
-The `skills/` directory holds nine methodology guides for LLM agents working with Wiren Board over SSH:
+The `skills/` directory holds eight methodology guides for LLM agents working with Wiren Board over SSH:
 
 | Skill | What it covers |
 |---|---|
 | `wiren-board` | Master entry: discovery, SSH conventions, wb-cli, install fallback. **Load first.** |
 | `wb-troubleshooting` | Failed units, disk, kernel mismatch, Docker, general diagnostics. |
-| `wb-troubleshooting-serial` | RS-485 / Modbus bus debugging (CRC, timeouts, debug capture). |
+| `wb-serial` | RS-485/Modbus: custom templates, device config via confed, bus diagnostics (CRC, timeouts). |
 | `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron). |
-| `wb-serial-templates` | Custom Modbus device templates. |
 | `wb-mqtt-broker` | MQTT broker config: auth, ACL, TLS, bridges. |
-| `wb-network` | WiFi, 4G/GSM, VPN, failover, modem diagnostics. |
+| `wb-network` | WiFi, 4G/GSM, VPN, failover, modem diagnostics, NTP. |
 | `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
 | `wb-controller-backup` | Full controller backup and restore. |
 

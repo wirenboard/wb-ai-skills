@@ -6,6 +6,15 @@ allowed-tools: Bash Read Write WebFetch
 
 # mqtt-broker
 
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
+**`<HOST>` variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
+
 `mosquitto` on a WB controller is the main MQTT broker through which all WB services and user applications communicate. Managed via `/etc/mosquitto/conf.d/*.conf` (DON'T edit `mosquitto.conf` directly).
 
 Load this on: "open MQTT externally", "MQTT needs passwords", "set up TLS", "bridge to cloud", "bridge to HA", "can't connect to MQTT from laptop", "mosquitto", "ACL for MQTT", "passwords on the broker", "encrypt MQTT".
@@ -19,7 +28,7 @@ Load this on: "open MQTT externally", "MQTT needs passwords", "set up TLS", "bri
   /usr/share/wb-configs/mosquitto-post/   # WB post (DON'T touch)
 
 /etc/mosquitto/conf.d/
-├── 00default_listener.conf   # Unix socket for wb services (DON'T touch)
+├── 00default_listener.conf   # Unix socket for WB services — pre-configured; override only if you know what you're doing
 ├── 10listeners.conf          # external listeners (port 1883, 8883) — yours
 ├── 20bridges.conf            # bridges to other brokers — yours
 └── 21bridge.conf.example     # bridge template
@@ -39,8 +48,8 @@ By default (factory): listener 1883 anonymous = broker open to the world. **For 
 ssh root@<HOST> 'systemctl is-active mosquitto'
 ssh root@<HOST> 'mosquitto -c /etc/mosquitto/mosquitto.conf -t'      # config check without starting
 ssh root@<HOST> 'journalctl -u mosquitto -n 50 --no-pager'
-ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/#' -C 5"        # broker system stats
-ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/broker/clients/connected' -C 1"
+ssh root@<HOST> "wb-cli --json mqtt sub '\$SYS/#' --count 5"        # broker system stats
+ssh root@<HOST> "wb-cli --json mqtt sub '\$SYS/broker/clients/connected' --count 1"
 ```
 
 ### Reading/writing device values via wb-cli
@@ -48,13 +57,13 @@ ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/broker/clients/connected' 
 For reading retained MQTT values (device controls, meta), prefer `wb-cli`:
 
 ```bash
-ssh root@<HOST> wb-cli mqtt read '/devices/wb-mr6c_2/controls/K1'
-ssh root@<HOST> wb-cli mqtt write '/devices/wb-mr6c_2/controls/K1/on' 1
-ssh root@<HOST> wb-cli mqtt list '/devices/+/meta/name'
-ssh root@<HOST> wb-cli dev wb-mr6c_2      # all controls with types and values
+ssh root@<HOST> wb-cli --json mqtt read '/devices/wb-mr6c_2/controls/K1'
+ssh root@<HOST> wb-cli --json mqtt write '/devices/wb-mr6c_2/controls/K1/on' 1
+ssh root@<HOST> wb-cli --json mqtt list '/devices/+/meta/name'
+ssh root@<HOST> wb-cli --json dev wb-mr6c_2      # all controls with types and values
 ```
 
-Use raw `mosquitto_sub`/`mosquitto_pub` only for: `$SYS` topics, non-retained streams, broker config testing with `-u`/`-P` auth flags, and bridge diagnostics.
+Use raw `mosquitto_sub`/`mosquitto_pub` only when `wb-cli` can't help: broker config testing with `-u`/`-P` auth flags (wb-cli connects via Unix socket, not TCP), and TLS certificate verification with `--cafile`.
 
 ## Authentication: passwords
 
@@ -217,16 +226,16 @@ bridge_insecure false
 ## Checking state and active clients
 
 ```bash
-ssh root@<HOST> "mosquitto_sub -h localhost -t '\$SYS/broker/+' -C 20 -W 2"
+ssh root@<HOST> "wb-cli --json mqtt sub '\$SYS/broker/+' --count 20 --timeout 2"
 # $SYS/broker/clients/connected, $SYS/broker/messages/received/1min etc.
-ssh root@<HOST> wb-cli dev                   # all WB devices with names (faster than raw sub)
+ssh root@<HOST> wb-cli --json dev                   # all WB devices with names (faster than raw sub)
 ```
 
 `mosquitto_sub` without `-u` against a closed listener → 1883 will refuse, 1883 on the Unix socket (mosquitto_sub auto-picks hostname=localhost:1883 by default). To hit the Unix socket: `mosquitto_sub -L mqtt://localhost:1883/<topic>` or connect with `mosquitto_sub -h /var/run/mosquitto/mosquitto.sock` — doesn't work in some versions, easier via 1883.
 
 ## Backup and FIT
 
-`/etc/mosquitto/conf.d/`, `/etc/mosquitto/passwd/`, `/etc/mosquitto/acl/`, `/etc/mosquitto/certs/` — all do NOT survive FIT. Via `/wb-controller-backup` they get picked up (some `dpkg --verify` will flag changes, and core-tar will capture them as modified configs).
+`/etc/mosquitto/conf.d/`, `/etc/mosquitto/passwd/`, `/etc/mosquitto/acl/`, `/etc/mosquitto/certs/` — all do NOT survive FIT. Via `/wb-controller-backup` they get picked up (some `dpkg --verify` will flag changes, and core-tar will capture them as modified configs). For a full list of what survives FIT, see `wb-controller-backup` skill.
 
 ## Pitfalls
 

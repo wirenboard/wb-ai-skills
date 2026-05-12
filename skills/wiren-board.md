@@ -6,6 +6,13 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 # Wiren Board — master skill
 
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
 You manage **Wiren Board** home/building automation controllers over SSH.
 
 ## Discovery
@@ -34,17 +41,24 @@ Default credentials: **user `root`, password `wirenboard`**. Key-based auth is p
 
 ```bash
 # Key-based (preferred for scripts)
-ssh root@wirenboard-A25NDEMJ wb-cli info
+ssh root@wirenboard-A25NDEMJ wb-cli --json info
 
 # Password auth (default, no prior setup needed)
-sshpass -p wirenboard ssh root@wirenboard-A25NDEMJ wb-cli info
+sshpass -p wirenboard ssh root@wirenboard-A25NDEMJ wb-cli --json info
 ```
+
+## SSH key-based auth
+
+```bash
+ssh-copy-id root@<HOST>          # copies ~/.ssh/id_*.pub
+```
+After this, password is not needed. To disable password auth — edit `/etc/ssh/sshd_config`: set `PasswordAuthentication no`, then `systemctl restart sshd`.
 
 ## wb-cli — the primary tool
 
 Runs **on the controller**. Check it's there: `ssh root@<HOST> 'command -v wb-cli && wb-cli --version'`. If missing — install (see below).
 
-**Rule: before first use of any command group — `wb-cli <group> --help`.**
+**Rule: before first use of any command group — `wb-cli --json <group> --help`.**
 
 ### Install wb-cli on a controller
 
@@ -71,7 +85,7 @@ ssh root@<HOST> 'set -e
 Notes:
 - `wb-cli` is an `_all.deb` (arch-independent), works on any wb6/wb7 firmware ≥ bullseye.
 - Runtime deps (`python3-mqttrpc`, `python3-wb-common`, `mosquitto-clients`, `jq`) live in the wirenboard apt repo, which is preconfigured on every controller — `apt-get install -y -f` resolves them.
-- Verify with `wb-cli info` (returns serial number, fw, uptime).
+- Verify with `wb-cli --json info` (returns serial number, fw, uptime).
 
 ### Output contract
 
@@ -118,15 +132,41 @@ Standard Docker CE installed via `wb-docker-manager.sh`. Key WB-specific rule: *
 ssh root@<HOST> 'docker compose -f /mnt/data/homeassistant/docker-compose.yml up -d'
 ```
 
-## Troubleshooting patterns
+## Firmware upgrade
 
-### Kernel mismatch (most common WB issue)
-
+Check for available update:
 ```bash
-ssh root@<HOST> 'uname -r; cat /boot/Image.version 2>/dev/null || echo unknown'
+ssh root@<HOST> wb-cli --json info
+```
+Upgrade (runs in background, controller reboots):
+```bash
+ssh root@<HOST> wb-cli --json job run fw-upgrade "wb-update-manager -y upgrade 2>&1"
+ssh root@<HOST> wb-cli --json job wait fw-upgrade
+```
+After reboot, verify: `wb-cli --json info`. If kernel mismatch after upgrade — see `wb-troubleshooting` skill.
+
+## Factory reset
+
+**Erases /etc and /mnt/data/etc. Back up first (see wb-controller-backup skill).**
+```bash
+ssh root@<HOST> wb-cli --json job run factory-reset "wb-factoryreset 2>&1"
+```
+Controller reboots with default config. SSH will work with default credentials (root/wirenboard).
+
+## apt package pinning
+
+Hold a package at current version:
+```bash
+ssh root@<HOST> "apt-mark hold <package>"
+ssh root@<HOST> "apt-mark showhold"       # list held packages
+ssh root@<HOST> "apt-mark unhold <package>"
 ```
 
-If versions differ — **reboot is the only fix**. Kernel modules won't load, Docker/iptables/network may break. Don't try modprobe workarounds.
+## Troubleshooting patterns
+
+### Kernel mismatch
+
+Kernel mismatch after upgrade — see `wb-troubleshooting` skill.
 
 ### Docker iptables fix (after kernel is OK)
 
@@ -139,7 +179,7 @@ ssh root@<HOST> 'update-alternatives --set iptables /usr/sbin/iptables-legacy &&
 ```bash
 ssh root@<HOST> 'systemctl list-units --state=failed --no-pager'
 ssh root@<HOST> 'df -h / /mnt/data'
-ssh root@<HOST> 'wb-cli audit'
+ssh root@<HOST> 'wb-cli --json audit'
 ```
 
 ## Documentation lookup
@@ -158,12 +198,28 @@ Common pages: `Docker`, `Modbus`, `Home_Assistant`, `Wiren_Board_Cloud`, `wb-rul
 |---|---|
 | wb-rules JavaScript automation (defineRule, virtual devices, cron, ES5) | `/wb-rules` |
 | General troubleshooting (failed services, disk, kernel, Docker) | `/wb-troubleshooting` |
-| RS-485 / Modbus bus debugging (CRC, timeouts, debug capture) | `/wb-troubleshooting-serial` |
-| Custom Modbus device templates (registers, endianness, parameters) | `/wb-serial-templates` |
+| RS-485 / Modbus: templates, confed config, diagnostics (CRC, timeouts) | `/wb-serial` |
 | Network setup (WiFi, 4G/GSM, VPN, failover, modem diagnostics) | `/wb-network` |
 | MQTT broker config (auth, ACL, TLS, bridges to HA/cloud) | `/wb-mqtt-broker` |
 | Full controller backup and restore | `/wb-controller-backup` |
 | Zigbee devices via zigbee2mqtt (pairing, OTA, native vs Docker) | `/wb-zigbee` |
+
+## Third-party integrations
+
+For components not covered by a dedicated skill — always start with `WebFetch` on the WB wiki page, then standard component docs:
+
+| Component | Wiki page |
+|---|---|
+| InfluxDB, Grafana | `WebFetch('https://wiki.wirenboard.com/wiki/InfluxDB')` |
+| Node-RED | `WebFetch('https://wiki.wirenboard.com/wiki/Node-RED')` |
+| Home Assistant | `WebFetch('https://wiki.wirenboard.com/wiki/Home_Assistant')` |
+| nginx / SSL on controller | `WebFetch('https://wiki.wirenboard.com/wiki/Nginx')` + standard nginx / certbot docs |
+| Docker on controller | `WebFetch('https://wiki.wirenboard.com/wiki/Docker')` |
+
+**Installing software on a controller:** WB has a small root partition. Install via:
+1. WB-packaged `.deb` from the wirenboard apt repo (e.g. `zigbee2mqtt` built by WB maintainers) — preferred.
+2. Docker — **follow the WB wiki, not generic Docker docs**: `WebFetch('https://wiki.wirenboard.com/wiki/Docker')`. Docker is pre-configured to store images in `/mnt/data` (not root); generic `apt install docker-ce` breaks this. Use `docker compose` from `/mnt/data/etc/docker/`.
+3. Direct `apt install` of standard Debian packages — only if they're small and in the wirenboard repo. Large packages (Node.js runtimes, databases) must go via Docker or `/mnt/data`.
 
 ## Safety
 

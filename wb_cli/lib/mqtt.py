@@ -26,7 +26,7 @@ import os
 import select
 import subprocess
 import time
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from wb_cli.errors import ExitCode, WbCliError
 from wb_cli.lib.shell import ShellRunner
@@ -106,6 +106,73 @@ class MqttClient:
             raise WbCliError(
                 code="MQTT_BROKER_DOWN",
                 message=f"mosquitto_sub failed (rc={rc}): {stderr_text.strip()}",
+                details={"topic": topic, "returncode": rc},
+                exit_code=ExitCode.ENVIRONMENT,
+            )
+        return results
+
+    def subscribe_live(
+        self,
+        topic: str,
+        *,
+        count: Optional[int] = None,
+        timeout: float = 5.0,
+    ) -> List[Tuple[str, str]]:
+        """Subscribe and collect messages — both retained and live.
+
+        Unlike ``subscribe``, does not use an idle-window heuristic.
+        Waits until *count* messages arrive or *timeout* seconds elapse.
+        """
+        cmd = [
+            "stdbuf",
+            "-oL",
+            "mosquitto_sub",
+            "-F",
+            "%t\t%p",
+            "-t",
+            topic,
+            "-W",
+            str(max(1, int(timeout + 0.5))),
+        ]
+        if count is not None:
+            cmd += ["-C", str(count)]
+        try:
+            proc = subprocess.Popen(  # pylint: disable=consider-using-with
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except FileNotFoundError as exc:
+            raise WbCliError(
+                code="MQTT_BROKER_DOWN",
+                message="mosquitto_sub not found; is mosquitto-clients installed?",
+                exit_code=ExitCode.ENVIRONMENT,
+            ) from exc
+
+        results: List[Tuple[str, str]] = []
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout + 2.0)
+            for line in stdout.decode("utf-8", errors="replace").splitlines():
+                if "\t" in line:
+                    t, _, p = line.partition("\t")
+                    results.append((t, p))
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, _ = proc.communicate()
+            for line in stdout.decode("utf-8", errors="replace").splitlines():
+                if "\t" in line:
+                    t, _, p = line.partition("\t")
+                    results.append((t, p))
+            stderr = b""
+
+        rc = proc.returncode
+        stderr_text = (
+            stderr.decode("utf-8", errors="replace") if isinstance(stderr, bytes) else ""
+        ).strip()
+        if not results and rc is not None and rc > 0:
+            raise WbCliError(
+                code="MQTT_BROKER_DOWN",
+                message=f"mosquitto_sub failed (rc={rc}): {stderr_text}",
                 details={"topic": topic, "returncode": rc},
                 exit_code=ExitCode.ENVIRONMENT,
             )

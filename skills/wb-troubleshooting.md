@@ -1,12 +1,19 @@
 ---
 name: wb-troubleshooting
-description: "General diagnostics for issues on a Wiren Board controller. Failed services, low disk space, kernel mismatch, Docker, iptables, diagnostic archive. NOT for serial/Modbus — for that there's troubleshooting-serial."
+description: "General diagnostics for issues on a Wiren Board controller. Failed services, low disk space, kernel mismatch, Docker, iptables, diagnostic archive. NOT for serial/Modbus — for that there's `wb-serial` skill."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
 # troubleshooting
 
-General diagnostics for issues on a Wiren Board controller. Load this when the user says: "doesn't work", "fix it", "broken", "error", "won't start", "service crashed", "issue with...", "collect diagnostics", "diagnostic archive", "logs and state" — and it's NOT about serial/Modbus (for serial there's troubleshooting-serial).
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
+General diagnostics for issues on a Wiren Board controller. Load this when the user says: "doesn't work", "fix it", "broken", "error", "won't start", "service crashed", "issue with...", "collect diagnostics", "diagnostic archive", "logs and state" — and it's NOT about serial/Modbus (for serial there's `wb-serial` skill).
 
 Don't confuse with backup (`wb-controller-backup`). The diagnostic archive is for analysis and support, not for restore. Collected by the `wb-diag-collect` utility and includes: configs from `/etc`, service logs (wb*, mosquitto, NetworkManager, etc.), output of diagnostic commands (df, ps, ip, dpkg, etc.).
 
@@ -19,7 +26,7 @@ Before fixing — figure out the cause. Don't fix symptoms.
 ### 0. Quick health check
 
 ```bash
-ssh root@<HOST> wb-cli audit
+ssh root@<HOST> wb-cli --json audit
 ```
 
 This runs automated checks (failed units, controller identity). If wb-cli is not installed, proceed with manual steps below.
@@ -91,7 +98,7 @@ Shows who's eating CPU.
 | Service crashes in a loop | `journalctl -u <unit> -n 100` — look for the cause, don't restart blindly |
 | `fstrim.service` failed, `status=64/USAGE` | An entry in `/etc/fstab` points to a physically absent partition (typically `/mnt/sdcard` without an inserted SD). `fstrim --listed-in /etc/fstab` fails before reaching other mount points. Check `mount` and `ls /dev/mmcblk1*`. Cure: remove the line from fstab or drop-in with `ExecStart=/sbin/fstrim --fstab --quiet-unsupported` |
 | No network | `ip addr`, `nmcli`, `ping 8.8.8.8`, `cat /etc/resolv.conf` |
-| MQTT doesn't work | `systemctl is-active mosquitto`, `mosquitto_sub -t '#' -C 1 -W 2` |
+| MQTT doesn't work | `systemctl is-active mosquitto`, `wb-cli --json audit` |
 | Web UI doesn't open | `systemctl is-active nginx wb-mqtt-homeui` |
 
 ## Docker and iptables

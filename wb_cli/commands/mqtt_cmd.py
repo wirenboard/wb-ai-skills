@@ -67,6 +67,26 @@ class MqttPlugin(BasePlugin):
         )
         p.add_argument("--timeout", type=float, default=5.0, help="max seconds to wait (default: 5)")
 
+        p = sub.add_parser(
+            "sub",
+            help="subscribe and print messages (retained + live)",
+            description=(
+                "Subscribe to <topic> and print every message that arrives. "
+                "Captures both retained and live (non-retained) messages. "
+                "Use --count to stop after N messages, --timeout to limit wait time."
+            ),
+        )
+        p.add_argument("topic", help="MQTT topic or wildcard pattern")
+        p.add_argument(
+            "-C",
+            "--count",
+            type=int,
+            default=None,
+            metavar="N",
+            help="stop after N messages",
+        )
+        p.add_argument("--timeout", type=float, default=5.0, help="max seconds to wait (default: 5)")
+
     def dispatch(self, ctx) -> dict:
         subcmd = ctx.args.subcmd
         if subcmd == "read":
@@ -75,6 +95,8 @@ class MqttPlugin(BasePlugin):
             return self._write(ctx)
         if subcmd == "list":
             return self._list(ctx)
+        if subcmd == "sub":
+            return self._sub(ctx)
         return {}
 
     def _read(self, ctx) -> dict:
@@ -106,6 +128,15 @@ class MqttPlugin(BasePlugin):
 
     def _list(self, ctx) -> dict:
         msgs = ctx.mqtt.subscribe(ctx.args.topic, timeout=ctx.args.timeout)
+        messages = [{"topic": t, "payload": p} for t, p in msgs]
+        return {"messages": messages, "count": len(messages)}
+
+    def _sub(self, ctx) -> dict:
+        msgs = ctx.mqtt.subscribe_live(
+            ctx.args.topic,
+            count=ctx.args.count,
+            timeout=ctx.args.timeout,
+        )
         messages = [{"topic": t, "payload": p} for t, p in msgs]
         return {"messages": messages, "count": len(messages)}
 

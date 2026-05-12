@@ -1,3 +1,24 @@
+wb-cli (0.4.0) stable; urgency=medium
+
+  * NEW: `mqtt sub <topic> [-C N] [--timeout T]` — subscribe and print
+    messages (retained + live). Unlike `mqtt list`, captures non-retained
+    streams such as $SYS topics and live state updates.
+  * Skills: merged wb-serial-templates + wb-troubleshooting-serial into
+    single wb-serial skill; 8 skills total.
+  * Skills: CRITICAL RULES block (wb-cli --json requirement) added to all
+    skills; <HOST> variable defined everywhere it is used.
+  * Skills: all mosquitto_sub calls in skills replaced with wb-cli
+    equivalents (mqtt read, mqtt list, mqtt sub) where possible. Only
+    auth-testing (-u/-P) and TLS-testing (--cafile) calls remain raw.
+  * Skills: new sections — firmware upgrade, factory reset, SSH keys, apt
+    pinning, NTP, system cron, nginx/SSL note, Docker installation note,
+    third-party integrations table with wiki links.
+  * Skills: wb-zigbee mosquitto_sub topic fixed (was missing -t flag).
+  * README: skill count and table updated (nine → eight, new wb-serial).
+  * README: mqtt sub added to command table.
+
+ -- Alexander Degtyarev <wb-claude-mail-00003@proton.me>  Tue, 13 May 2026 00:00:00 +0000
+
 wb-cli (0.3.2) stable; urgency=medium
 
   * FIX: `history get/chart --from/--to` crashed with a cryptic C++ RPC

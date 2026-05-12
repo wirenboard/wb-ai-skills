@@ -6,13 +6,22 @@ allowed-tools: Bash Read Write WebFetch
 
 # network
 
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
 WB networking subsystem: **NetworkManager** manages physical connections (eth0/eth1/wlan0/ppp0/...), **wb-connection-manager** prioritizes them and does automatic failover. Config `/etc/wb-connection-manager.conf` (via `confed`) is the single source of truth for the web UI.
 
 Load this on: "set up 4G", "give me internet via sim1", "WiFi access point", "no external ping", "static IP", "set DNS", "eth1 doesn't connect", "modem won't connect", "failover not working", "OpenVPN client", "network settings".
 
 **Don't confuse with `/wb-troubleshooting`** (general "something broke" diagnostics). This skill is for targeted setup.
 
-> **wb-cli note:** Network configuration mostly uses standard Linux tools (`nmcli`, `ip`, `mmcli`). `wb-cli` is useful here only for loading/saving `wb-connection-manager.conf` via confed: `wb-cli confed load /etc/wb-connection-manager.conf` and `wb-cli confed save /etc/wb-connection-manager.conf '<json>'`.
+**`<HOST>` variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
+
+> **wb-cli note:** Network config changes use standard Linux tools (`nmcli`, `ip`, `mmcli`). `wb-cli confed` is for loading/saving `wb-connection-manager.conf`. `wb-cli --json dev` works normally for any device control queries (e.g. modem signal via MQTT).
 
 ## Architecture
 
@@ -153,15 +162,15 @@ Without `ignore-auto-dns` your DNS is added **at the end** of the list — DHCP 
 View current priorities via confed:
 
 ```bash
-ssh root@<HOST> wb-cli confed load /etc/wb-connection-manager.conf
+ssh root@<HOST> wb-cli --json confed load /etc/wb-connection-manager.conf
 ```
 
-Parse the result (JSON) — look at `.config.ui.con_switch.connections` — ordered list of `connection_uuid` from highest to lowest priority. Failover follows it.
+The output is `{"data": {...}}`. Extract `.data`, edit the `config.ui.con_switch.connections` array (ordered list of `connection_uuid` from highest to lowest priority — failover follows it), then pass the modified `.data` object to `confed save`.
 
 Save edited config:
 
 ```bash
-ssh root@<HOST> 'wb-cli confed save /etc/wb-connection-manager.conf '"'"'<updated-json>'"'"''
+ssh root@<HOST> 'wb-cli --json confed save /etc/wb-connection-manager.conf '"'"'<updated-json>'"'"''
 ```
 
 **Logs**: `journalctl -u wb-connection-manager -n 50 --no-pager` — what switched and why.
@@ -184,6 +193,23 @@ NM profiles live in `/etc/NetworkManager/system-connections/*.nmconnection`. **T
 
 **Recommendation**: simple changes (SSID, password, static IP) — via `nmcli`. Priority/structural changes — via `wb_confed_save` `/etc/wb-connection-manager.conf`.
 
+## NTP / time synchronization
+
+WB uses `chrony`. Config: `/etc/chrony/chrony.conf`.
+
+Check sync status:
+```bash
+ssh root@<HOST> chronyc tracking
+ssh root@<HOST> chronyc sources -v
+```
+Add a custom NTP server — edit `/etc/chrony/chrony.conf`:
+```
+server ntp.example.com iburst
+```
+Then `systemctl restart chrony`.
+
+> `reload` re-reads config without downtime (some changes); `restart` applies all config changes (~1s downtime).
+
 ## Pitfalls
 
 - **Didn't check the link** before DNS — typical diagnostic mistake. First `ip addr`, then `ping IP`, then `ping name`.
@@ -194,7 +220,11 @@ NM profiles live in `/etc/NetworkManager/system-connections/*.nmconnection`. **T
 - **PIN** — some operators require it. Without PIN the modem is `Locked`.
 - **Failover "bouncing"** — low GSM signal, bad WiFi. wb-connection-manager log shows what's stuck.
 - **NM doesn't start** — `systemctl status NetworkManager`, kernel mismatch (see `/wb-troubleshooting`).
-- **Custom nmconnection won't survive FIT** — backup via `/wb-controller-backup`.
+- **Custom nmconnection won't survive FIT** — backup via `/wb-controller-backup`. For a full list of what survives FIT, see `wb-controller-backup` skill.
+
+## nginx / SSL on the controller
+
+WB uses nginx as a reverse proxy (web UI, API). For HTTPS/SSL: standard nginx configuration applies. WB-specific: `WebFetch('https://wiki.wirenboard.com/wiki/Nginx')` for any WB-specific paths or config locations. For Let's Encrypt / certbot — standard certbot docs.
 
 ## Documentation
 

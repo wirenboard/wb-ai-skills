@@ -6,6 +6,13 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 # controller-backup
 
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
 Backup and restore of a WB controller — collect an archive with configs, data and package lists; hand it to the user; restore after a firmware flash or on a new controller. Load this on "make a backup", "controller backup", "save the controller", "send me the backup", "backup before update", "roll back after firmware flash", "restore from backup", "transfer settings".
 
 **This is NOT a diagnostic archive.** If the user asks for a "diagnostic archive", "logs for support", "wb-diag-collect" — that's the `wb-troubleshooting` skill, not backup. Backup is the full controller restore process (packages, configs, data, RESTORE.md), takes minutes.
@@ -66,12 +73,12 @@ Output sections breakdown:
 Save a controller state snapshot via wb-cli:
 
 ```bash
-ssh root@<HOST> wb-cli snapshot save --label backup-pre
+ssh root@<HOST> wb-cli --json snapshot save --label backup-pre
 ```
 
 This saves a JSON snapshot to `/mnt/data/ai/wb-cli/snapshots/backup-pre.json` with controller identity, failed units, etc. After restore, compare with `wb-cli snapshot diff <path>`.
 
-If wb-cli is not installed, fall back to the manual method:
+Use the manual method only if wb-cli is not installed:
 
 ```bash
 ssh root@<HOST> 'mkdir -p /mnt/data/ai/wb-ai-skills/snapshots'
@@ -134,20 +141,20 @@ In one message to the user: difference report + "including in the archive: ...; 
 Run THIS script as a background job. Don't invent your own script for this part.
 
 ```bash
-ssh root@<HOST> 'wb-cli job run backup-core "set -e; TS=\$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-skills/backups/\$TS; mkdir -p \$B; cat /etc/wb-fw-version > \$B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release \$B/wb-release 2>/dev/null || true; apt-mark showmanual > \$B/packages-manual.list; dpkg-query -W -f='"'"'\${Package}=\${Version}\n'"'"' > \$B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk '"'"'{print \$1}'"'"' > \$B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c '"'"'T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac'"'"' _ {} \\; > \$B/symlinks-etc.list; tar czf \$B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \\( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \\) -prune -o \\( -name '"'"'docker-compose.y*ml'"'"' -o -name '"'"'compose.y*ml'"'"' \\) -print 2>/dev/null | tar czf \$B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=\$(ls -t /mnt/data/ai/wb-cli/snapshots/*.json /mnt/data/ai/wb-ai-skills/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n \"\$SNAP\" ] && cp \"\$SNAP\" \$B/state-snapshot.json; echo BACKUP_DIR=\$B; du -sh \$B \$B/*"'
+ssh root@<HOST> 'wb-cli --json job run backup-core "set -e; TS=\$(date +%Y%m%d-%H%M%S); B=/mnt/data/ai/wb-ai-skills/backups/\$TS; mkdir -p \$B; cat /etc/wb-fw-version > \$B/fw-version 2>/dev/null || true; cp /usr/lib/wb-release \$B/wb-release 2>/dev/null || true; apt-mark showmanual > \$B/packages-manual.list; dpkg-query -W -f='"'"'\${Package}=\${Version}\n'"'"' > \$B/packages-all.list; systemctl list-unit-files --state=enabled --no-legend | awk '"'"'{print \$1}'"'"' > \$B/services-enabled.list; find /etc -maxdepth 3 -type l -exec sh -c '"'"'T=\$(readlink -f \"\$1\"); case \"\$T\" in /mnt/data/*) echo \"\$1 -> \$T\";; esac'"'"' _ {} \\; > \$B/symlinks-etc.list; tar czf \$B/core.tar.gz -C / --warning=no-file-changed --ignore-failed-read mnt/data/etc etc/wb-rules etc/wb-mqtt-serial.conf etc/wb-mqtt-serial.conf.d etc/network etc/hostname etc/resolv.conf etc/ntp.conf etc/chrony 2>/dev/null || true; find / /mnt/data -xdev \\( -path /mnt/data/.docker -o -path /mnt/data/var/lib/containerd \\) -prune -o \\( -name '"'"'docker-compose.y*ml'"'"' -o -name '"'"'compose.y*ml'"'"' \\) -print 2>/dev/null | tar czf \$B/compose-files.tar.gz -T - 2>/dev/null || true; SNAP=\$(ls -t /mnt/data/ai/wb-cli/snapshots/*.json /mnt/data/ai/wb-ai-skills/snapshots/snapshot-*.json 2>/dev/null | head -1); [ -n \"\$SNAP\" ] && cp \"\$SNAP\" \$B/state-snapshot.json; echo BACKUP_DIR=\$B; du -sh \$B \$B/*"'
 ```
 
 `wb-cli job run` wraps `systemd-run` — it returns a JSON with the `unit` name and `log` path.
 
 Check the job status and tail the log:
 ```bash
-ssh root@<HOST> wb-cli job status <unit>
-ssh root@<HOST> wb-cli job tail <unit>
+ssh root@<HOST> wb-cli --json job status <unit>
+ssh root@<HOST> wb-cli --json job tail <unit>
 ```
 
 Wait for the job to finish (blocks up to 5 minutes):
 ```bash
-ssh root@<HOST> wb-cli job wait <unit>
+ssh root@<HOST> wb-cli --json job wait <unit>
 ```
 
 From the job log, take the path `BACKUP_DIR=...` — for example `/mnt/data/ai/wb-ai-skills/backups/20260419-224500`. **Substitute this exact path in all subsequent steps.** Don't write `$B` in following commands — the variable does not persist between calls!
@@ -155,7 +162,7 @@ From the job log, take the path `BACKUP_DIR=...` — for example `/mnt/data/ai/w
 ### Step 2: data based on audit results
 
 ```bash
-ssh root@<HOST> 'wb-cli job run backup-audit "tar czf <BACKUP_DIR>/audit-files.tar.gz --warning=no-file-changed --ignore-failed-read <paths from audit> 2>/dev/null || true; du -sh <BACKUP_DIR>/audit-files.tar.gz"'
+ssh root@<HOST> 'wb-cli --json job run backup-audit "tar czf <BACKUP_DIR>/audit-files.tar.gz --warning=no-file-changed --ignore-failed-read <paths from audit> 2>/dev/null || true; du -sh <BACKUP_DIR>/audit-files.tar.gz"'
 ```
 
 Substitute **specific paths** from phase 1 step 3:
@@ -174,7 +181,7 @@ ssh root@<HOST> "docker volume ls -q 2>/dev/null"
 ```
 If there are volumes with data:
 ```bash
-ssh root@<HOST> 'wb-cli job run backup-docker "for v in \$(docker volume ls -q); do docker run --rm -v \$v:/data alpine tar czf - /data > <BACKUP_DIR>/docker-volume-\$v.tar.gz 2>/dev/null; done; ls -lh <BACKUP_DIR>/docker-volume-*.tar.gz 2>/dev/null"'
+ssh root@<HOST> 'wb-cli --json job run backup-docker "for v in \$(docker volume ls -q); do docker run --rm -v \$v:/data alpine tar czf - /data > <BACKUP_DIR>/docker-volume-\$v.tar.gz 2>/dev/null; done; ls -lh <BACKUP_DIR>/docker-volume-*.tar.gz 2>/dev/null"'
 ```
 
 ## Phase 3 — delivery (after ALL tasks complete)
@@ -202,7 +209,7 @@ Write specific paths, package names and commands — not `$variables` and not `<
 ### 2. Pack into a single file
 
 ```bash
-ssh root@<HOST> 'wb-cli job run backup-pack "cd /mnt/data/ai/wb-ai-skills/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz"'
+ssh root@<HOST> 'wb-cli --json job run backup-pack "cd /mnt/data/ai/wb-ai-skills/backups && tar czf backup-<TS>.tar.gz <TS>/ && du -sh backup-<TS>.tar.gz"'
 ```
 
 ### 3. Check size and deliver

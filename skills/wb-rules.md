@@ -6,6 +6,15 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 # wb-rules
 
+## CRITICAL RULES
+
+> **NEVER call `wb-cli` without `--json` from an agent.**
+> Human-mode output is unparseable; always use:
+> `wb-cli --json <command>`
+> This applies to every call including help: `wb-cli --json <group> --help`.
+
+**`<HOST>` variable:** in all examples below `<HOST>` means `wirenboard-<SN>.local`, where `<SN>` is the serial number (e.g. `wirenboard-AABBCCDD.local`). Substitute the real address.
+
 Automation engine on the controller. Scripts in `/etc/wb-rules/*.js`, modules in `/etc/wb-rules-modules/*.js`. Language — **ES5** (no let/const/arrow). Manage rules via `wb-cli rules` on the controller.
 
 Canonical docs: <https://github.com/wirenboard/wb-rules>. When in doubt — `WebFetch` the README.
@@ -13,11 +22,11 @@ Canonical docs: <https://github.com/wirenboard/wb-rules>. When in doubt — `Web
 ## Rule operations via wb-cli
 
 ```bash
-ssh root@<HOST> wb-cli rules list
-ssh root@<HOST> wb-cli rules load myrule
-ssh root@<HOST> 'wb-cli rules save myrule "$(cat /tmp/rule.js)"'
-ssh root@<HOST> wb-cli rules disable myrule
-ssh root@<HOST> wb-cli rules delete myrule
+ssh root@<HOST> wb-cli --json rules list
+ssh root@<HOST> wb-cli --json rules load myrule
+ssh root@<HOST> 'wb-cli --json rules save myrule "$(cat /tmp/rule.js)"'
+ssh root@<HOST> wb-cli --json rules disable myrule
+ssh root@<HOST> wb-cli --json rules delete myrule
 ```
 
 Rule names — without `.js`. After save, check logs:
@@ -27,8 +36,8 @@ ssh root@<HOST> journalctl -u wb-rules --since '10s ago' --no-pager
 
 ## Workflow
 
-1. Check channel type: `ssh root@<HOST> wb-cli dev <device>`
-2. List existing rules: `ssh root@<HOST> wb-cli rules list`
+1. Check channel type: `ssh root@<HOST> wb-cli --json dev <device>`
+2. List existing rules: `ssh root@<HOST> wb-cli --json rules list`
 3. Check for conflicts with existing rules — show interaction table
 4. Show logic (table or Mermaid diagram), get confirmation
 5. Write rule, save via `wb-cli rules save`, check logs
@@ -180,6 +189,18 @@ Notify.sendEmail("x@y.ru", "subj", "body");
 Notify.sendSMS("+7...", "body");
 Notify.sendTelegramMessage(token, chatId, "body");
 ```
+
+## System cron jobs (/etc/cron.d)
+
+For tasks outside wb-rules (shell scripts on schedule), use `/etc/cron.d/`:
+```bash
+ssh root@<HOST> 'cat > /etc/cron.d/my-task << EOF
+*/5 * * * * root /usr/local/bin/my-script.sh >> /var/log/my-task.log 2>&1
+EOF'
+```
+Syntax: standard cron (5 time fields + username + command). The file must not have `.` in the name.
+
+For in-rules scheduling, use `defineRule` with a `cron` trigger — see examples above.
 
 ## Pitfalls
 
