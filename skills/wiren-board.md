@@ -74,7 +74,7 @@ Try apt first; if the package isn't in the controller's repos, fall back to the 
 
 ```bash
 # 1) Try the apt repo (works once wb-cli is published to wirenboard repos)
-ssh root@<HOST> 'apt-get update && apt-get -y install wb-cli' || \
+ssh root@<HOST> 'apt update && apt -y install wb-cli' || \
 
 # 2) Fallback: pull the latest .deb from GitHub Releases
 ssh root@<HOST> 'set -e
@@ -83,8 +83,8 @@ ssh root@<HOST> 'set -e
         | grep -oE "https://[^\"]+wb-cli_[^\"]+\.deb" | head -1)
   [ -n "$URL" ] || { echo "no .deb in latest release" >&2; exit 1; }
   curl -fsSL -o wb-cli.deb "$URL"
-  apt-get install -y ./wb-cli.deb || dpkg -i wb-cli.deb || {
-    apt-get install -y -f
+  apt install -y ./wb-cli.deb || dpkg -i wb-cli.deb || {
+    apt install -y -f
     dpkg -i wb-cli.deb
   }
   wb-cli --version'
@@ -92,7 +92,7 @@ ssh root@<HOST> 'set -e
 
 Notes:
 - `wb-cli` is an `_all.deb` (arch-independent), works on any wb6/wb7 firmware ≥ bullseye.
-- Runtime deps (`python3-mqttrpc`, `python3-wb-common`, `mosquitto-clients`, `jq`) live in the wirenboard apt repo, which is preconfigured on every controller — `apt-get install -y -f` resolves them.
+- Runtime deps (`python3-mqttrpc`, `python3-wb-common`, `mosquitto-clients`, `jq`) live in the wirenboard apt repo, which is preconfigured on every controller — `apt install -y -f` resolves them.
 - Verify with `wb-cli --json info` (returns serial number, fw, uptime).
 
 ### Output contract
@@ -128,7 +128,7 @@ ssh root@<HOST> wb-cli --json audit
 ssh root@<HOST> systemctl status wb-mqtt-serial
 ssh root@<HOST> journalctl -u wb-rules -n 50
 ssh root@<HOST> docker ps
-ssh root@<HOST> apt-get install <package>
+ssh root@<HOST> apt install <package>
 ssh root@<HOST> ip addr show
 ```
 
@@ -146,10 +146,10 @@ There is **no `wb-update-manager` command** — that does not exist. Use standar
 
 ```bash
 # Check what can be updated (fast — plain SSH is fine)
-ssh root@<HOST> 'apt-get update -qq && apt-get --simulate upgrade | grep "^Inst"'
+ssh root@<HOST> 'apt update -qq && apt --simulate upgrade | grep "^Inst"'
 
 # Install updates — takes minutes, use job:
-ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt-get update && apt-get -y upgrade 2>&1"'
+ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt update && apt -y upgrade 2>&1"'
 ssh root@<HOST> 'wb-cli --json job wait apt-upgrade'
 ssh root@<HOST> 'wb-cli --json job tail apt-upgrade'
 ```
@@ -164,7 +164,7 @@ WebFetch("https://raw.githubusercontent.com/wirenboard/wb-releases/main/releases
 
 The top-level keys under `releases:` are the available release names. The first (topmost) entry is the latest.
 
-Running `apt-get upgrade` updates packages within the current release track; it also bumps `release_name` when WB publishes a new release to the stable repo.
+Running `apt upgrade` updates packages within the current release track; it also bumps `release_name` when WB publishes a new release to the stable repo.
 
 After a reboot, verify: `wb-cli --json info`. If kernel mismatch after upgrade — see `wb-troubleshooting` skill.
 
@@ -226,6 +226,7 @@ Common pages: `Docker`, `Modbus`, `Home_Assistant`, `Wiren_Board_Cloud`, `wb-rul
 | MQTT broker config (auth, ACL, TLS, bridges to HA/cloud) | `/wb-mqtt-broker` |
 | Full controller backup and restore | `/wb-controller-backup` |
 | Zigbee devices via zigbee2mqtt (pairing, OTA, native vs Docker) | `/wb-zigbee` |
+| Software development / integrations for WB (custom daemons, protocol bridges, MQTT conventions, MQTT-RPC, Debian packaging) | `/wb-dev` |
 
 ## Third-party integrations
 
@@ -248,14 +249,14 @@ For components not covered by a dedicated skill — always start with `WebFetch`
 
 - **Back up before destructive operations** (confed save, rules delete, modbus add-devices).
 - **Never write to MQTT controls you don't understand** — some control physical outputs.
-- **Any operation expected to take more than 20–30 seconds** — use `wb-cli job run`, not plain SSH. This includes `apt-get update`, `apt-get upgrade`, `apt-get install`, tar archives, modbus firmware updates, factory reset. Plain SSH will appear to hang, block the agent, and may timeout mid-operation leaving the system in an inconsistent state.
+- **Any operation expected to take more than 20–30 seconds** — use `wb-cli job run`, not plain SSH. This includes `apt update`, `apt upgrade`, `apt install`, tar archives, modbus firmware updates, factory reset. Plain SSH will appear to hang, block the agent, and may timeout mid-operation leaving the system in an inconsistent state.
 
 ```bash
 # Wrong — blocks the agent for minutes:
-ssh root@<HOST> 'apt-get update && apt-get -y upgrade'
+ssh root@<HOST> 'apt update && apt -y upgrade'
 
 # Correct — returns immediately, agent polls for completion:
-ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt-get update && apt-get -y upgrade 2>&1"'
+ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt update && apt -y upgrade 2>&1"'
 ssh root@<HOST> 'wb-cli --json job wait apt-upgrade'
 ssh root@<HOST> 'wb-cli --json job tail apt-upgrade'
 ```
