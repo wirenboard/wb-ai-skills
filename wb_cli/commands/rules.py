@@ -215,7 +215,7 @@ def _validate_name(name: str) -> None:
         raise WbCliError(
             code="RULES_NAME_INVALID",
             message=f"Pass rule name without .js/.js.disabled suffix: '{name}'",
-            hint=f"Use: wb-cli rules load {name.split('.')[0]}",
+            hint=f"Use: wb-cli rules load {name.removesuffix('.js.disabled').removesuffix('.js')}",
             details={"name": name},
             exit_code=ExitCode.USAGE,
         )

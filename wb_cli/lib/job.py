@@ -64,7 +64,7 @@ class JobManager:
         )
         if rc != 0:
             raise WbCliError(
-                code="JOB_ALREADY_RUNNING",
+                code="JOB_START_FAILED",
                 message=f"Failed to start job '{label}': {stderr.strip()}",
                 details={"label": label, "unit": unit},
                 exit_code=ExitCode.DOMAIN,
@@ -77,7 +77,7 @@ class JobManager:
             ["systemctl", "is-active", unit],
             timeout=timeout,
         )
-        state = stdout.strip() if rc == 0 else "inactive"
+        state = stdout.strip() or "inactive"
         log_path = self._dir / f"{unit}.log"
         label_path = self._dir / f"{unit}.label"
         return {

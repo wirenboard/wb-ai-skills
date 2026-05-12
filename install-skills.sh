@@ -1,21 +1,4 @@
 #!/bin/bash
-# Install wb-cli skills for Claude Code, opencode, or any custom folder.
-#
-# Usage:
-#   ./install-skills.sh claude   [--global | --dest <dir>]   # symlinks SKILL.md
-#   ./install-skills.sh opencode [--global | --dest <dir>]   # flat copies with frontmatter rewrite
-#   ./install-skills.sh manual    --dest <dir>               # flat copies, no rewrites
-#
-# Defaults (no flag):
-#   claude   -> ./.claude/commands/
-#   opencode -> ./.opencode/agents/
-#
-# --global:
-#   claude   -> ~/.claude/commands/
-#   opencode -> ~/.config/opencode/agents/
-#
-# --dest <dir> overrides the destination for any target.
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -27,8 +10,39 @@ if [ ! -d "$SKILLS_DIR" ]; then
 fi
 
 usage() {
-    sed -n '2,18p' "$0"
-    exit "${1:-1}"
+    cat <<'EOF'
+Install wb-ai-skills for Claude Code, OpenCode, or any other AI agent.
+
+Usage:
+  install-skills.sh <target> [options]
+
+Targets:
+  claude    Create symlinks in the Claude Code commands directory.
+            Live-updates: changes to skills/ are visible immediately.
+  opencode  Copy skills to the OpenCode agents directory.
+            Rewrites frontmatter: allowed-tools -> mode: primary.
+  manual    Copy skills to a custom directory (--dest required).
+            Strips frontmatter to name + description only — safe for
+            any agent that does not know Claude- or OpenCode-specific fields.
+
+Options:
+  --global        Use the user-level directory instead of the project-local one:
+                    claude   ~/.claude/commands/
+                    opencode ~/.config/opencode/agents/
+  --dest <dir>    Override the destination directory (works with all targets).
+  -h, --help      Show this help and exit.
+
+Default destinations (no --global / --dest):
+  claude   ./.claude/commands/
+  opencode ./.opencode/agents/
+
+Examples:
+  ./install-skills.sh claude                       # project-local Claude Code
+  ./install-skills.sh claude --global              # user-wide Claude Code
+  ./install-skills.sh opencode --global            # user-wide OpenCode
+  ./install-skills.sh manual --dest ~/my-agent/prompts
+EOF
+    exit "${1:-0}"
 }
 
 TARGET="${1:-}"; shift || true
@@ -84,7 +98,20 @@ for skill_dir in "$SKILLS_DIR"/*/; do
             sed 's/^allowed-tools:.*/mode: primary/' "$src" > "$DEST/$name.md"
             ;;
         manual)
-            cp "$src" "$DEST/$name.md"
+            # Strip frontmatter to name+description only (agent-neutral)
+            awk '
+                BEGIN { in_fm=0; done=0; printed=0 }
+                /^---$/ && !done {
+                    if (!in_fm) { in_fm=1; print; next }
+                    # closing ---: emit minimal frontmatter then the rest
+                    print "---"; done=1; in_fm=0; next
+                }
+                in_fm {
+                    if (/^name:/ || /^description:/) print
+                    next
+                }
+                { print }
+            ' "$src" > "$DEST/$name.md"
             ;;
     esac
     count=$((count + 1))
@@ -93,6 +120,6 @@ done
 mode_desc=$(case "$TARGET" in
     claude) echo "symlinks" ;;
     opencode) echo "copies (opencode frontmatter)" ;;
-    manual) echo "copies (verbatim)" ;;
+    manual) echo "copies (frontmatter: name+description only)" ;;
 esac)
 echo "installed $count skills -> $DEST ($mode_desc)"

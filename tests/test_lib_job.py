@@ -26,11 +26,11 @@ def test_run_creates_artefacts_and_returns_metadata(tmp_path, shell_returning):
     assert f"--unit={unit}" in cmd
 
 
-def test_run_failure_raises_job_already_running(tmp_path, shell_returning):
+def test_run_failure_raises_job_start_failed(tmp_path, shell_returning):
     shell = shell_returning(1, stderr="Unit already exists")
     with pytest.raises(WbCliError) as exc:
         JobManager(shell, jobs_dir=tmp_path).run("dup", "true")
-    assert exc.value.code == "JOB_ALREADY_RUNNING"
+    assert exc.value.code == "JOB_START_FAILED"
 
 
 def test_status_active(tmp_path, shell_returning):
@@ -44,10 +44,10 @@ def test_status_active(tmp_path, shell_returning):
     }
 
 
-def test_status_missing_label_returns_none(shell_returning):
+def test_status_failed_unit_returns_failed(shell_returning):
     shell = shell_returning(3, "failed\n")
     st = JobManager(shell, jobs_dir=Path("/nonexistent/dir")).status("u")
-    assert st["state"] == "inactive"
+    assert st["state"] == "failed"
     assert st["label"] is None
 
 

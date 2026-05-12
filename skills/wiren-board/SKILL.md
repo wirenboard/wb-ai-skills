@@ -10,19 +10,35 @@ You manage **Wiren Board** home/building automation controllers over SSH.
 
 ## Discovery
 
+Find all controllers on the local network (mDNS):
+
 ```bash
 avahi-browse -tpr _wirenboard._tcp 2>/dev/null | grep '^=' | awk -F';' '{print $4, $8}'
 ```
 
 Serial number: 8 chars (e.g. `A25NDEMJ`). Hostname: `wirenboard-<SN>`.
 
-## SSH convention
+If avahi returns nothing (mDNS not forwarded, different subnet, or avahi not running):
 
 ```bash
-ssh root@wirenboard-A25NDEMJ wb-cli info
+# Resolve a specific controller by serial number
+avahi-resolve -n wirenboard-A25NDEMJ.local
+
+# Scan the local subnet for all WB controllers (port 22 open, hostname pattern)
+nmap -sn 192.168.1.0/24 2>/dev/null | awk '/wirenboard/{print}' 
 ```
 
-Non-interactive, key-based auth. All wb-cli commands return JSON on stdout.
+## SSH convention
+
+Default credentials: **user `root`, password `wirenboard`**. Key-based auth is preferred for automation; password auth works out of the box.
+
+```bash
+# Key-based (preferred for scripts)
+ssh root@wirenboard-A25NDEMJ wb-cli info
+
+# Password auth (default, no prior setup needed)
+sshpass -p wirenboard ssh root@wirenboard-A25NDEMJ wb-cli info
+```
 
 ## wb-cli — the primary tool
 
@@ -59,49 +75,29 @@ Notes:
 
 ### Output contract
 
-`wb-cli` picks JSON vs. human-friendly output by `stdout.isatty()`. **Always pass `--json` (or set `WB_CLI_OUTPUT=json`)** when calling from an agent / script:
+`wb-cli` defaults to human-friendly output everywhere. **Always pass `--json` (or set `WB_CLI_OUTPUT=json`)** when calling from an agent / script:
 
 ```bash
-ssh root@<HOST> wb-cli --json devices list
+ssh root@<HOST> wb-cli --json dev
 ```
 
-Through `ssh host wb-cli ...` without `-t` stdout is already a pipe → JSON automatically, but `--json` is the explicit contract; never depend on luck.
-
 - Success: `{"data": {...}}` — object, `snake_case` keys.
-- Error: `{"error": {"code": "SCREAMING_SNAKE", "message": "...", "hint": "...", "details": {...}}}`.
+- Error: `{"error": {"code": "SCREAMING_SNAKE", "message": "...", "details": {...}}}` — `hint` is optional.
 - Exit codes: 0 success, 1 domain, 2 usage, 3 environment.
 
 In human mode a stderr spinner / progress bar is drawn during long operations; it never touches stdout, so even mixed-mode output stays parseable.
 
 ### Key commands
 
-```bash
-wb-cli info                                    # serial, firmware, board, uptime
-wb-cli dev                                     # every <device>/<control> with value/type/flags
-wb-cli dev <device>                            # controls of one device with metadata
-wb-cli dev <device>/<control>                  # read one control
-wb-cli dev <device>/<control> <value>          # write one control (refuses readonly / unknown)
-wb-cli dev --all                               # include system_* devices
-wb-cli mqtt read <topic>                       # raw MQTT: read retained value
-wb-cli mqtt write <topic> <value> [-r]         # raw MQTT: publish (-r for retained)
-wb-cli mqtt list '<pattern>'                   # list retained topics by wildcard
-wb-cli confed load <path>                      # service config via confed RPC
-wb-cli rules list                              # wb-rules automation
-wb-cli rules enable|disable <name>             # rename .js <-> .js.disabled (no overwrite)
-wb-cli history get <device>/<control>          # time-series from wb-mqtt-db
-wb-cli modbus scan                             # scan RS-485 (Fast Modbus; --slow / --bootloader)
-wb-cli modbus devices                          # devices configured in /etc/wb-mqtt-serial.conf
-wb-cli modbus-fw check [<slave_id>] [--port]   # firmware versions; bulk uses serial.conf
-wb-cli modbus-fw update [<slave_id>] [--all]   # flash one device, or every updatable one
-wb-cli audit                                   # quick health check
-```
+For the full command list run `wb-cli --help` or `wb-cli <group> --help` on the controller — that is always up to date. Common entry points: `info`, `dev`, `mqtt`, `rules`, `modbus`, `modbus-fw`, `audit`, `snapshot`, `job`, `confed`, `history`.
 
-Addresses everywhere use the wb-rules form `<device>/<control>` — same as
-`dev["X"]["Y"]` inside a rule. Quote it if the control name has a space:
+Addressing uses the wb-rules form `<device>/<control>`. Quote names with spaces:
 
 ```bash
+ssh root@<HOST> wb-cli --json info
+ssh root@<HOST> wb-cli --json dev wb-adc/Vin          # read one control
 ssh root@<HOST> "wb-cli --json dev 'wb-mdm3_5/Channel 1 Dimming Level' 30"
-ssh root@<HOST> "wb-cli --json dev 'wb-map6s_34/P 1'"
+ssh root@<HOST> wb-cli --json audit
 ```
 
 ### Standard Linux — use SSH directly
