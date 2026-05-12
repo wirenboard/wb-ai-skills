@@ -154,7 +154,7 @@ ssh root@<HOST> 'wb-cli --json job wait apt-upgrade'
 ssh root@<HOST> 'wb-cli --json job tail apt-upgrade'
 ```
 
-**Note:** `release_name` (e.g. `wb-2602` = February 2026) reflects the current release. To check if a newer release exists — see **https://github.com/wirenboard/wb-releases**. Do not judge "outdated" just from the date — check the releases page.
+**WB release model:** A release (e.g. `wb-2602` = February 2026) is a named snapshot of package versions defined in `releases.yaml` at https://github.com/wirenboard/wb-releases. There are **no packages named `wb-2603-repo` or similar** — do not search for them. The latest available release is the last entry in that YAML file. Running `apt-get upgrade` updates packages within the current release track; it also bumps `release_name` when WB publishes a new release to the stable repo.
 
 After a reboot, verify: `wb-cli --json info`. If kernel mismatch after upgrade — see `wb-troubleshooting` skill.
 
