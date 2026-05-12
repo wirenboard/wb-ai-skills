@@ -11,14 +11,14 @@ fi
 
 usage() {
     cat <<'EOF'
-Install wb-ai-skills for Claude Code, OpenCode, or any other AI agent.
+Install or uninstall wb-ai-skills for Claude Code, OpenCode, or any other AI agent.
 
 Usage:
   install-skills.sh <target> [options]
+  install-skills.sh uninstall <target> [options]
 
 Targets:
-  claude    Create symlinks in the Claude Code commands directory.
-            Live-updates: changes to skills/ are visible immediately.
+  claude    Copy skills to the Claude Code commands directory.
   opencode  Copy skills to the OpenCode agents directory.
             Rewrites frontmatter: allowed-tools -> mode: primary.
   manual    Copy skills to a custom directory (--dest required).
@@ -41,11 +41,18 @@ Examples:
   ./install-skills.sh claude --global              # user-wide Claude Code
   ./install-skills.sh opencode --global            # user-wide OpenCode
   ./install-skills.sh manual --dest ~/my-agent/prompts
+  ./install-skills.sh uninstall claude --global    # remove user-wide Claude Code skills
 EOF
     exit "${1:-0}"
 }
 
+ACTION="install"
 TARGET="${1:-}"; shift || true
+
+if [ "$TARGET" = "uninstall" ]; then
+    ACTION="uninstall"
+    TARGET="${1:-}"; shift || true
+fi
 
 DEST=""
 GLOBAL=0
@@ -81,6 +88,21 @@ resolve_dest() {
 }
 
 resolve_dest
+
+if [ "$ACTION" = "uninstall" ]; then
+    count=0
+    for skill_dir in "$SKILLS_DIR"/*/; do
+        name="$(basename "$skill_dir")"
+        target="$DEST/$name.md"
+        if [ -e "$target" ] || [ -L "$target" ]; then
+            rm -f "$target"
+            count=$((count + 1))
+        fi
+    done
+    echo "removed $count skills from $DEST"
+    exit 0
+fi
+
 mkdir -p "$DEST"
 
 count=0
@@ -91,7 +113,8 @@ for skill_dir in "$SKILLS_DIR"/*/; do
 
     case "$TARGET" in
         claude)
-            ln -sf "$(realpath "$src")" "$DEST/$name.md"
+            rm -f "$DEST/$name.md"
+            cp "$src" "$DEST/$name.md"
             ;;
         opencode)
             # opencode wants flat .md; replace `allowed-tools:` with `mode: primary`
@@ -118,7 +141,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
 done
 
 mode_desc=$(case "$TARGET" in
-    claude) echo "symlinks" ;;
+    claude) echo "copies" ;;
     opencode) echo "copies (opencode frontmatter)" ;;
     manual) echo "copies (frontmatter: name+description only)" ;;
 esac)
