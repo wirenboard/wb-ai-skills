@@ -1,3 +1,30 @@
+wb-cli (0.3.2) stable; urgency=medium
+
+  * FIX: `history get/chart --from/--to` crashed with a cryptic C++ RPC
+    error because the string was passed verbatim instead of being converted
+    to a Unix timestamp. Now parsed via datetime.fromisoformat(); naive
+    datetimes treated as UTC. Bad input raises HISTORY_INVALID_TIMESTAMP
+    with a hint showing the expected format.
+  * FIX: `snapshot diff` in human mode showed Python dict repr (single-
+    quoted keys) in table cells. Nested objects now rendered as JSON.
+  * FIX: `job status` reported "inactive" for failed units. systemctl
+    is-active exits non-zero with stdout "failed" for failed units; now
+    stdout is used unconditionally. Failed jobs correctly show "failed".
+  * FIX: `job run` error code was JOB_ALREADY_RUNNING for any systemd-run
+    failure (not just duplicates). Renamed to JOB_START_FAILED.
+  * FIX: `rules disable/enable` hint for names with multiple dots (e.g.
+    my.rule.js) suggested "my" instead of "my.rule". Fixed with
+    removesuffix().
+  * install-skills.sh: `manual` target now strips frontmatter to
+    name+description only instead of verbatim copy with Claude-specific
+    fields. No-arg invocation prints clean English help and exits 0.
+  * skills/wiren-board: document default credentials (root/wirenboard),
+    avahi-resolve and nmap fallbacks, fixed false "pipe→JSON auto" claim.
+    Key commands section replaced with pointer to wb-cli --help.
+  * skills/wb-scenarios removed.
+
+ -- Alexander Degtyarev <wb-claude-mail-00003@proton.me>  Tue, 12 May 2026 00:00:00 +0000
+
 wb-cli (0.3.1) stable; urgency=medium
 
   * NEW: `wb-cli rules enable <name>` — inverse of `disable`. The pair was
