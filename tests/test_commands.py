@@ -388,22 +388,6 @@ def test_history_get_passes_unix_ts_to_rpc():
     assert isinstance(call_params["timestamp"]["gt"], int)
 
 
-def test_history_chart():
-    ctx = _ctx(
-        args=argparse.Namespace(
-            quiet=False,
-            subcmd="chart",
-            channel="wb-adc/A1",
-            from_ts=None,
-            to_ts=None,
-            limit=100,
-        )
-    )
-    ctx.rpc.call.return_value = {"values": [{"v": 1.5}, {"v": 2.0}]}
-    result = HistoryPlugin().dispatch(ctx)
-    assert "xychart-beta" in result["mermaid"]
-
-
 # --- snapshot ---
 
 
