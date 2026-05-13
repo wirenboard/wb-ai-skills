@@ -870,7 +870,10 @@ def test_modbus_add_devices_skips_when_baud_change_fails():
     ctx = _add_ctx(scan_results=scan)
     ctx.shell.run.return_value = (1, "", "")
     # baud change raises → device skipped, no Save call
-    ctx.rpc.call.side_effect = [_conf_with_rs1(), Exception("port busy")]
+    ctx.rpc.call.side_effect = [
+        _conf_with_rs1(),
+        WbCliError(code="RPC_NO_REPLY", message="port busy"),
+    ]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 0
     assert any("could not change baud" in w for w in result.get("warnings", []))
@@ -1226,6 +1229,7 @@ def _serial_send_ctx(msg="FD 46 01", add_modbus_crc=True, response_size=10, baud
             port="/dev/ttyRS485-1",
             baud=baud,
             parity="N",
+            data_bits=8,
             stop_bits=2,
             msg=msg,
             add_modbus_crc=add_modbus_crc,

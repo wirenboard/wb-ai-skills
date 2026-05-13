@@ -1,3 +1,35 @@
+wb-cli (1.4.0) stable; urgency=medium
+
+  * Full serial refactor — no behaviour change, but every duplicated frame /
+    port-dict / argparse stanza now goes through ``wb_cli.lib``.
+  * lib/modbus_frame.py: ``fc6_write``, ``fast_modbus_pdu_by_sn``,
+    ``fast_modbus_fc6_by_sn``, ``REG_BAUD``, ``REG_SLAVE_ID``. The three
+    inline ``struct.pack(">BBHH", …) + modbus_crc16(…)`` snippets in
+    ``serial add-devices`` are gone — callers just say
+    ``modbus_frame.fc6_write(slave_id, REG_BAUD, baud // 100)``.
+  * lib/serial_port.py: ``port_params``, ``port_params_from_cfg``,
+    ``port_params_from_args``, ``raw_send`` and ``add_uart_args``. The
+    ``{path, baud_rate, parity, data_bits, stop_bits, protocol: raw,
+    format: HEX, msg, response_size, response_timeout, frame_timeout,
+    total_timeout}`` dict that was inlined four times in serial actions
+    (and the parallel ``_port_arg`` in ``modbus-fw``) is now built in one
+    place. ``serial send`` and ``modbus-fw`` argparse blocks share the
+    same ``add_uart_args`` helper, so changing a default ripples to both.
+  * serial command package split — ``_actions.py`` was 1095 lines mixing
+    parsers, scan loop, add-devices flow and small actions. Now:
+      * ``_register.py`` — argparse parser tree (``register_all``).
+      * ``_scan.py``     — ``bus-scan/Start`` driver + result aggregator.
+      * ``_add.py``      — ``add-devices`` flow incl. baud/slave_id fixups.
+      * ``_actions.py``  — dispatcher + small actions (``send``,
+                          ``device-info``, ``device-params``, ``device-set``,
+                          ``devices``, ``ports``, ``templates``, ``template``).
+    Public surface (``wb_cli.commands.serial.PLUGIN``) and CLI behaviour are
+    unchanged; tests' private-name imports keep working through re-exports.
+  * Lint 10.00/10 (was 9.99/10); 252 tests (was 233), including 9 for
+    ``lib/templates``, 4 for ``lib/modbus_frame`` and 6 for ``lib/serial_port``.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 11:03:22 +0400
+
 wb-cli (1.3.0) stable; urgency=medium
 
   * Plugin registry: ``serial`` is now addressed as ``wb_cli.commands.serial``

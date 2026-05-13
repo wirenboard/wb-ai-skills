@@ -16,7 +16,7 @@ import json
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
-from wb_cli.lib import serial_conf
+from wb_cli.lib import serial_conf, serial_port
 from wb_cli.lib.progress import ProgressBar
 from wb_cli.plugin import BasePlugin
 
@@ -202,20 +202,10 @@ def _add_uart_args(p, *, require_port: bool):
         required=require_port,
         help="serial port path, e.g. /dev/ttyRS485-1 (filters bulk mode to one port)",
     )
-    p.add_argument("--baud", type=int, default=9600, help="baud rate (default: 9600)")
-    p.add_argument("--parity", default="N", choices=("N", "E", "O"), help="parity (default: N)")
-    p.add_argument("--data-bits", dest="data_bits", type=int, default=8, help="data bits (default: 8)")
-    p.add_argument("--stop-bits", dest="stop_bits", type=int, default=2, help="stop bits (default: 2)")
+    serial_port.add_uart_args(p)
 
 
-def _port_arg(args) -> dict:
-    return {
-        "path": args.port,
-        "baud_rate": args.baud,
-        "parity": args.parity,
-        "data_bits": args.data_bits,
-        "stop_bits": args.stop_bits,
-    }
+_port_arg = serial_port.port_params_from_args  # alias for back-compat in this module
 
 
 # --------------------------------------------------------------------------- #
