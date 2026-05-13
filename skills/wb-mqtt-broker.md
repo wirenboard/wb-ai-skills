@@ -67,25 +67,36 @@ Use raw `mosquitto_sub`/`mosquitto_pub` only when `wb-cli` can't help: broker co
 
 ### Verbose PUBLISH tracing — `wb-cli mqtt-debug`
 
-To find **who** publishes to a given topic (wb-rules, web UI, an external client, a misbehaving driver), use the dedicated plugin instead of editing `/etc/mosquitto/conf.d/` by hand:
+To find **who** publishes to a given topic (wb-rules, web UI, an external client, a misbehaving driver), use the dedicated plugin instead of editing `/etc/mosquitto/conf.d/` by hand. **Always quote topics — WB control names commonly contain spaces** (e.g. `Channel 1 Dimming Level`), and over SSH wrap the whole command in double quotes so the controller shell sees the spaces.
 
 ```bash
-# Short ad-hoc capture (default 30 s; up to 600 s inline)
-ssh root@<HOST> wb-cli --json mqtt-debug capture --seconds 60 \
-    --topic '/devices/wb-mr6c_7/controls/K1' --source wb-rules
+# Short ad-hoc capture — single substring filter (grep-style)
+ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
+    --topic '/devices/wb-mr6c_7/controls/K1' --source wb-rules"
+
+# Multiple --topic / --source values OR together
+ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
+    --topic 'wb-mr6c_2/controls/K1' --topic 'wb-mr6c_2/controls/K2' \
+    --source wb-rules --source wb-mqtt-homeui"
+
+# MQTT-style wildcards: + matches one level, # matches all remaining levels
+ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
+    --topic '/devices/+/controls/Channel 1 Dimming Level/on'"
+ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
+    --topic '/devices/wb-mr6c_2/#'"
 
 # Toggle persistently (verbose logging stays on after capture)
 ssh root@<HOST> wb-cli mqtt-debug enable
 ssh root@<HOST> wb-cli mqtt-debug status
 ssh root@<HOST> wb-cli mqtt-debug disable
 
-# Long capture (hours / days) — runs as a job, JSON envelope written to disk
-ssh root@<HOST> wb-cli --json mqtt-debug capture --seconds 86400 --background \
-    --output /mnt/data/ai/wb-cli/mqtt-debug-$(date +%s).json
+# Long capture (hours / days) — runs as a wb-cli job, JSON envelope on disk
+ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 86400 --background \
+    --output /mnt/data/ai/wb-cli/mqtt-debug-\$(date +%s).json"
 # poll the job:
 ssh root@<HOST> wb-cli --json job wait <unit>
-ssh root@<HOST> jq '.data.entries[] | select(.source != "wb-adc")' \
-    /mnt/data/ai/wb-cli/mqtt-debug-<TS>.json
+ssh root@<HOST> "jq '.data.entries[] | select(.source != \"wb-adc\")' \
+    /mnt/data/ai/wb-cli/mqtt-debug-<TS>.json"
 ```
 
 The plugin writes the same drop-in (`/etc/mosquitto/conf.d/debug-verbose.conf` with `log_type all`) that you would put there manually, restarts `mosquitto`, parses every `Received PUBLISH …` line out of the journal into structured records:

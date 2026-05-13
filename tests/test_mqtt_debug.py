@@ -103,8 +103,8 @@ def _capture_args(**overrides):
         "subcmd": "capture",
         "quiet": False,
         "seconds": 5,
-        "topic": None,
-        "source": None,
+        "topic": None,  # list[str] | None (action=append)
+        "source": None,  # list[str] | None (action=append)
         "output": None,
         "background": False,
         "keep_enabled": False,
@@ -149,9 +149,10 @@ def test_capture_short_inline_when_already_enabled_does_not_disable(monkeypatch,
 
 
 def test_capture_filters_by_topic(monkeypatch, fake_config):  # pylint: disable=unused-argument
+    """Single --topic substring."""
     fake_config.write_text("log_type all\n", encoding="utf-8")
     monkeypatch.setattr(mqtt_debug, "countdown", lambda *a, **kw: None)
-    ctx = _ctx(_capture_args(seconds=1, topic="K1"))
+    ctx = _ctx(_capture_args(seconds=1, topic=["K1"]))
     ctx.journal.read.return_value = [
         _publish_entry(topic="/devices/wb-mr6c_7/controls/K1/on", source="wb-rules"),
         _publish_entry(topic="/devices/wb-adc/controls/V5_0", source="wb-adc"),
@@ -159,6 +160,41 @@ def test_capture_filters_by_topic(monkeypatch, fake_config):  # pylint: disable=
     result = MqttDebugPlugin().dispatch(ctx)
     assert result["count"] == 1
     assert "K1" in result["entries"][0]["topic"]
+    assert result["topic_filters"] == ["K1"]
+
+
+def test_capture_multiple_topics_or_match(monkeypatch, fake_config):  # pylint: disable=unused-argument
+    """Multiple --topic values: OR-match."""
+    fake_config.write_text("log_type all\n", encoding="utf-8")
+    monkeypatch.setattr(mqtt_debug, "countdown", lambda *a, **kw: None)
+    ctx = _ctx(_capture_args(seconds=1, topic=["K1", "Vin"]))
+    ctx.journal.read.return_value = [
+        _publish_entry(topic="/devices/wb-mr6c_7/controls/K1/on"),
+        _publish_entry(topic="/devices/wb-mr6c_7/controls/K2/on"),
+        _publish_entry(topic="/devices/wb-adc/controls/Vin"),
+    ]
+    result = MqttDebugPlugin().dispatch(ctx)
+    assert result["count"] == 2
+    assert {e["topic"] for e in result["entries"]} == {
+        "/devices/wb-mr6c_7/controls/K1/on",
+        "/devices/wb-adc/controls/Vin",
+    }
+
+
+def test_capture_topic_with_space_and_wildcard(monkeypatch, fake_config):  # pylint: disable=unused-argument
+    """MQTT-wildcard pattern matches a topic containing spaces."""
+    fake_config.write_text("log_type all\n", encoding="utf-8")
+    monkeypatch.setattr(mqtt_debug, "countdown", lambda *a, **kw: None)
+    ctx = _ctx(
+        _capture_args(seconds=1, topic=["/devices/+/controls/Channel 1 Dimming Level/on"]),
+    )
+    ctx.journal.read.return_value = [
+        _publish_entry(topic="/devices/wb-mdm3_5/controls/Channel 1 Dimming Level/on"),
+        _publish_entry(topic="/devices/wb-mr6c_7/controls/K1/on"),
+    ]
+    result = MqttDebugPlugin().dispatch(ctx)
+    assert result["count"] == 1
+    assert result["entries"][0]["topic"].endswith("Channel 1 Dimming Level/on")
 
 
 def test_capture_writes_output_file(monkeypatch, fake_config, tmp_path):  # pylint: disable=unused-argument
@@ -187,8 +223,17 @@ def test_capture_background_requires_output(fake_config):  # pylint: disable=unu
 
 
 def test_capture_background_schedules_job(fake_config, tmp_path):  # pylint: disable=unused-argument
+    """Each --topic value is shell-quoted in the generated job command."""
     out = tmp_path / "capture.json"
-    ctx = _ctx(_capture_args(seconds=3600, background=True, output=str(out), topic="K1"))
+    ctx = _ctx(
+        _capture_args(
+            seconds=3600,
+            background=True,
+            output=str(out),
+            topic=["K1", "/devices/wb-mdm3_5/controls/Channel 1 Dimming Level/on"],
+            source=["wb-rules"],
+        )
+    )
     ctx.job.run.return_value = {"unit": "wb-cli-job-mqtt-debug-capture-1", "log": "/tmp/foo.log"}
     result = MqttDebugPlugin().dispatch(ctx)
     assert result["unit"] == "wb-cli-job-mqtt-debug-capture-1"
@@ -196,6 +241,9 @@ def test_capture_background_schedules_job(fake_config, tmp_path):  # pylint: dis
     cmd = ctx.job.run.call_args.args[1]
     assert "wb-cli --json mqtt-debug capture --seconds 3600" in cmd
     assert "--topic K1" in cmd
+    # Topic with spaces must be single-quoted so the shell sees it as one token.
+    assert "'/devices/wb-mdm3_5/controls/Channel 1 Dimming Level/on'" in cmd
+    assert "--source wb-rules" in cmd
     assert f"--output {out}" in cmd
 
 
