@@ -1,18 +1,21 @@
 """``wb-cli modbus-fw`` — firmware update of Modbus / RS-485 devices.
 
-Wraps the ``wb-device-manager/fw-update/*`` RPC: check available firmware,
-start an update, restore a device stuck in bootloader after a failed update,
-clear a leftover error from the state topic, and watch live progress.
+Wraps the ``wb-device-manager/fw-update/*`` RPC: ``check`` available
+firmware, ``update`` (inline ``--wait`` or ``--background`` via
+``wb-cli job run`` for hours-long bulk flashes), and ``restore`` a
+device stuck in bootloader.
 
-The wb-device-manager service does the heavy lifting (downloads the binary,
-flashes via Modbus bootloader, publishes progress to
-``/wb-device-manager/firmware_update/state``). We expose it as a CLI.
+The wb-device-manager service does the heavy lifting (downloads the
+binary, flashes via Modbus bootloader, publishes progress to
+``/wb-device-manager/firmware_update/state``). To observe an in-flight
+update from elsewhere: ``wb-cli mqtt sub /wb-device-manager/firmware_update/state``.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
@@ -39,10 +42,14 @@ class ModbusFwPlugin(BasePlugin):
                 "wb-device-manager's fw-update RPC.\n"
                 "\n"
                 "Typical use:\n"
-                "  1. `wb-cli modbus-fw check 4 --port /dev/ttyRS485-1`   # what's available\n"
-                "  2. `wb-cli modbus-fw update 4 --port /dev/ttyRS485-1`  # start flashing\n"
-                "  3. `wb-cli modbus-fw watch`                            # live progress\n"
-                "  4. on a failed update: `wb-cli modbus-fw restore 4 --port ...`"
+                "  1. `wb-cli modbus-fw check 4 --port /dev/ttyRS485-1`           # what's available\n"
+                "  2a. `wb-cli modbus-fw update 4 --port ... --wait`              # one device, inline\n"
+                "  2b. `wb-cli modbus-fw update --all --background \\             # whole bus, as a job\n"
+                "        --output /mnt/data/ai/wb-cli/fw-$(date +%s).json`\n"
+                "  3. on a failed update: `wb-cli modbus-fw restore 4 --port ...`\n"
+                "\n"
+                "In-flight update progress / queue:\n"
+                "  wb-cli mqtt sub /wb-device-manager/firmware_update/state"
             ),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
@@ -88,6 +95,16 @@ class ModbusFwPlugin(BasePlugin):
             action="store_true",
             help="block until the update finishes or fails (draws a progress bar)",
         )
+        sp.add_argument(
+            "--background",
+            action="store_true",
+            help=("run as a wb-cli job (use for bulk / hours-long flashes); " "requires --output"),
+        )
+        sp.add_argument(
+            "--output",
+            default=None,
+            help="write the JSON envelope to this file (required with --background)",
+        )
 
         sp = sub.add_parser(
             "restore",
@@ -100,41 +117,7 @@ class ModbusFwPlugin(BasePlugin):
             help="block until restore finishes",
         )
 
-        sp = sub.add_parser(
-            "clear-error",
-            help="remove a stale error entry from the state topic",
-        )
-        _add_target_args(sp)
-        sp.add_argument(
-            "--type",
-            dest="software_type",
-            choices=("firmware", "bootloader"),
-            default="firmware",
-            help="which component's error to clear (default: firmware)",
-        )
-
-        sp = sub.add_parser(
-            "watch",
-            help="stream the firmware-update state topic until everything settles",
-            description=(
-                "Subscribe to /wb-device-manager/firmware_update/state and print updates"
-                " until every entry reports progress=100 or carries an error."
-            ),
-        )
-        sp.add_argument(
-            "--timeout",
-            type=float,
-            default=600.0,
-            help="give up after this many seconds (default: 600)",
-        )
-
-        sp = sub.add_parser(
-            "state",
-            help="print the current firmware-update state once and exit",
-            description="One-shot read of the retained state topic.",
-        )
-
-    def dispatch(self, ctx) -> dict:  # pylint: disable=too-many-return-statements
+    def dispatch(self, ctx) -> dict:
         subcmd = ctx.args.subcmd
         if subcmd == "check":
             return _check(ctx)
@@ -142,15 +125,9 @@ class ModbusFwPlugin(BasePlugin):
             return _update(ctx)
         if subcmd == "restore":
             return _restore(ctx)
-        if subcmd == "clear-error":
-            return _clear_error(ctx)
-        if subcmd == "watch":
-            return _watch(ctx)
-        if subcmd == "state":
-            return _state_once(ctx)
         return {}
 
-    def render(self, result):  # pylint: disable=too-many-return-statements
+    def render(self, result):
         # `check` single
         if "can_update" in result:
             return _render_check_one(result)
@@ -164,12 +141,12 @@ class ModbusFwPlugin(BasePlugin):
         # `update` bulk
         if "queued" in result:
             return _render_update_bulk(result)
-        # `update` / `restore` / `clear-error` single
+        # `update --background` scheduled
+        if "unit" in result and "output" in result:
+            return f"update started in background: {result['unit']}\noutput: {result['output']}"
+        # `update` / `restore` single
         if "ok" in result and "slave_id" in result:
             return f"ok  {result['action']}  slave_id={result['slave_id']} port={result['port']}"
-        # `watch` / `state`
-        if "devices" in result:
-            return _render_state(result)
         return None
 
 
@@ -296,6 +273,9 @@ def _check_one(
 
 
 def _update(ctx) -> dict:
+    if getattr(ctx.args, "background", False):
+        return _update_background(ctx)
+
     if ctx.args.slave_id is not None:
         return _update_one(ctx, ctx.args.slave_id, _port_arg(ctx.args), ctx.args.software_type)
 
@@ -320,6 +300,41 @@ def _update(ctx) -> dict:
         "queued": queued,
         "skipped": skipped,
         "count": len(queued),
+    }
+
+
+def _update_background(ctx) -> dict:
+    """Schedule the update via ``wb-cli job run`` and return the unit name."""
+    args = ctx.args
+    if not args.output:
+        raise WbCliError(
+            code="MODBUS_FW_OUTPUT_REQUIRED",
+            message="--background requires --output PATH",
+            hint=(
+                "Write the long-flash JSON to a file under /mnt/data, "
+                "e.g. --output /mnt/data/ai/wb-cli/modbus-fw-$(date +%s).json"
+            ),
+            exit_code=ExitCode.USAGE,
+        )
+    parts = ["wb-cli", "--json", "modbus-fw", "update"]
+    if args.slave_id is not None:
+        parts.append(str(args.slave_id))
+    if args.port:
+        parts += ["--port", shlex.quote(args.port)]
+    if getattr(args, "all", False):
+        parts.append("--all")
+    if getattr(args, "software_type", "firmware") != "firmware":
+        parts += ["--type", args.software_type]
+    parts.append("--wait")  # the whole point of background is inside-the-job wait
+    parts += [">", shlex.quote(args.output)]
+    command = " ".join(parts)
+    info = ctx.job.run("modbus-fw-update", command)
+    return {
+        "action": "update",
+        "background": True,
+        "output": args.output,
+        "unit": info["unit"],
+        "log": info["log"],
     }
 
 
@@ -357,60 +372,6 @@ def _restore(ctx) -> dict:
     if args.wait:
         result.update(_wait_for_completion(ctx, args.slave_id, args.port))
     return result
-
-
-def _clear_error(ctx) -> dict:
-    args = ctx.args
-    ctx.rpc.call(
-        "wb-device-manager/fw-update/ClearError",
-        {
-            "slave_id": args.slave_id,
-            "port": _port_arg(args),
-            "type": args.software_type,
-        },
-        timeout=10.0,
-    )
-    return {
-        "action": "clear-error",
-        "slave_id": args.slave_id,
-        "port": args.port,
-        "type": args.software_type,
-        "ok": True,
-    }
-
-
-# --------------------------------------------------------------------------- #
-# state / watch
-# --------------------------------------------------------------------------- #
-
-
-def _state_once(ctx) -> dict:
-    try:
-        msgs = ctx.mqtt.subscribe(_STATE_TOPIC, timeout=3.0)
-    except WbCliError as exc:
-        if exc.code == "MQTT_TIMEOUT":
-            # An empty firmware-update state topic just means "nothing in flight".
-            return {"devices": [], "count": 0}
-        raise
-    if not msgs:
-        return {"devices": [], "count": 0}
-    return _parse_state(msgs[-1][1])
-
-
-def _watch(ctx) -> dict:
-    """Stream the firmware-update state topic until everything settles."""
-    deadline = time.monotonic() + ctx.args.timeout
-    last_state: dict = {"devices": [], "count": 0}
-    with ctx.mqtt.live_sub(_STATE_TOPIC) as sub:
-        with ProgressBar("firmware updates") as progress_bar:
-            while time.monotonic() < deadline:
-                for payload in sub.poll(0.1):
-                    state = _parse_state(payload)
-                    last_state = state
-                    progress_bar.update(_overall_progress(state), suffix=_summary_for_bar(state))
-                    if _all_done(state):
-                        return last_state
-    return last_state
 
 
 def _wait_for_completion(ctx, slave_id: int, port: str) -> dict:
@@ -454,23 +415,6 @@ def _find_entry(state: dict, slave_id: int, port: str):
         if entry.get("slave_id") == slave_id and entry.get("port", {}).get("path") == port:
             return entry
     return None
-
-
-def _overall_progress(state: dict) -> int:
-    devices = state.get("devices", [])
-    if not devices:
-        return 100
-    return int(sum(d.get("progress", 0) for d in devices) / len(devices))
-
-
-def _summary_for_bar(state: dict) -> str:
-    devices = state.get("devices", [])
-    errs = sum(1 for d in devices if d.get("error"))
-    return f"{len(devices)} in flight, {errs} errored"
-
-
-def _all_done(state: dict) -> bool:
-    return all(d.get("progress", 0) >= 100 or d.get("error") for d in state.get("devices", []))
 
 
 def _render_check_one(result: dict) -> str:
@@ -535,29 +479,6 @@ def _render_update_bulk(result: dict) -> str:
     for s in skipped:
         lines.append(f"  . slave_id={s['slave_id']:<4} port={s['port']} (no update)")
     return "\n".join(lines)
-
-
-def _render_state(state: dict) -> str:
-    devices = state.get("devices", [])
-    if not devices:
-        return "no firmware updates in flight"
-    rows = []
-    for d in devices:
-        rows.append(
-            {
-                "slave_id": str(d.get("slave_id", "?")),
-                "port": d.get("port", {}).get("path", "?"),
-                "type": d.get("type", "?"),
-                "progress": f"{d.get('progress', 0)}%",
-                "status": (d.get("error") or {}).get("message") or "OK",
-            }
-        )
-    columns = ["slave_id", "port", "type", "progress", "status"]
-    widths = {col: max(len(col), *(len(r[col]) for r in rows)) for col in columns}
-    header = "  ".join(col.ljust(widths[col]) for col in columns)
-    sep = "  ".join("-" * widths[col] for col in columns)
-    body = ["  ".join(r[col].ljust(widths[col]) for col in columns) for r in rows]
-    return "\n".join([f"{len(rows)} update(s):", header, sep, *body])
 
 
 PLUGIN = ModbusFwPlugin()

@@ -22,31 +22,31 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 
 ## Commands
 
-| Command | What it does |
+| Plugin | What it covers |
 |---|---|
-| `info` | Controller identity: serial, firmware, board revision, uptime |
-| `dev` | All controls on the bus with value / type / readonly (use `--all` for `system_*`) |
-| `dev <device>` | Controls of one device, same columns |
-| `dev <device>/<control>` | Read one control |
-| `dev <device>/<control> <value>` | Write one control (refuses readonly / unknown) |
-| `mqtt read <topic>` | Read retained MQTT value |
-| `mqtt write <topic> <val>` | Publish MQTT message (`-r` to retain) |
-| `mqtt list <pattern>` | List retained topics |
-| `mqtt sub <pattern> [-C N] [--timeout T]` | Subscribe and print messages (retained + live) |
-| `confed load <path>` | Load config via wb-mqtt-confed |
-| `confed save <path> <json>` | Save config via wb-mqtt-confed |
-| `rules list\|load\|save\|enable\|disable\|delete` | Manage wb-rules automation scripts |
-| `history get <dev/ctrl>` | Time-series data from wb-mqtt-db |
-| `history chart <dev/ctrl>` | Mermaid chart of historical data |
-| `serial wb-scan\|templates\|template\|ports\|device-info\|device-params\|device-set\|devices\|add-devices\|send` | RS-485 / Modbus operations via wb-mqtt-serial / wb-device-manager |
-| `modbus-fw check\|update\|restore\|clear-error\|watch\|state` | Firmware update of Modbus devices |
-| `cloud` | Cloud agent status |
-| `serial-debug --port <path>` | RS-485 debug capture with auto-restore |
-| `mqtt-debug enable\|disable\|status\|capture` | Verbose mosquitto PUBLISH tracing — structured records (client_id, topic, qos, retain, …) for tracing what wrote to a topic |
-| `audit` | Quick health check |
-| `snapshot save\|diff` | System state snapshots |
-| `job run\|status\|tail\|cancel\|wait\|list` | Managed background tasks |
-| `plugins` | List installed plugins |
+| `info` | Controller identity: serial number, firmware release, board revision, hostname, uptime |
+| `audit` | Quick health check (failed units + identity) |
+| `cloud` | Wiren Board cloud-agent status |
+| `dev` | Devices and controls — list, read, write through the wb-rules `<device>/<control>` form |
+| `mqtt` | Raw MQTT: read retained, write, list, live subscribe |
+| `mqtt-debug` | Verbose mosquitto PUBLISH tracing — structured `{client_id, topic, qos, retain, …}` records, optional inline / background capture |
+| `confed` | Read and write service config files through wb-mqtt-confed (handles validation + service reload) |
+| `rules` | Manage wb-rules automation scripts |
+| `history` | Time-series data from wb-mqtt-db (raw rows or a Mermaid xychart) |
+| `serial` | RS-485 / Modbus operations through wb-mqtt-serial and wb-device-manager |
+| `serial-debug` | RS-485 driver debug capture (toggles wb-mqtt-serial's `Debug` control with auto-restore) |
+| `modbus-fw` | Firmware update of Modbus devices |
+| `snapshot` | Capture and diff small JSON snapshots of controller state |
+| `job` | Long-running commands as transient systemd units |
+| `plugins` | Self-introspection: which commands this wb-cli build knows about |
+
+Each plugin has its own `--help` with full subcommand list, flags and worked examples — that's the authoritative reference and always matches the installed version:
+
+```bash
+wb-cli --help                  # top-level — all plugins
+wb-cli <plugin> --help         # subcommands of one plugin
+wb-cli <plugin> <action> --help  # flags for one action
+```
 
 ## Output modes
 
@@ -90,7 +90,7 @@ The `.deb` is `Architecture: all` and works on any wb6/wb7 running Debian ≥ bu
 
 ## Skills for LLM agents
 
-The `skills/` directory holds eight methodology guides for LLM agents working with Wiren Board over SSH:
+The `skills/` directory holds nine methodology guides for LLM agents working with Wiren Board over SSH:
 
 | Skill | What it covers |
 |---|---|
@@ -98,10 +98,11 @@ The `skills/` directory holds eight methodology guides for LLM agents working wi
 | `wb-troubleshooting` | Failed units, disk, kernel mismatch, Docker, general diagnostics. |
 | `wb-serial` | RS-485/Modbus: custom templates, device config via confed, bus diagnostics (CRC, timeouts). |
 | `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron). |
-| `wb-mqtt-broker` | MQTT broker config: auth, ACL, TLS, bridges. |
+| `wb-mqtt-broker` | MQTT broker config: auth, ACL, TLS, bridges, `mqtt-debug` PUBLISH tracing. |
 | `wb-network` | WiFi, 4G/GSM, VPN, failover, modem diagnostics, NTP. |
 | `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
 | `wb-controller-backup` | Full controller backup and restore. |
+| `wb-dev` | Writing software / integrations for WB: custom daemons, protocol bridges, MQTT conventions, MQTT-RPC, codestyle, wbdev cross-compilation, Debian packaging. |
 
 Install for your agent runtime:
 

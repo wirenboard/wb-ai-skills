@@ -21,40 +21,29 @@ class HistoryPlugin(BasePlugin):
                 "Read recorded values of a control from wb-mqtt-db. The channel is\n"
                 "addressed in wb-rules style: `<device>/<control>` (same as `dev`)."
             ),
-            epilog=(
-                "Examples:\n"
-                "  wb-cli history get   wb-map6s_34/P\\ 1 --limit 50\n"
-                "  wb-cli history chart wb-adc/A1 --from '2026-05-11 00:00:00'\n"
-            ),
+            epilog=("Examples:\n" "  wb-cli history get   wb-map6s_34/P\\ 1 --limit 50\n"),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         sub = parser.add_subparsers(dest="subcmd", metavar="<action>")
 
-        for action, default_limit in (("get", 1000), ("chart", 100)):
-            p = sub.add_parser(
-                action,
-                help=("rows of (timestamp, value)" if action == "get" else "Mermaid xychart of the channel"),
-                description=(
-                    "Return raw rows; pipe through jq for ad-hoc filtering."
-                    if action == "get"
-                    else "Render a small Mermaid xychart from the latest points."
-                ),
-            )
-            p.add_argument("channel", help="<device>/<control>, e.g. wb-adc/A1")
-            p.add_argument("--from", dest="from_ts", help="start time (ISO-8601 or what db_logger accepts)")
-            p.add_argument("--to", dest="to_ts", help="end time (ISO-8601)")
-            p.add_argument(
-                "--limit",
-                type=int,
-                default=default_limit,
-                help=f"max rows (default: {default_limit})",
-            )
+        p = sub.add_parser(
+            "get",
+            help="rows of (timestamp, value)",
+            description="Return raw rows; pipe through jq for ad-hoc filtering.",
+        )
+        p.add_argument("channel", help="<device>/<control>, e.g. wb-adc/A1")
+        p.add_argument("--from", dest="from_ts", help="start time (ISO-8601 or what db_logger accepts)")
+        p.add_argument("--to", dest="to_ts", help="end time (ISO-8601)")
+        p.add_argument(
+            "--limit",
+            type=int,
+            default=1000,
+            help="max rows (default: 1000)",
+        )
 
     def dispatch(self, ctx) -> dict:
         if ctx.args.subcmd == "get":
             return self._get(ctx)
-        if ctx.args.subcmd == "chart":
-            return self._chart(ctx)
         return {}
 
     def _get(self, ctx) -> dict:
@@ -64,24 +53,6 @@ class HistoryPlugin(BasePlugin):
         return {
             "channel": ctx.args.channel,
             "values": values,
-            "count": len(values),
-        }
-
-    def _chart(self, ctx) -> dict:
-        params = _build_params(ctx)
-        result = ctx.rpc.call("db_logger/history/get_values", params)
-        values = result if isinstance(result, list) else result.get("values", [])
-        if not values:
-            raise WbCliError(
-                code="HISTORY_CHANNEL_NOT_FOUND",
-                message=f"No data for channel '{ctx.args.channel}'",
-                details={"channel": ctx.args.channel},
-                exit_code=ExitCode.DOMAIN,
-            )
-        chart = _mermaid_chart(ctx.args.channel, values)
-        return {
-            "channel": ctx.args.channel,
-            "mermaid": chart,
             "count": len(values),
         }
 
@@ -128,24 +99,6 @@ def _split_channel(channel: str) -> list:
         )
     device, _, control = channel.partition("/")
     return [device, control]
-
-
-def _mermaid_chart(title: str, values: list) -> str:
-    lines = [
-        "xychart-beta",
-        f'  title "{title}"',
-        '  x-axis "time"',
-        '  y-axis "value"',
-    ]
-    nums = []
-    for entry in values:
-        val = entry.get("v", entry.get("value", 0))
-        try:
-            nums.append(float(val))
-        except (TypeError, ValueError):
-            nums.append(0)
-    lines.append("  line [" + ", ".join(str(v) for v in nums) + "]")
-    return "\n".join(lines)
 
 
 PLUGIN = HistoryPlugin()

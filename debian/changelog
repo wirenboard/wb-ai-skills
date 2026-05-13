@@ -1,3 +1,40 @@
+wb-cli (1.6.0) stable; urgency=medium
+
+  Breaking minor — trims low-level operations that duplicated generic
+  mqtt commands and merges redundant view-only subcommands.
+
+  * Removed ``modbus-fw clear-error``, ``modbus-fw watch``,
+    ``modbus-fw state`` — all three are thin wrappers around the
+    retained state topic ``/wb-device-manager/firmware_update/state``.
+    Substitutes:
+      - watch  → ``wb-cli mqtt sub /wb-device-manager/firmware_update/state``
+      - state  → ``wb-cli mqtt read /wb-device-manager/firmware_update/state``
+      - clear-error → the entry self-clears when the device update
+        completes; if stale, ``wb-cli mqtt write -r`` the new payload.
+    ``modbus-fw`` now exposes only what a user actually invokes:
+    ``check``, ``update``, ``restore``.
+  * ``modbus-fw update`` accepts ``--background --output <path>`` for
+    hours-long bulk flashes, matching ``mqtt-debug capture --background``.
+    Inline ``--wait`` still works for short single-device updates.
+  * Removed ``history chart`` — Mermaid xychart helper. Building a
+    chart on top of ``history get`` is one ``jq`` away; the plugin
+    shouldn't own that rendering. Only ``history get`` remains.
+
+  Wider refactors discussed during 1.6.0 planning (``serial devices``
+  / ``device-info`` → ``serial config``, ``serial device-params`` /
+  ``device-set`` → ``serial fw-params``, new ``serial wb-set-slave-id``
+  / ``wb-set-baud``, plugin ``modbus-fw`` → subcommand ``serial wb-fw``,
+  new ``serial send-modbus``) are scheduled for 1.7.0 so each lands
+  with its own tests + smoke instead of one mega-rename.
+
+  ## Docs
+  * README skills list: nine entries (added ``wb-dev``, was missing).
+    Commands table collapsed to one row per plugin — subcommand
+    details delegated to ``wb-cli <plugin> --help`` so the README
+    stops drifting on every release.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 14:55:43 +0400
+
 wb-cli (1.5.3) stable; urgency=medium
 
   Documentation rot — README and wiren-board skill still referenced
