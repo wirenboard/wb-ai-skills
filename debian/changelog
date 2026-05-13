@@ -1,3 +1,94 @@
+wb-cli (1.4.1) stable; urgency=medium
+
+  UX polish driven by an extended smoke test on a live controller.
+
+  * serial send: invalid hex argument now raises ``SERIAL_INVALID_HEX``
+    (exit USAGE) with a hint instead of dumping a Python traceback as
+    ``CLI_INTERNAL``.
+  * dev <device>/<control> and dev <device>: when the topic returns no
+    retained value (driver isn't publishing, name is wrong), surface
+    ``DEV_CONTROL_NOT_FOUND`` / ``DEV_DEVICE_NOT_FOUND`` with a hint
+    pointing at ``wb-cli dev`` instead of the raw ``MQTT_TIMEOUT`` from
+    the broker layer.
+  * dev table: split the ``type/rw`` merged column into separate
+    ``type`` and ``flags`` columns; cap ``value`` at 20 characters
+    (long strings have ``…``). For the full value read the control
+    directly with ``wb-cli dev <device>/<control>``.
+  * serial device-params (human): handle ``fw`` returned both as a
+    bare string and as ``{"version": "..."}`` — the firmware version
+    is shown either way.
+  * snapshot diff (human): instead of dumping whole nested JSON blobs
+    side-by-side in a table, walk the structure recursively and emit
+    one ``key.path  old → new`` line per actual leaf change. Lists are
+    summarised as added/removed items.
+  * serial add-devices: ``--port`` is now optional in the scan-results
+    flows. With no ``--port``, iterate every port mentioned in the scan
+    results and add per-port in one call. Each ``added`` / ``skipped``
+    row now carries a ``port`` field, and the envelope has a top-level
+    ``ports`` list. ``--port`` is still required with ``--device-type``
+    (and a clear ``MODBUS_ADD_MISSING_PORT`` error surfaces otherwise).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 11:36:41 +0400
+
+wb-cli (1.4.0) stable; urgency=medium
+
+  * Full serial refactor — no behaviour change, but every duplicated frame /
+    port-dict / argparse stanza now goes through ``wb_cli.lib``.
+  * lib/modbus_frame.py: ``fc6_write``, ``fast_modbus_pdu_by_sn``,
+    ``fast_modbus_fc6_by_sn``, ``REG_BAUD``, ``REG_SLAVE_ID``. The three
+    inline ``struct.pack(">BBHH", …) + modbus_crc16(…)`` snippets in
+    ``serial add-devices`` are gone — callers just say
+    ``modbus_frame.fc6_write(slave_id, REG_BAUD, baud // 100)``.
+  * lib/serial_port.py: ``port_params``, ``port_params_from_cfg``,
+    ``port_params_from_args``, ``raw_send`` and ``add_uart_args``. The
+    ``{path, baud_rate, parity, data_bits, stop_bits, protocol: raw,
+    format: HEX, msg, response_size, response_timeout, frame_timeout,
+    total_timeout}`` dict that was inlined four times in serial actions
+    (and the parallel ``_port_arg`` in ``modbus-fw``) is now built in one
+    place. ``serial send`` and ``modbus-fw`` argparse blocks share the
+    same ``add_uart_args`` helper, so changing a default ripples to both.
+  * serial command package split — ``_actions.py`` was 1095 lines mixing
+    parsers, scan loop, add-devices flow and small actions. Now:
+      * ``_register.py`` — argparse parser tree (``register_all``).
+      * ``_scan.py``     — ``bus-scan/Start`` driver + result aggregator.
+      * ``_add.py``      — ``add-devices`` flow incl. baud/slave_id fixups.
+      * ``_actions.py``  — dispatcher + small actions (``send``,
+                          ``device-info``, ``device-params``, ``device-set``,
+                          ``devices``, ``ports``, ``templates``, ``template``).
+    Public surface (``wb_cli.commands.serial.PLUGIN``) and CLI behaviour are
+    unchanged; tests' private-name imports keep working through re-exports.
+  * Lint 10.00/10 (was 9.99/10); 252 tests (was 233), including 9 for
+    ``lib/templates``, 4 for ``lib/modbus_frame`` and 6 for ``lib/serial_port``.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 11:03:22 +0400
+
+wb-cli (1.3.0) stable; urgency=medium
+
+  * Plugin registry: ``serial`` is now addressed as ``wb_cli.commands.serial``
+    just like every other command. The previously visible
+    ``wb_cli.commands.serial._plugin`` suffix was an artefact of ``serial``
+    being a package; ``_gen_registry`` now imports the package itself and the
+    package re-exports ``PLUGIN`` from its ``__init__``. No user-visible change
+    to ``wb-cli serial …`` calls.
+  * lib/templates.py: new shared module for filesystem template lookup
+    (``list_template_names``, ``read_template``, ``find_template_by_field``,
+    ``find_template``). Custom templates in ``/etc/wb-mqtt-serial.conf.d/templates``
+    win over packaged ones, ``deprecated`` paths are deprioritised. ``serial
+    templates`` / ``serial template`` / ``serial add-devices`` no longer shell
+    out to ``find``/``cat``/``grep`` — all template I/O goes through the lib
+    layer.
+  * skills/wiren-board: replaced removed ``modbus`` group with ``serial`` /
+    ``serial-debug`` in the entry-point list; "Quick diagnostic sequence" now
+    relies on ``wb-cli audit`` instead of duplicating ``systemctl --failed``.
+  * skills/wb-serial: moved the ``wb-cli serial …`` shortcuts to the top of
+    the skill and demoted the raw MQTT-RPC base pattern to a fallback. Bus
+    scan and debug-collection sections now drive the flow through
+    ``wb-cli serial wb-scan`` and ``wb-cli serial-debug`` (with
+    ``wb-cli job run`` for long captures); raw ``bus-scan/Start`` and the
+    sed-and-restart script are kept only as fallbacks.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 10:34:07 +0400
+
 wb-cli (1.2.2) stable; urgency=medium
 
   * serial ports / serial wb-scan: always go through wb-mqtt-serial RPCs

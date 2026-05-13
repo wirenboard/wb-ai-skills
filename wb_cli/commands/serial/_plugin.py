@@ -55,8 +55,13 @@ def _render_send(result):
 def _render_device_params(result):
     lines = [f"{result.get('device_type', '?')}  slave_id={result.get('slave_id', '?')}"]
     model = result.get("model", "")
-    fw = result.get("fw", {})
-    fw_ver = fw.get("version", "") if isinstance(fw, dict) else ""
+    fw = result.get("fw")
+    if isinstance(fw, dict):
+        fw_ver = fw.get("version", "")
+    elif isinstance(fw, str):
+        fw_ver = fw
+    else:
+        fw_ver = ""
     if model or fw_ver:
         lines.append("  " + "  ".join(filter(None, [f"model={model}", f"fw={fw_ver}"])))
     params = result.get("parameters") or {}

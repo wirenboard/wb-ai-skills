@@ -554,19 +554,34 @@ def test_modbus_ports():
     assert result["count"] == 1
 
 
-def test_modbus_templates():
+def test_modbus_templates(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "wb-mr6c.json").write_text("{}", encoding="utf-8")
+    (pkg_dir / "wb-msw-v4.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
             subcmd="templates",
         )
     )
-    ctx.shell.run.return_value = (0, "wb-mr6c.json\nwb-msw-v4.json\n", "")
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 2
+    assert result["templates"] == ["wb-mr6c.json", "wb-msw-v4.json"]
 
 
-def test_modbus_template_reads_file_from_disk():
+def test_modbus_template_reads_file_from_disk(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "config-wb-mr3.json").write_text('{"device_type": "WB-MR3"}', encoding="utf-8")
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
@@ -574,15 +589,17 @@ def test_modbus_template_reads_file_from_disk():
             template_id="config-wb-mr3",
         )
     )
-    ctx.shell.run.return_value = (0, '{"device_type": "WB-MR3"}', "")
     result = ModbusPlugin().dispatch(ctx)
     assert result["template"] == {"device_type": "WB-MR3"}
-    cmd = ctx.shell.run.call_args.args[0]
-    assert cmd[0] == "cat"
-    assert cmd[1].endswith("config-wb-mr3.json")
 
 
-def test_modbus_template_missing_file():
+def test_modbus_template_missing_file(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
@@ -590,13 +607,19 @@ def test_modbus_template_missing_file():
             template_id="nonexistent",
         )
     )
-    ctx.shell.run.return_value = (1, "", "No such file")
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_TEMPLATE_NOT_FOUND"
 
 
-def test_modbus_template_invalid_json():
+def test_modbus_template_invalid_json(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "broken.json").write_text("not-json", encoding="utf-8")
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
@@ -604,7 +627,6 @@ def test_modbus_template_invalid_json():
             template_id="broken",
         )
     )
-    ctx.shell.run.return_value = (0, "not-json", "")
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_TEMPLATE_INVALID"
@@ -687,7 +709,11 @@ def test_modbus_add_devices_appends_to_target_port():
     ctx.rpc.call.side_effect = [_conf_with_rs1([{"slave_id": 1}]), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
-    assert result["added"][0] == {"slave_id": 7, "device_type": "WB-MR6C"}
+    assert result["added"][0] == {
+        "slave_id": 7,
+        "device_type": "WB-MR6C",
+        "port": "/dev/ttyRS485-1",
+    }
     save_call = ctx.rpc.call.call_args_list[1]
     rs1 = next(p for p in save_call.args[1]["content"]["ports"] if p["path"] == "/dev/ttyRS485-1")
     assert any(d["slave_id"] == 7 and d["device_type"] == "WB-MR6C" for d in rs1["devices"])
@@ -716,7 +742,7 @@ def test_modbus_add_devices_skips_duplicate_slave_id():
     ctx.rpc.call.return_value = _conf_with_rs1([{"slave_id": 7, "device_type": "WB-MR6C"}])
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 0
-    assert 7 in result["skipped"]
+    assert any(s["slave_id"] == 7 for s in result["skipped"])
     # No save call when nothing is added
     assert ctx.rpc.call.call_count == 1
 
@@ -745,27 +771,33 @@ def test_modbus_add_devices_no_state_raises():
     assert exc.value.code == "MODBUS_NO_SCAN_STATE"
 
 
-def test_modbus_add_devices_by_device_type():
+def test_modbus_add_devices_by_device_type(tmp_path, monkeypatch):
     """--device-type + --slave-id adds without scan, fills required template params."""
-    ctx = _add_ctx(device_type="WB-MAI6", slave_id=19)
-    template_json = __import__("json").dumps(
-        {
-            "device_type": "WB-MAI6",
-            "device": {
-                "parameters": [
-                    {"id": "in1_type", "required": True, "default": 0},
-                    {"id": "in2_type", "required": True, "default": 0},
-                ]
-            },
-        }
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "config-wb-mai6.json").write_text(
+        __import__("json").dumps(
+            {
+                "device_type": "WB-MAI6",
+                "device": {
+                    "parameters": [
+                        {"id": "in1_type", "required": True, "default": 0},
+                        {"id": "in2_type", "required": True, "default": 0},
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
     )
-    ctx.shell.run.side_effect = [
-        (0, "/tmp/config-wb-mai6.json\n", ""),  # grep
-        (0, template_json, ""),  # cat
-    ]
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
+    ctx = _add_ctx(device_type="WB-MAI6", slave_id=19)
     ctx.rpc.call.side_effect = [_conf_with_rs1(), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
+    # --device-type mode adds without the per-row "port" field (single explicit port).
     assert result["added"][0] == {"slave_id": 19, "device_type": "WB-MAI6"}
     save_call = ctx.rpc.call.call_args_list[1]
     rs1 = next(p for p in save_call.args[1]["content"]["ports"] if p["path"] == "/dev/ttyRS485-1")
@@ -843,7 +875,10 @@ def test_modbus_add_devices_skips_when_baud_change_fails():
     ctx = _add_ctx(scan_results=scan)
     ctx.shell.run.return_value = (1, "", "")
     # baud change raises → device skipped, no Save call
-    ctx.rpc.call.side_effect = [_conf_with_rs1(), Exception("port busy")]
+    ctx.rpc.call.side_effect = [
+        _conf_with_rs1(),
+        WbCliError(code="RPC_NO_REPLY", message="port busy"),
+    ]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 0
     assert any("could not change baud" in w for w in result.get("warnings", []))
@@ -1199,6 +1234,7 @@ def _serial_send_ctx(msg="FD 46 01", add_modbus_crc=True, response_size=10, baud
             port="/dev/ttyRS485-1",
             baud=baud,
             parity="N",
+            data_bits=8,
             stop_bits=2,
             msg=msg,
             add_modbus_crc=add_modbus_crc,

@@ -68,12 +68,12 @@ def test_list_render_emits_table_with_header():
     result = DevPlugin().dispatch(ctx)
     out = DevPlugin().render(result)
     lines = out.splitlines()
-    # Compact 3-column layout (error column hidden when no row has errors).
-    assert lines[0].split() == ["address", "value", "type"]
+    # 4-column layout: address, value, type, flags (error hidden when no errors).
+    assert lines[0].split() == ["address", "value", "type", "flags"]
     assert "wb-mr6c_2/K1" in lines[2]
-    # type column merges readonly flag: `switch/rw` / `switch/ro`
-    assert "switch/rw" in lines[2]
+    # type and flags are now separate columns.
     assert "switch" in lines[2]
+    assert "rw" in lines[2]
 
 
 def test_list_filters_system_by_default():

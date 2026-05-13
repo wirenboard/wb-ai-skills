@@ -111,7 +111,7 @@ In human mode a stderr spinner / progress bar is drawn during long operations; i
 
 ### Key commands
 
-For the full command list run `wb-cli --help` or `wb-cli <group> --help` on the controller — that is always up to date. Common entry points: `info`, `dev`, `mqtt`, `rules`, `modbus`, `modbus-fw`, `audit`, `snapshot`, `job`, `confed`, `history`.
+For the full command list run `wb-cli --help` or `wb-cli <group> --help` on the controller — that is always up to date. Common entry points: `info`, `dev`, `mqtt`, `rules`, `serial`, `serial-debug`, `modbus-fw`, `audit`, `snapshot`, `job`, `confed`, `history`, `plugins`.
 
 Addressing uses the wb-rules form `<device>/<control>`. Quote names with spaces:
 
@@ -200,10 +200,11 @@ ssh root@<HOST> 'update-alternatives --set iptables /usr/sbin/iptables-legacy &&
 ### Quick diagnostic sequence
 
 ```bash
-ssh root@<HOST> 'systemctl list-units --state=failed --no-pager'
-ssh root@<HOST> 'df -h / /mnt/data'
-ssh root@<HOST> 'wb-cli --json audit'
+ssh root@<HOST> 'wb-cli --json audit'            # failed units + identity in one call
+ssh root@<HOST> 'df -h / /mnt/data'              # disk: only thing audit does not check yet
 ```
+
+`wb-cli audit` already enumerates failed services (and reports them in the `failed_units` check), so a separate `systemctl --failed` is redundant.
 
 ## Documentation lookup
 

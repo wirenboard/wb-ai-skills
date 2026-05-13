@@ -14,25 +14,27 @@ import wb_cli.commands as commands_pkg
 
 
 def collect() -> list[tuple[str, str, str]]:
-    """Return [(name, module_path, help_text), ...] sorted by name."""
+    """Return [(name, module_path, help_text), ...] sorted by name.
+
+    Each command exposes a ``PLUGIN`` attribute. Single-file commands put it
+    in ``wb_cli.commands.<name>``; package commands (e.g. ``serial``) re-export
+    ``PLUGIN`` from their ``__init__.py``. Either way the registry stores
+    ``wb_cli.commands.<name>`` — the ``_plugin`` submodule is an implementation
+    detail and never appears in the registry.
+    """
     found: list[tuple[str, str, str]] = []
-    for _, mod_name, is_pkg in pkgutil.iter_modules(
+    for _, mod_name, _ in pkgutil.iter_modules(
         commands_pkg.__path__,
         commands_pkg.__name__ + ".",
     ):
-        if is_pkg:
-            try:
-                module = importlib.import_module(mod_name + "._plugin")
-            except ImportError:
-                continue
-            actual_module = mod_name + "._plugin"
-        else:
+        try:
             module = importlib.import_module(mod_name)
-            actual_module = mod_name
+        except ImportError:
+            continue
         plug = getattr(module, "PLUGIN", None)
         if plug is None:
             continue
-        found.append((plug.name, actual_module, plug.help))
+        found.append((plug.name, mod_name, plug.help))
     found.sort()
     return found
 

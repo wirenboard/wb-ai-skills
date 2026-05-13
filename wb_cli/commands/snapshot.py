@@ -6,6 +6,7 @@ import argparse
 import json
 import time
 from pathlib import Path
+from typing import Any, Iterator, List, Tuple
 
 from wb_cli.errors import ExitCode, WbCliError
 from wb_cli.plugin import BasePlugin
@@ -55,6 +56,11 @@ class SnapshotPlugin(BasePlugin):
         if ctx.args.subcmd == "diff":
             return self._diff(ctx)
         return {}
+
+    def render(self, result):
+        if "changes" in result and "baseline" in result:
+            return _render_diff(result)
+        return None
 
     def _save(self, ctx) -> dict:
         state = self._collect_state(ctx)
@@ -110,6 +116,58 @@ def _compute_diff(old: dict, new: dict) -> list:
         if old_val != new_val:
             changes.append({"key": key, "old": old_val, "new": new_val})
     return changes
+
+
+def _render_diff(result: dict) -> str:
+    """Render snapshot diff as a flat ``key: old → new`` list.
+
+    Walks each top-level change recursively and emits one line per leaf
+    that actually changed — instead of dumping whole nested JSON blobs
+    side by side. Lists are shown by added/removed items.
+    """
+    changes = result.get("changes", [])
+    if not changes:
+        return f"no changes vs {result.get('baseline', '?')}"
+    lines: List[str] = [f"diff vs {result.get('baseline', '?')} — {len(changes)} top-level key(s) changed:"]
+    leaves: List[Tuple[str, Any, Any]] = []
+    for change in changes:
+        leaves.extend(_walk_leaves(change["key"], change["old"], change["new"]))
+    if not leaves:
+        # All top-level changes resolved to noop (shouldn't happen, but guard).
+        return lines[0]
+    width = max(len(path) for path, _, _ in leaves)
+    for path, old_val, new_val in leaves:
+        lines.append(f"  {path.ljust(width)}  {_fmt(old_val)} → {_fmt(new_val)}")
+    return "\n".join(lines)
+
+
+def _walk_leaves(path: str, old: Any, new: Any) -> Iterator[Tuple[str, Any, Any]]:
+    """Yield ``(path, old_leaf, new_leaf)`` for every actual difference."""
+    if old == new:
+        return
+    if isinstance(old, dict) and isinstance(new, dict):
+        for key in sorted(set(old) | set(new)):
+            yield from _walk_leaves(f"{path}.{key}", old.get(key), new.get(key))
+        return
+    if isinstance(old, list) and isinstance(new, list):
+        # For lists we report added / removed entries; order changes are noisy.
+        old_set, new_set = list(old), list(new)
+        added = [x for x in new_set if x not in old_set]
+        removed = [x for x in old_set if x not in new_set]
+        for item in removed:
+            yield (f"{path}[-]", item, None)
+        for item in added:
+            yield (f"{path}[+]", None, item)
+        return
+    yield (path, old, new)
+
+
+def _fmt(value: Any) -> str:
+    if value is None:
+        return "—"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
 
 
 PLUGIN = SnapshotPlugin()

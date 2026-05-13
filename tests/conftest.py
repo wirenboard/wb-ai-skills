@@ -69,3 +69,17 @@ def controller_root(tmp_path: Path) -> Path:
 def _copy(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dst)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_templates(monkeypatch, tmp_path_factory):
+    """Point ``wb_cli.lib.templates`` at an empty dir so tests never touch a
+    real ``/usr/share/wb-mqtt-serial/templates`` (which may exist on a
+    controller running the test suite). Tests that need template content
+    monkeypatch ``SEARCH_DIRS`` again to their own fixture dir.
+    """
+    empty = tmp_path_factory.mktemp("wb-cli-templates-empty")
+    monkeypatch.setattr(
+        "wb_cli.lib.templates.SEARCH_DIRS",
+        (empty,),
+    )
