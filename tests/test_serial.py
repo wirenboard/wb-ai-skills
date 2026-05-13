@@ -3,7 +3,7 @@
 Covers utilities, dispatch logic, and render paths for all serial subcommands
 that are not already exercised in test_commands.py:
 
-  _parse_param_assignments  _required_params_from_template  _find_free_slave_id  _is_done
+  _parse_param_assignments  _required_params_from_template  _find_free_slave_id
   device-params  device-set  wb-scan --slow / --bootloader
   render: _devices_table, _add_devices_summary, _render_device_params, _render_device_set
   serial_conf.iter_devices protocol field
@@ -27,7 +27,6 @@ from wb_cli.commands.modbus_fw import (
 )
 from wb_cli.commands.serial._actions import (
     _find_free_slave_id,
-    _is_done,
     _parse_param_assignments,
     _required_params_from_template,
 )
@@ -211,26 +210,6 @@ def test_find_free_slave_id_non_contiguous():
 
 def test_find_free_slave_id_all_used_returns_none():
     assert _find_free_slave_id(set(range(1, 248))) is None
-
-
-# ---------------------------------------------------------------------------
-# _is_done
-# ---------------------------------------------------------------------------
-
-
-def test_is_done_extended_requires_ext_phase():
-    assert _is_done("extended", is_ext=True) is True
-    assert _is_done("extended", is_ext=False) is False
-
-
-def test_is_done_standard_requires_standard_phase():
-    assert _is_done("standard", is_ext=False) is True
-    assert _is_done("standard", is_ext=True) is False
-
-
-def test_is_done_bootloader_any_phase():
-    assert _is_done("bootloader", is_ext=True) is True
-    assert _is_done("bootloader", is_ext=False) is True
 
 
 # ---------------------------------------------------------------------------
@@ -536,14 +515,15 @@ def _make_call_watch(state_jsons):
     return side_effect
 
 
-def test_wb_scan_slow_completes_via_standard_phase(monkeypatch):
-    """--slow scan completes when is_ext_scan=False reaches 100%."""
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_wb_scan_slow_completes_on_scanning_false():
+    """--slow scan completes when wb-device-manager publishes scanning=false."""
     ctx = _scan_ctx(scan_type="standard")
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
             '{"progress": 50, "scanning": true, "is_ext_scan": false, "devices": []}',
-            '{"progress": 100, "scanning": false, "is_ext_scan": false, "devices": ['
+            '{"progress": 100, "scanning": true, "is_ext_scan": false, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}]}',
+            '{"progress": 0, "scanning": false, "is_ext_scan": false, "devices": ['
             '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}]}',
         ]
     )
@@ -553,29 +533,28 @@ def test_wb_scan_slow_completes_via_standard_phase(monkeypatch):
     assert result["scan_type"] == "standard"
 
 
-def test_wb_scan_slow_ignores_extended_phase_done(monkeypatch):
-    """--slow: extended-phase progress=100 (is_ext_scan=True) must NOT trigger completion."""
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_wb_scan_ignores_initial_idle_state():
+    """A `scanning=false` state seen before `scanning=true` is the retained idle
+    snapshot and must NOT trigger completion — wait until the scan actually starts."""
     ctx = _scan_ctx(scan_type="standard", timeout=0.5)
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
-            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": ['
             '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}]}'
         ]
     )
     result = SerialPlugin().dispatch(ctx)
-    # Extended-phase done does not count for --slow → completed=False
     assert result["completed"] is False
 
 
-def test_wb_scan_bootloader_completes_regardless_of_phase(monkeypatch):
-    """--bootloader: any progress=100 state means done."""
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_wb_scan_bootloader_completes_on_scanning_false():
+    """--bootloader: scanning=true → scanning=false means done."""
     ctx = _scan_ctx(scan_type="bootloader")
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
-            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 11}}]}'
+            '{"progress": 50, "scanning": true, "is_ext_scan": false, "devices": []}',
+            '{"progress": 100, "scanning": false, "is_ext_scan": false, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 11}}]}',
         ]
     )
     result = SerialPlugin().dispatch(ctx)

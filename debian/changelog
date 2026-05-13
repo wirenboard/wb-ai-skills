@@ -1,3 +1,23 @@
+wb-cli (1.2.1) stable; urgency=medium
+
+  * serial wb-scan: pass `port` to wb-device-manager as a dict with UART
+    params, not a bare string — wb-device-manager silently ignored the
+    string form, so `--port /dev/ttyRS485-N` scans returned 0 devices.
+  * serial wb-scan: detect completion via the `scanning=true→false`
+    transition wb-device-manager publishes at end-of-scan instead of
+    timing out after `progress=100`. The old logic reset the wait window
+    on the post-scan `progress=0` state and never declared the scan done.
+  * serial wb-scan (no --port): iterate over RS-485 ports from
+    /etc/wb-mqtt-serial.conf and scan each one. wb-mqtt-serial/ports/Load
+    is no longer used — it returns empty when any port stanza fails
+    schema validation, which silently hid bus devices. `/dev/ttyMOD*`
+    (cellular modem ports) are skipped.
+  * serial wb-scan: continue past per-port failures — wb-device-manager's
+    `error` field is reported in `failed_ports` instead of aborting the
+    whole multi-port run.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 04:50:00 +0300
+
 wb-cli (1.2.0) stable; urgency=medium
 
   * serial: renamed from `modbus` — wb-cli now uses `wb-cli serial` for all

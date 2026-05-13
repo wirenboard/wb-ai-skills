@@ -15,10 +15,6 @@ from wb_cli.lib.progress import ProgressBar
 _BROKER_SETTLE_S = 1.0
 _SUB_CONNECT_S = 0.5
 _SCAN_STOP_TIMEOUT_S = 2.0
-# After progress=100 wb-device-manager may still publish another state with
-# more devices (the final tally trickles in). Wait this long for the list to
-# stop growing before declaring the scan done.
-_FINAL_STABLE_S = 1.5
 
 
 def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=too-many-statements
@@ -442,35 +438,135 @@ def _device_set(ctx) -> dict:
     return {"slave_id": dev["slave_id"], "device_type": dev["device_type"], "set": params["parameters"]}
 
 
-def _is_done(scan_type: str, is_ext: bool) -> bool:
-    # The phase flag in state messages mirrors the scan_type we requested:
-    #   extended (default)  → is_ext_scan=True throughout
-    #   standard (--slow)   → is_ext_scan=False throughout
-    #   bootloader          → no extended phase, any progress=100 is done
-    if scan_type == "extended":
-        return is_ext
-    if scan_type == "standard":
-        return not is_ext
-    return True
+_DEFAULT_PORT_UART = {"baud_rate": 9600, "parity": "N", "data_bits": 8, "stop_bits": 2}
 
 
-def _rpc_scan_args(args) -> dict:
-    """Map CLI args to wb-device-manager's bus-scan/Start kwargs.
-
-    Always pass `preserve_old_results=false` to drop the retained cache from
-    the previous scan — otherwise the first state message we see is stale
-    and we exit immediately with whatever the previous scan happened to find.
-    """
-    out: dict = {
-        "scan_type": args.scan_type,
-        "preserve_old_results": False,
+def _port_params(path: str, port_cfg: dict | None) -> dict:
+    """Build the {path, baud_rate, parity, data_bits, stop_bits} dict
+    wb-device-manager expects for bus-scan/Start."""
+    cfg = port_cfg or {}
+    return {
+        "path": path,
+        "baud_rate": cfg.get("baud_rate", _DEFAULT_PORT_UART["baud_rate"]),
+        "parity": cfg.get("parity", _DEFAULT_PORT_UART["parity"]),
+        "data_bits": cfg.get("data_bits", _DEFAULT_PORT_UART["data_bits"]),
+        "stop_bits": cfg.get("stop_bits", _DEFAULT_PORT_UART["stop_bits"]),
     }
-    if args.port:
-        out["port"] = args.port
-    return out
 
 
-def _scan(ctx) -> dict:  # pylint: disable=too-many-statements
+def _is_rs485_port(path: str) -> bool:
+    """Filter out ports that obviously can't hold RS-485 devices.
+
+    `/dev/ttyMOD*` on WB6+ controllers map to internal modems (NB-IoT,
+    LTE), not the RS-485 buses. wb-device-manager will happily fail on them
+    every time, so we don't even try.
+    """
+    return "/ttyMOD" not in path
+
+
+def _ports_to_scan(ctx) -> list[dict]:
+    """Resolve the list of port-param dicts to scan in this command run.
+
+    - If --port is given: a single explicit entry with UART params from the
+      serial config (if the port exists there) or defaults. The RS-485
+      filter is not applied — the user explicitly picked that port.
+    - Without --port: every RS-485 port from /etc/wb-mqtt-serial.conf.
+
+    wb-mqtt-serial/ports/Load is *not* consulted — that RPC only returns
+    ports the driver currently opens, which excludes ports failing schema
+    validation. We want to scan everything the user has configured.
+    """
+    if ctx.args.port:
+        port_cfg = None
+        try:
+            content = serial_conf.load_config(ctx)
+            for port in content.get("ports") or []:
+                if port.get("path") == ctx.args.port:
+                    port_cfg = port
+                    break
+        except WbCliError:
+            pass
+        return [_port_params(ctx.args.port, port_cfg)]
+
+    try:
+        content = serial_conf.load_config(ctx)
+    except WbCliError:
+        return []
+    return [
+        _port_params(port["path"], port)
+        for port in content.get("ports") or []
+        if port.get("path") and _is_rs485_port(port["path"])
+    ]
+
+
+def _scan_one_port(ctx, port_params: dict, timeout: float) -> dict:
+    """Run bus-scan/Start for a single port; return {devices, completed, progress, received, error}."""
+    state: dict = {
+        "devices": [],
+        "completed": False,
+        "progress": 0,
+        "received": False,
+        "scanning_started": False,
+        "error": None,
+    }
+    label = f"{ctx.args.scan_type} scan of {port_params['path']}"
+    with ProgressBar(label) as progress_bar:
+
+        def on_state(payload: str) -> bool:
+            try:
+                msg = json.loads(payload)
+            except json.JSONDecodeError:
+                return False
+            if msg.get("error"):
+                # wb-device-manager surfaces per-port failures as an `error`
+                # field on the state message. Record it and stop the wait,
+                # but don't raise — other ports may still succeed.
+                state["error"] = msg["error"]
+                state["received"] = True
+                return True
+            progress = msg.get("progress", 0)
+            is_ext = msg.get("is_ext_scan", False)
+            scanning = msg.get("scanning", False)
+            state["devices"] = msg.get("devices", state["devices"])
+            state["progress"] = progress
+            state["received"] = True
+            phase = "extended" if is_ext else "standard"
+            progress_bar.update(progress, suffix=f"{phase}, {len(state['devices'])} device(s)")
+            # wb-device-manager publishes scanning=true while a scan is
+            # running and scanning=false once when it's done. Treat that
+            # transition as completion — progress crosses 100 multiple
+            # times during slow scans.
+            if scanning:
+                state["scanning_started"] = True
+            elif state["scanning_started"]:
+                state["completed"] = True
+                return True
+            return False
+
+        try:
+            ctx.rpc.call_watch(
+                "wb-device-manager/bus-scan/Start",
+                {
+                    "scan_type": ctx.args.scan_type,
+                    "preserve_old_results": False,
+                    "port": port_params,
+                },
+                state_topic="/wb-device-manager/state",
+                skip_retained=True,
+                settle_s=_SUB_CONNECT_S,
+                timeout=timeout,
+                on_state=on_state,
+                rpc_timeout=5.0,
+            )
+        finally:
+            try:
+                ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
+            except WbCliError:
+                pass
+    return state
+
+
+def _scan(ctx) -> dict:  # pylint: disable=too-many-locals
     # Cancel any previous scan and let the broker quiesce so we don't pick
     # up its tail state messages.
     try:
@@ -480,71 +576,46 @@ def _scan(ctx) -> dict:  # pylint: disable=too-many-statements
     time.sleep(_BROKER_SETTLE_S)
 
     scan_type = ctx.args.scan_type
-    spinner_label = f"{scan_type} scan of {ctx.args.port}" if ctx.args.port else f"{scan_type} RS-485 scan"
+    ports = _ports_to_scan(ctx)
 
-    scan_state: dict = {
-        "devices": [],
-        "completed": False,
-        "progress": 0,
-        "received": False,
-        "final_deadline": 0.0,
-    }
+    if not ports:
+        return {
+            "scan_type": scan_type,
+            "devices": [],
+            "count": 0,
+            "completed": False,
+            "hint": (
+                "No ports configured in /etc/wb-mqtt-serial.conf to scan. "
+                "Add a port stanza first, or pass --port /dev/ttyRS485-N."
+            ),
+        }
 
-    with ProgressBar(spinner_label) as progress_bar:
+    # Split the user-facing timeout evenly across ports we're scanning.
+    per_port_timeout = ctx.args.timeout if ctx.args.port else max(ctx.args.timeout / len(ports), 5.0)
 
-        def on_state(payload: str) -> bool:
-            try:
-                msg = json.loads(payload)
-            except json.JSONDecodeError:
-                return False
-            if msg.get("error"):
-                raise WbCliError(
-                    code="MODBUS_SCAN_FAILED",
-                    message=f"Bus scan reported error: {msg['error']}",
-                    details={"port": ctx.args.port, "state": msg},
-                    exit_code=ExitCode.DOMAIN,
-                )
-            progress = msg.get("progress", 0)
-            is_ext = msg.get("is_ext_scan", False)
-            scan_state["devices"] = msg.get("devices", scan_state["devices"])
-            scan_state["progress"] = progress
-            scan_state["received"] = True
-            phase = "extended" if is_ext else "standard"
-            progress_bar.update(progress, suffix=f"{phase}, {len(scan_state['devices'])} device(s)")
-            if 0 < progress < 100:
-                scan_state["final_deadline"] = 0.0
-            if progress >= 100 and _is_done(scan_type, is_ext) and not scan_state["final_deadline"]:
-                scan_state["final_deadline"] = time.monotonic() + _FINAL_STABLE_S
-            return False
-
-        def on_tick() -> bool:
-            if scan_state["final_deadline"] and time.monotonic() >= scan_state["final_deadline"]:
-                scan_state["completed"] = True
-                return True
-            return False
-
-        try:
-            ctx.rpc.call_watch(
-                "wb-device-manager/bus-scan/Start",
-                _rpc_scan_args(ctx.args),
-                state_topic="/wb-device-manager/state",
-                skip_retained=True,
-                settle_s=_SUB_CONNECT_S,
-                timeout=ctx.args.timeout,
-                on_state=on_state,
-                on_tick=on_tick,
-                rpc_timeout=5.0,
+    all_devices: list = []
+    all_completed = True
+    last_progress = 0
+    received_any = False
+    failed_ports: list = []
+    for port_params in ports:
+        state = _scan_one_port(ctx, port_params, per_port_timeout)
+        all_devices.extend(state["devices"])
+        all_completed = all_completed and state["completed"]
+        last_progress = state["progress"]
+        received_any = received_any or state["received"]
+        if state["error"]:
+            err = state["error"]
+            failed_ports.append(
+                {
+                    "port": port_params["path"],
+                    "message": err.get("message", str(err)) if isinstance(err, dict) else str(err),
+                }
             )
-        finally:
-            try:
-                ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
-            except WbCliError:
-                pass
 
-    devices = scan_state["devices"]
-    completed = scan_state["completed"]
-    last_progress = scan_state["progress"]
-    received_state = scan_state["received"]
+    devices = all_devices
+    completed = all_completed and not failed_ports
+    received_state = received_any
 
     envelope: dict = {
         "scan_type": scan_type,
@@ -552,23 +623,24 @@ def _scan(ctx) -> dict:  # pylint: disable=too-many-statements
         "count": len(devices),
         "completed": completed,
     }
+    if failed_ports:
+        envelope["failed_ports"] = failed_ports
     if not completed:
         envelope["progress"] = last_progress
         envelope["timeout_seconds"] = ctx.args.timeout
         if not received_state:
             envelope["hint"] = (
-                "wb-device-manager published no scan state — it may have no ports to scan. "
-                "Check that wb-mqtt-serial is running and its config is valid: "
-                "`systemctl is-active wb-mqtt-serial` and `wb-cli --json serial ports`."
+                "wb-device-manager published no scan state — check that it is running "
+                "(`systemctl is-active wb-device-manager`) and try again."
             )
-        else:
+        elif not failed_ports:
             envelope["hint"] = (
                 "Scan did not finish in time. Re-run with a larger --timeout; "
                 "--slow scans typically need several minutes per port."
             )
     if ctx.args.port:
         envelope["port"] = ctx.args.port
-    if devices and completed:
+    if devices:
         ports_seen = sorted({d.get("port", {}).get("path") for d in devices if d.get("port", {}).get("path")})
         envelope["add_hint"] = "  ".join(f"wb-cli serial add-devices --port {p}" for p in ports_seen)
     return envelope

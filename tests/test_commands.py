@@ -473,14 +473,15 @@ def _make_call_watch(state_jsons):
     return side_effect
 
 
-def test_modbus_scan(monkeypatch):
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_modbus_scan():
     ctx = _scan_ctx()
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
             '{"progress": 10, "scanning": true, "is_ext_scan": true, "devices": []}',
             '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": []}',
             '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"slave_id": 52, "title": "WB-MR6C", "port": {"path": "/dev/ttyRS485-1"}}]}',
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": ['
             '{"slave_id": 52, "title": "WB-MR6C", "port": {"path": "/dev/ttyRS485-1"}}]}',
         ]
     )
@@ -489,51 +490,56 @@ def test_modbus_scan(monkeypatch):
     assert result["completed"] is True
 
 
-def test_modbus_scan_has_add_hint_when_devices_found(monkeypatch):
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_modbus_scan_has_add_hint_when_devices_found():
     ctx = _scan_ctx(port="/dev/ttyRS485-1")
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
-            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}}]}'
+            '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}}]}',
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}}]}',
         ]
     )
     result = ModbusPlugin().dispatch(ctx)
     assert result.get("add_hint") == "wb-cli serial add-devices --port /dev/ttyRS485-1"
 
 
-def test_modbus_scan_no_add_hint_when_no_devices(monkeypatch):
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_modbus_scan_no_add_hint_when_no_devices():
     ctx = _scan_ctx()
     ctx.rpc.call_watch.side_effect = _make_call_watch(
-        ['{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": []}']
+        [
+            '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": []}',
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": []}',
+        ]
     )
     result = ModbusPlugin().dispatch(ctx)
     assert "add_hint" not in result
 
 
-def test_modbus_scan_instant_0_to_100_completes(monkeypatch):
-    """Scan that jumps 0→100% without intermediate steps must complete (not time out)."""
-    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
+def test_modbus_scan_completes_on_scanning_false():
+    """The transition scanning=true → scanning=false from wb-device-manager
+    signals completion regardless of how progress moves in between."""
     ctx = _scan_ctx()
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
-            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 3}}]}'
+            '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 3}}]}',
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 3}}]}',
         ]
     )
     result = ModbusPlugin().dispatch(ctx)
     assert result["completed"] is True
 
 
-def test_modbus_scan_timeout_no_state_hint_mentions_ports():
-    """When wb-device-manager publishes nothing, hint must mention ports/wb-mqtt-serial."""
+def test_modbus_scan_timeout_no_state_hint_mentions_daemon():
+    """When wb-device-manager publishes nothing, hint must point at it."""
     ctx = _scan_ctx(timeout=0.01)
-    # call_watch delivers no messages → completed=False, hint about ports
+    # call_watch delivers no messages → completed=False, hint about daemon
     ctx.rpc.call_watch.side_effect = _make_call_watch([])
     result = ModbusPlugin().dispatch(ctx)
     assert result["completed"] is False
-    assert "serial ports" in result.get("hint", "")
+    assert "wb-device-manager" in result.get("hint", "")
 
 
 def test_modbus_ports():
