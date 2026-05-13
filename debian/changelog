@@ -1,3 +1,30 @@
+wb-cli (1.3.0) stable; urgency=medium
+
+  * Plugin registry: ``serial`` is now addressed as ``wb_cli.commands.serial``
+    just like every other command. The previously visible
+    ``wb_cli.commands.serial._plugin`` suffix was an artefact of ``serial``
+    being a package; ``_gen_registry`` now imports the package itself and the
+    package re-exports ``PLUGIN`` from its ``__init__``. No user-visible change
+    to ``wb-cli serial …`` calls.
+  * lib/templates.py: new shared module for filesystem template lookup
+    (``list_template_names``, ``read_template``, ``find_template_by_field``,
+    ``find_template``). Custom templates in ``/etc/wb-mqtt-serial.conf.d/templates``
+    win over packaged ones, ``deprecated`` paths are deprioritised. ``serial
+    templates`` / ``serial template`` / ``serial add-devices`` no longer shell
+    out to ``find``/``cat``/``grep`` — all template I/O goes through the lib
+    layer.
+  * skills/wiren-board: replaced removed ``modbus`` group with ``serial`` /
+    ``serial-debug`` in the entry-point list; "Quick diagnostic sequence" now
+    relies on ``wb-cli audit`` instead of duplicating ``systemctl --failed``.
+  * skills/wb-serial: moved the ``wb-cli serial …`` shortcuts to the top of
+    the skill and demoted the raw MQTT-RPC base pattern to a fallback. Bus
+    scan and debug-collection sections now drive the flow through
+    ``wb-cli serial wb-scan`` and ``wb-cli serial-debug`` (with
+    ``wb-cli job run`` for long captures); raw ``bus-scan/Start`` and the
+    sed-and-restart script are kept only as fallbacks.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 10:34:07 +0400
+
 wb-cli (1.2.2) stable; urgency=medium
 
   * serial ports / serial wb-scan: always go through wb-mqtt-serial RPCs

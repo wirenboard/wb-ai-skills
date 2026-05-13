@@ -554,19 +554,34 @@ def test_modbus_ports():
     assert result["count"] == 1
 
 
-def test_modbus_templates():
+def test_modbus_templates(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "wb-mr6c.json").write_text("{}", encoding="utf-8")
+    (pkg_dir / "wb-msw-v4.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
             subcmd="templates",
         )
     )
-    ctx.shell.run.return_value = (0, "wb-mr6c.json\nwb-msw-v4.json\n", "")
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 2
+    assert result["templates"] == ["wb-mr6c.json", "wb-msw-v4.json"]
 
 
-def test_modbus_template_reads_file_from_disk():
+def test_modbus_template_reads_file_from_disk(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "config-wb-mr3.json").write_text('{"device_type": "WB-MR3"}', encoding="utf-8")
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
@@ -574,15 +589,17 @@ def test_modbus_template_reads_file_from_disk():
             template_id="config-wb-mr3",
         )
     )
-    ctx.shell.run.return_value = (0, '{"device_type": "WB-MR3"}', "")
     result = ModbusPlugin().dispatch(ctx)
     assert result["template"] == {"device_type": "WB-MR3"}
-    cmd = ctx.shell.run.call_args.args[0]
-    assert cmd[0] == "cat"
-    assert cmd[1].endswith("config-wb-mr3.json")
 
 
-def test_modbus_template_missing_file():
+def test_modbus_template_missing_file(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
@@ -590,13 +607,19 @@ def test_modbus_template_missing_file():
             template_id="nonexistent",
         )
     )
-    ctx.shell.run.return_value = (1, "", "No such file")
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_TEMPLATE_NOT_FOUND"
 
 
-def test_modbus_template_invalid_json():
+def test_modbus_template_invalid_json(tmp_path, monkeypatch):
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "broken.json").write_text("not-json", encoding="utf-8")
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
@@ -604,7 +627,6 @@ def test_modbus_template_invalid_json():
             template_id="broken",
         )
     )
-    ctx.shell.run.return_value = (0, "not-json", "")
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_TEMPLATE_INVALID"
@@ -745,24 +767,29 @@ def test_modbus_add_devices_no_state_raises():
     assert exc.value.code == "MODBUS_NO_SCAN_STATE"
 
 
-def test_modbus_add_devices_by_device_type():
+def test_modbus_add_devices_by_device_type(tmp_path, monkeypatch):
     """--device-type + --slave-id adds without scan, fills required template params."""
-    ctx = _add_ctx(device_type="WB-MAI6", slave_id=19)
-    template_json = __import__("json").dumps(
-        {
-            "device_type": "WB-MAI6",
-            "device": {
-                "parameters": [
-                    {"id": "in1_type", "required": True, "default": 0},
-                    {"id": "in2_type", "required": True, "default": 0},
-                ]
-            },
-        }
+    pkg_dir = tmp_path / "pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "config-wb-mai6.json").write_text(
+        __import__("json").dumps(
+            {
+                "device_type": "WB-MAI6",
+                "device": {
+                    "parameters": [
+                        {"id": "in1_type", "required": True, "default": 0},
+                        {"id": "in2_type", "required": True, "default": 0},
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
     )
-    ctx.shell.run.side_effect = [
-        (0, "/tmp/config-wb-mai6.json\n", ""),  # grep
-        (0, template_json, ""),  # cat
-    ]
+    monkeypatch.setattr(
+        "wb_cli.commands.serial._actions.templates.SEARCH_DIRS",
+        (pkg_dir,),
+    )
+    ctx = _add_ctx(device_type="WB-MAI6", slave_id=19)
     ctx.rpc.call.side_effect = [_conf_with_rs1(), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1

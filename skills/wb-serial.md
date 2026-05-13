@@ -22,20 +22,30 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 **IMPORTANT for diagnostics: Act without pauses. DON'T ask permission for each step — the user ALREADY asked for diagnostics. Execute ALL steps in sequence: logs → debug → scan → health. DON'T stop with questions like "want to run debug?" — just do it. Report at the end.**
 
-## MQTT RPC via Bash — base pattern
+## wb-cli — primary tool
+
+`wb-cli serial` wraps every wb-mqtt-serial / wb-device-manager RPC the
+diagnostics flow needs; prefer it to raw MQTT RPCs.
+
+```bash
+ssh root@<HOST> wb-cli --json serial wb-scan --port /dev/ttyRS485-1     # bus scan (Fast Modbus)
+ssh root@<HOST> wb-cli --json serial wb-scan --slow --timeout 300       # exhaustive UART poll
+ssh root@<HOST> wb-cli --json serial wb-scan --bootloader               # devices in bootloader mode
+ssh root@<HOST> wb-cli --json serial devices                            # what's in /etc/wb-mqtt-serial.conf
+ssh root@<HOST> wb-cli --json serial ports                              # ports the driver currently serves
+ssh root@<HOST> wb-cli --json serial device-params 52                   # current firmware settings
+ssh root@<HOST> wb-cli --json serial device-set 52 --set in0_mode=1     # update firmware settings
+ssh root@<HOST> wb-cli --json serial-debug --port /dev/ttyRS485-1 --seconds 60
+ssh root@<HOST> wb-cli --json dev wb-mr6c_52                            # live values from the device
+```
+
+## MQTT RPC via Bash — base pattern (fallback)
+
+Use only for RPCs that wb-cli does not yet wrap (custom drivers, ad-hoc
+exploration). Anything covered by `wb-cli serial …` should go through wb-cli.
 
 ```bash
 ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -d " "); mosquitto_sub -t "/rpc/v1/<driver>/<service>/<method>/$CID/reply" -C 1 -W <timeout> & sleep 0.2; mosquitto_pub -t "/rpc/v1/<driver>/<service>/<method>/$CID" -m '"'"'{"id":1,"params":{...}}'"'"'; wait'
-```
-
-## wb-cli shortcuts
-
-```bash
-ssh root@<HOST> wb-cli --json serial-debug --port /dev/ttyRS485-1 --seconds 60
-ssh root@<HOST> wb-cli --json serial wb-scan --port /dev/ttyRS485-1
-ssh root@<HOST> wb-cli --json serial devices
-ssh root@<HOST> wb-cli --json serial device-params 52
-ssh root@<HOST> wb-cli --json dev wb-mr6c_52
 ```
 
 ---
@@ -352,7 +362,7 @@ ssh root@<HOST> 'journalctl -u wb-mqtt-serial -n 50 --no-pager | grep -iE "(temp
    ssh root@<HOST> "journalctl -u wb-mqtt-serial -p warning --since '1 hour ago' --no-pager | grep -oP 'device modbus:\\K\\d+' | sort | uniq -c | sort -rn"
    ```
 
-4. **Debug — raw packets. RUN IMMEDIATELY, DON'T ASK.** Safe operation — the script enables/disables debug itself, restarts the driver itself. **Exception** to the general "ask before `systemctl restart`" rule: two restarts inside a debug session are part of the procedure.
+4. **Debug — raw packets. RUN IMMEDIATELY, DON'T ASK.** Safe operation — `wb-cli serial-debug` enables `wb-mqtt-serial`'s `Debug` control, captures the journal for a window, then restores it even if the capture fails. No driver restart, no config edit, no `trap` to maintain by hand.
 
    Debug duration: divide 18000 by the number of errors per hour (from step 3). Minimum 30, maximum 300. If <10 errors/h — set 120 sec.
 
@@ -365,72 +375,43 @@ ssh root@<HOST> 'journalctl -u wb-mqtt-serial -n 50 --no-pager | grep -iE "(temp
    | 500 | 36 sec → floor 30 sec |
    | 1000+ | 18 sec → floor 30 sec |
 
-   **Debug-collection script** — write it to the controller, then run as a background job. `trap` guarantees `debug:false` is restored on exit. **Don't remove the `trap` — without it a hung restart leaves the controller in debug mode, filling the disk.**
+   ### Preferred: wb-cli serial-debug
 
    ```bash
-   ssh root@<HOST> 'cat > /tmp/debug-serial.sh << '"'"'SCRIPT'"'"'
-   #!/bin/bash
-   set -e
-   DURATION="${1:-120}"
-   CONF=/etc/wb-mqtt-serial.conf
-   LOG=/mnt/data/ai/wb-ai-skills/diag/debug-serial.log
-   mkdir -p /mnt/data/ai/wb-ai-skills/diag
-
-   restore_debug_off() {
-     sed -i '"'"'s/\("debug"\s*:\s*\)true/\1false/'"'"' "$CONF"
-     systemctl restart wb-mqtt-serial >/dev/null 2>&1 || true
-     echo "[debug-serial] restored debug:false"
-   }
-   trap restore_debug_off EXIT INT TERM
-
-   sed -i '"'"'s/\("debug"\s*:\s*\)false/\1true/'"'"' "$CONF"
-   systemctl restart wb-mqtt-serial
-   sleep 1
-   START_TS=$(date -u +%Y-%m-%dT%H:%M:%S)
-   echo "[debug-serial] collecting ${DURATION}s from $START_TS"
-   sleep "$DURATION"
-   journalctl -u wb-mqtt-serial --since "$START_TS" --no-pager > "$LOG"
-   echo "[debug-serial] saved $(wc -l < "$LOG") lines to $LOG"
-   SCRIPT
-   chmod +x /tmp/debug-serial.sh'
+   ssh root@<HOST> wb-cli --json serial-debug --port /dev/ttyRS485-1 --seconds <DURATION>
    ```
 
-   Start the background job:
-   ```bash
-   ssh root@<HOST> wb-cli --json job run serial-debug "bash /tmp/debug-serial.sh <DURATION>"
-   ```
+   Returns the journal entries collected during the window as JSON
+   (`.data.entries`). For long captures (>30 s) wrap it in a background job so SSH doesn't time out:
 
-   Wait for completion:
    ```bash
+   ssh root@<HOST> wb-cli --json job run serial-debug "wb-cli --json serial-debug --port /dev/ttyRS485-1 --seconds <DURATION> > /mnt/data/ai/wb-ai-skills/diag/debug-serial.json"
    ssh root@<HOST> wb-cli --json job wait serial-debug
+   scp root@<HOST>:/mnt/data/ai/wb-ai-skills/diag/debug-serial.json /tmp/debug-serial.json
    ```
-   Pick up the log:
+
+   **Verify debug control is off afterwards** (in case the job was killed mid-flight):
    ```bash
-   scp root@<HOST>:/mnt/data/ai/wb-ai-skills/diag/debug-serial.log /tmp/debug-serial.log
+   ssh root@<HOST> wb-cli --json mqtt read '/devices/wb-mqtt-serial/controls/Debug'
    ```
+   Should return `"0"`. If `"1"` — clear it with `wb-cli mqtt write /devices/wb-mqtt-serial/controls/Debug/on 0`.
 
-   **Verify debug is disabled:**
+   ### Fallback: manual restart loop (only if `wb-cli serial-debug` is unavailable)
+
+   Used to be needed on older firmware that lacked the `Debug` control. Edit `/etc/wb-mqtt-serial.conf` via confed to set `debug:true`, restart the driver, sleep, collect the journal, restore. **Keep the `trap` — without it a hung restart leaves the controller in debug mode, filling the disk.** Refer to git history if you need the exact script.
+
+5. **Bus scan** — who's there, who isn't, duplicates.
+
    ```bash
-   ssh root@<HOST> 'grep -c "\"debug\"\s*:\s*false" /etc/wb-mqtt-serial.conf; systemctl is-active wb-mqtt-serial'
-   ```
-   Should be `1` and `active`.
-
-5. **Bus scan** — who's there, who isn't, duplicates. First find port parameters:
-
-   Use the MQTT RPC base pattern from the top of this skill. Driver: `wb-mqtt-serial`, service: `ports`, method: `Load`, params: `{}`, timeout: 5.
-
-   `ports/Load` returns only **active** ports (those the driver currently opens). For a full list — `ls /dev/ttyRS485-* /dev/ttyMOD*`.
-
-   Then run a scan via `wb-device-manager/bus-scan/Start` (async):
-
-   Use the MQTT RPC base pattern from the top of this skill. Driver: `wb-device-manager`, service: `bus-scan`, method: `Start`, params: `{"scan_type":"extended","preserve_old_results":false,"port":{"path":"/dev/ttyRS485-1","baud_rate":<actual>,"parity":"N","data_bits":8,"stop_bits":2}}`, timeout: 10.
-
-   Poll for completion:
-   ```bash
-   ssh root@<HOST> 'for i in $(seq 1 60); do s=$(wb-cli --json mqtt read /wb-device-manager/state 2>/dev/null); echo "$s" | jq -e ".data.payload | fromjson | .scanning == false" >/dev/null 2>&1 && break; sleep 2; done; wb-cli --json mqtt read /wb-device-manager/state | jq -r ".data.payload | fromjson | .devices"'
+   ssh root@<HOST> wb-cli --json serial ports                                  # active ports the driver serves
+   ssh root@<HOST> wb-cli --json serial wb-scan --port /dev/ttyRS485-1         # Fast Modbus (WB+Onokom)
+   ssh root@<HOST> wb-cli --json serial wb-scan --slow --port /dev/ttyRS485-1 --timeout 300   # exhaustive UART poll (third-party)
+   ssh root@<HOST> wb-cli --json serial wb-scan --bootloader --port /dev/ttyRS485-1            # devices stuck in bootloader
    ```
 
-   `scan_type:"extended"` — Fast Modbus (WB+Onokom). `scan_type:"standard"` — regular Modbus, sees third-party devices.
+   wb-cli handles the `bus-scan/Start` RPC, scanning-state polling, retry-after-stop, and per-port iteration. The previous raw-MQTT-RPC flow (manual `mosquitto_pub` of `bus-scan/Start` + polling `/wb-device-manager/state` in a loop) is still the underlying mechanism — use it directly only if you need custom params wb-cli doesn't expose.
+
+   `serial ports` returns only **active** ports. If a port is missing, `wb-mqtt-serial` rejected its stanza (schema validation) — repair with `wb-cli confed load /etc/wb-mqtt-serial.conf` + `confed save`. For a full filesystem-level list — `ls /dev/ttyRS485-* /dev/ttyMOD*` (cellular modems are filtered out of scans).
 
 6. **WB device health** — uptime + power:
    ```bash
@@ -450,14 +431,21 @@ ssh root@<HOST> 'journalctl -u wb-mqtt-serial -n 50 --no-pager | grep -iE "(temp
 
 If the firmware version of a specific WB device is needed — **don't ask the user**:
 
-1. Use the MQTT RPC base pattern. Driver: `wb-mqtt-serial`, service: `config`, method: `Load`, params: `{}`, timeout: 5.
-2. Find the device by slave_id, remember its `device_type`.
-3. Read the template from file on the controller:
+1. Read device parameters directly from hardware — many WB devices expose `fw_version` in the `device-params` output without touching the config:
    ```bash
-   ssh root@<HOST> 'for f in /usr/share/wb-mqtt-serial/templates/*.json; do dt=$(jq -r ".device_type // \"\"" "$f" 2>/dev/null); [ "$dt" = "<device_type>" ] && jq ".device.channels[] | {name, enabled}" "$f" && break; done'
+   ssh root@<HOST> wb-cli --json serial device-params <slave_id_or_id>
+   ```
+   Look at `.data.fw.version` / `.data.parameters.fw_version`. Done if present.
+2. Otherwise, look up the device's `device_type` from config:
+   ```bash
+   ssh root@<HOST> wb-cli --json serial devices | jq -r '.data.devices[] | select(.slave_id==<slave_id>) | .device_type'
+   ```
+3. Read the template via wb-cli (it knows both `/etc/wb-mqtt-serial.conf.d/templates` and `/usr/share/wb-mqtt-serial/templates`, custom takes precedence):
+   ```bash
+   ssh root@<HOST> wb-cli --json serial template config-<mqtt-id> | jq '.data.template.device.channels[] | {name, enabled}'
    ```
 4. Find a channel named `FW Version`, `Firmware Version`, `SW Version`, `Serial`, etc.
-5. Enable it in the driver config (`"enabled": true`), save via confed.
+5. Enable it via confed (`wb-cli confed load` → flip `"enabled": true` for that channel → `wb-cli confed save`).
 6. After 10-20 seconds read from MQTT:
    ```bash
    ssh root@<HOST> wb-cli --json mqtt read '/devices/<device_id>/controls/<channel_name>'
@@ -630,7 +618,7 @@ ssh root@<HOST> "cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date
 
 - **Stop bits**: try 1 and 2 via `modbus_client_rpc -s 1` / `-s 2`
 - **Speed**: broadcast `modbus_client_rpc -a 0 -t 6 -r 110 ... 96` → change port via confed. Errors gone = cable/termination
-- **Isolation**: `config/Load` → `"enabled": false` → save. Errors gone on the rest = this device interferes
+- **Isolation**: `wb-cli confed load /etc/wb-mqtt-serial.conf` → flip the suspect device's `"enabled": false` → `wb-cli confed save`. Errors gone on the rest = this device interferes
 - **Timeouts**: `response_timeout_ms`, `guard_interval_us` in port config
 
 **Roll everything back after experiments.**

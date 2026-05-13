@@ -8,7 +8,7 @@ import struct
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
-from wb_cli.lib import serial_conf
+from wb_cli.lib import serial_conf, templates
 from wb_cli.lib.modbus_crc import modbus_crc16 as _modbus_crc16
 from wb_cli.lib.progress import ProgressBar
 
@@ -650,31 +650,15 @@ def _scan(ctx) -> dict:  # pylint: disable=too-many-locals
     return envelope
 
 
-def _templates(ctx) -> dict:
-    _, stdout, _ = ctx.shell.run(
-        ["find", "/usr/share/wb-mqtt-serial/templates", "-name", "*.json", "-printf", "%f\n"],
-        timeout=5.0,
-    )
-    names = sorted(stdout.strip().splitlines()) if stdout.strip() else []
+def _templates(_ctx) -> dict:
+    names = templates.list_template_names()
     return {"templates": names, "count": len(names)}
 
 
 def _template(ctx) -> dict:
     template_id = ctx.args.template_id
-    filename = template_id if template_id.endswith(".json") else f"{template_id}.json"
-    rc, stdout, _ = ctx.shell.run(
-        ["cat", f"/usr/share/wb-mqtt-serial/templates/{filename}"],
-        timeout=5.0,
-    )
-    if rc != 0:
-        raise WbCliError(
-            code="MODBUS_TEMPLATE_NOT_FOUND",
-            message=f"Template '{template_id}' not found",
-            details={"template_id": template_id, "filename": filename},
-            exit_code=ExitCode.DOMAIN,
-        )
     try:
-        template = json.loads(stdout)
+        template = templates.read_template(template_id)
     except json.JSONDecodeError as exc:
         raise WbCliError(
             code="MODBUS_TEMPLATE_INVALID",
@@ -682,6 +666,13 @@ def _template(ctx) -> dict:
             details={"template_id": template_id},
             exit_code=ExitCode.DOMAIN,
         ) from exc
+    if template is None:
+        raise WbCliError(
+            code="MODBUS_TEMPLATE_NOT_FOUND",
+            message=f"Template '{template_id}' not found",
+            details={"template_id": template_id},
+            exit_code=ExitCode.DOMAIN,
+        )
     return {"template_id": template_id, "template": template}
 
 
@@ -717,40 +708,13 @@ def _ports(ctx) -> dict:
     return {"ports": ports, "count": len(ports)}
 
 
-def _find_template(ctx, identifier: str) -> dict | None:
-    """Return the template dict for identifier, checking custom dir before packaged.
+def _find_template(_ctx, identifier: str) -> dict | None:
+    """Return the template dict for identifier (device_type or scan signature).
 
-    Tries two grep patterns in order:
-      1. "device_type": "<identifier>"   — direct device_type match
-      2. "signature": "<identifier>"     — wb-device-manager device_signature match
-    Returns the first template found (custom templates take priority).
-    Excludes deprecated templates unless no other match exists.
+    Custom templates win over packaged; deprecated templates are skipped unless
+    they are the only match. See ``wb_cli.lib.templates.find_template``.
     """
-    template_dirs = [
-        "/etc/wb-mqtt-serial.conf.d/templates",
-        "/usr/share/wb-mqtt-serial/templates",
-    ]
-    patterns = [f'"device_type": "{identifier}"', f'"signature": "{identifier}"']
-    for pattern in patterns:
-        for template_dir in template_dirs:
-            rc, stdout, _ = ctx.shell.run(
-                ["grep", "-rl", pattern, template_dir],
-                timeout=5.0,
-            )
-            if rc != 0 or not stdout.strip():
-                continue
-            files = stdout.strip().splitlines()
-            # Prefer non-deprecated templates.
-            preferred = [f for f in files if "deprecated" not in f]
-            first_file = (preferred or files)[0]
-            rc2, content, _ = ctx.shell.run(["cat", first_file], timeout=3.0)
-            if rc2 != 0:
-                continue
-            try:
-                return json.loads(content)
-            except json.JSONDecodeError:
-                pass
-    return None
+    return templates.find_template(identifier)
 
 
 def _required_params_from_template(template: dict) -> dict:

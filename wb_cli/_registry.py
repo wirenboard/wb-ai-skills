@@ -16,7 +16,7 @@ BUILTIN_PLUGINS: dict = {
     "mqtt": ("wb_cli.commands.mqtt_cmd", "raw MQTT: read retained, write, list topics"),
     "plugins": ("wb_cli.commands.plugins", "list every plugin this wb-cli build knows about"),
     "rules": ("wb_cli.commands.rules", "manage wb-rules automation scripts (list / read / save / disable / delete)"),
-    "serial": ("wb_cli.commands.serial._plugin", "serial port ops: send, wb-scan, device-params, device-set, add-devices, templates, devices, ports"),
+    "serial": ("wb_cli.commands.serial", "serial port ops: send, wb-scan, device-params, device-set, add-devices, templates, devices, ports"),
     "serial-debug": ("wb_cli.commands.serial_debug", "turn on RS-485 debug logging, capture for N seconds, then restore"),
     "snapshot": ("wb_cli.commands.snapshot", "save controller state to disk and compare snapshots later"),
 }
