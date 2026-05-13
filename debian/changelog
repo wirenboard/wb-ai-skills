@@ -1,3 +1,26 @@
+wb-cli (1.4.2) stable; urgency=medium
+
+  * serial wb-scan: at the end of a scan, wb-device-manager publishes a
+    reset state (``scanning=false, progress=0, devices=[]``). The
+    on_state handler used to swallow that message unconditionally,
+    wiping the accumulated devices list and progress value right before
+    declaring the scan complete. In single-port runs the symptom was a
+    confusing ``TIMEOUT at 0%`` title; in multi-port runs whole ports'
+    worth of devices were lost (8+2 found in progress → 8 reported).
+    The handler now keeps the previous non-empty devices list and
+    non-zero progress when the incoming message is the reset.
+    Regression test added (``test_wb_scan_keeps_devices_through_reset_state``).
+  * serial wb-scan (human): added a ``device_type`` column mirroring the
+    one in ``serial devices``. wb-device-manager fills it
+    (``configured_device_type``) when it matched a scan entry to an
+    existing config row. The bus-side ``signature`` is still shown in
+    its own column. Together the two columns let a user — or an LLM —
+    cross-reference the scan and config tables on the same name
+    rather than guessing whether ``WBMR3`` is the same device as
+    ``WB-MR3``.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 12:05:43 +0400
+
 wb-cli (1.4.1) stable; urgency=medium
 
   UX polish driven by an extended smoke test on a live controller.

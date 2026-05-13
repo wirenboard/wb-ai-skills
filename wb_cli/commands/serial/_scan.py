@@ -154,14 +154,26 @@ def _make_state_handler(state: Dict, progress_bar: ProgressBar):
             state["error"] = msg["error"]
             state["received"] = True
             return True
-        progress = msg.get("progress", 0)
+
         is_ext = msg.get("is_ext_scan", False)
         scanning = msg.get("scanning", False)
-        state["devices"] = msg.get("devices", state["devices"])
-        state["progress"] = progress
+        new_devices = msg.get("devices", [])
+        new_progress = msg.get("progress", 0)
+
+        # wb-device-manager publishes a "reset" state at the very end of a
+        # scan (``scanning=false, progress=0, devices=[]``). If we accept it
+        # blindly, the accumulated devices list and progress for the run are
+        # wiped right before we declare the scan complete. Keep the previous
+        # values when the incoming message is empty / zero — the scan list
+        # grows monotonically during a single run.
+        if new_devices or not state["devices"]:
+            state["devices"] = new_devices
+        if new_progress or not state["progress"]:
+            state["progress"] = new_progress
         state["received"] = True
+
         phase = "extended" if is_ext else "standard"
-        progress_bar.update(progress, suffix=f"{phase}, {len(state['devices'])} device(s)")
+        progress_bar.update(state["progress"], suffix=f"{phase}, {len(state['devices'])} device(s)")
         # wb-device-manager publishes scanning=true while running, then false
         # exactly once when it's done. Treat that transition as completion —
         # progress crosses 100 multiple times during slow scans.
