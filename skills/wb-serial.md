@@ -356,7 +356,12 @@ ssh root@<HOST> wb-cli --json serial wb-set-baud 5 115200 --port /dev/ttyRS485-1
 ssh root@<HOST> wb-cli --json serial wb-set-baud 5 9600 --port /dev/ttyRS485-1 --baud 19200
 ```
 
-**Caveat — WB-only.** Both commands use the *WB Common Modbus Registers* convention (regs 110 and 128). Third-party devices that don't follow this convention (Энергомера, DOOYA blinds, generic Modbus meters) will reject or ignore the write — they use vendor-specific procedures, see the datasheet. The `add-devices` flow uses the same writes internally for its baud-fixup / address-collision recovery.
+**Caveat — WB-only.** Both commands use the *WB Common Modbus Registers* convention (regs 110 and 128) over standard Modbus RTU. Two classes of devices won't react:
+
+- **Non-Modbus devices on the same RS-485.** Энергомера electricity meters speak their own IEC-61107-style protocol, DOOYA blinds use a proprietary one; they share the wire with Modbus traffic but ignore Modbus frames entirely. Drive them from CLI only through raw `serial send` (or — for normal operation — via wb-mqtt-serial templates with `protocol: energomera-iec` / `dooya-rs485`).
+- **Third-party Modbus devices** that change their slave_id through a different register or a vendor-specific procedure — check the datasheet.
+
+The `add-devices` flow uses the same WB writes internally for its baud-fixup and address-collision recovery, so it's also WB-only in those automatic fixups.
 
 ## Sending Modbus PDUs (CRC + framing handled)
 
@@ -376,6 +381,8 @@ ssh root@<HOST> wb-cli --json serial send-modbus --port /dev/ttyRS485-1 --slave 
 ```
 
 Supports FC3 (read holding), FC4 (read input), FC6 (write single holding). For Fast Modbus or other FCs use raw `serial send` with a hand-built message.
+
+**For Modbus devices only.** This includes WB and any third-party device that speaks standard Modbus RTU (sub-meters, inverters, generic controllers). Non-Modbus devices on the same RS-485 (Энергомера, DOOYA) won't answer — for them, normal operation goes through wb-mqtt-serial templates with the matching `protocol:`, and ad-hoc probing goes through raw `serial send` with hand-crafted bytes.
 
 ## Firmware update — `serial wb-fw`
 

@@ -14,8 +14,11 @@ wb-cli (1.8.0) stable; urgency=medium
     every device that follows the wiki's Common Modbus Registers).
     With ``--sn`` the write goes via WB Fast Modbus, safe under
     physical address collisions (two devices answering at the same
-    slave_id). NOT for third-party devices that don't implement reg
-    128 (Энергомера, DOOYA…).
+    slave_id). NOT for non-Modbus devices on the same RS-485 (e.g.
+    Энергомера meters with their own IEC-style protocol, DOOYA blinds
+    with a proprietary one), and not for third-party Modbus devices
+    that change their slave_id through a different register or a
+    vendor-specific procedure — check the datasheet.
   * ``serial wb-set-baud <slave_id> <new_baud> --port <path>
     [UART overrides]`` — change a device's baud rate via FC6 reg 110.
     Same WB-only caveat as above.

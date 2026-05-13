@@ -443,10 +443,12 @@ def _register_wb_set_slave_id(sub: argparse._SubParsersAction) -> None:
         help="change a WB device's slave_id (FC6 reg 128, or Fast Modbus by SN)",
         description=(
             "Bus-level write to the WB Common Modbus Register 128 (slave_id).\n"
-            "Works on every WB device and any third-party device that follows\n"
-            "the same convention. NOT for arbitrary Modbus devices that don't\n"
-            "expose reg 128 (Энергомера, DOOYA, generic meters — they use\n"
-            "vendor-specific procedures; see the datasheet).\n"
+            "Works on every WB device and any third-party Modbus device that\n"
+            "follows the same convention. NOT for non-Modbus devices on the\n"
+            "same RS-485 (Энергомера meters speak their own IEC-style protocol,\n"
+            "DOOYA blinds — a proprietary one), and not for Modbus devices that\n"
+            "change their address through a different register or a vendor-\n"
+            "specific procedure — check the datasheet.\n"
             "\n"
             "Two ways to target the device:\n"
             "  current_id (positional)   standard Modbus FC6 to reg 128 of\n"
