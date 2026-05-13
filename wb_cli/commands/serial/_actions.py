@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import select
 import struct
-import subprocess
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
@@ -444,93 +442,6 @@ def _device_set(ctx) -> dict:
     return {"slave_id": dev["slave_id"], "device_type": dev["device_type"], "set": params["parameters"]}
 
 
-def _open_state_stream():
-    """Subscribe to /wb-device-manager/state via mosquitto_sub, drop retained."""
-    try:
-        return subprocess.Popen(
-            ["mosquitto_sub", "-R", "-t", "/wb-device-manager/state", "-F", "%p"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-    except FileNotFoundError as exc:
-        raise WbCliError(  # pylint: disable=duplicate-code
-            code="MQTT_BROKER_DOWN",
-            message="mosquitto_sub not found; is mosquitto-clients installed?",
-            exit_code=ExitCode.ENVIRONMENT,
-        ) from exc
-
-
-def _reap(proc) -> None:
-    """Terminate a Popen safely with a kill fallback."""
-    proc.terminate()
-    try:
-        proc.wait(timeout=2.0)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-
-
-def _await_scan(ctx, proc, progress_bar, scan_type: str):
-    """Stream wb-device-manager's scan state until done or timeout.
-
-    Returns ``(devices, completed, progress)`` — ``devices`` is the latest
-    snapshot we received, ``completed`` says whether the chosen scan finished
-    cleanly, and ``progress`` is the last percentage we saw. Partial finds
-    are returned even on timeout so the user keeps what was discovered.
-
-    Once we see the first progress=100 state for the chosen phase we keep
-    reading for ``_FINAL_STABLE_S`` more seconds, because wb-device-manager
-    sometimes publishes one or two more state messages with more devices
-    just after reporting 100%.
-    """
-    deadline = time.monotonic() + ctx.args.timeout
-    # Once we receive any state message after calling bus-scan/Start, we know
-    # it is fresh (mosquitto_sub -R already dropped the retained message).
-    # So any progress>=100 with the right phase means the scan is done — no
-    # need for the old saw_progress guard that broke 0→100 instant completions.
-    received_state = False
-    devices: list = []
-    last_progress = 0
-    final_deadline: float = 0.0  # set once we first hit done(); read until it expires
-    while time.monotonic() < deadline:
-        # Non-blocking peek so _FINAL_STABLE_S can fire even when no new
-        # state message arrives.
-        ready, _, _ = select.select([proc.stdout], [], [], 0.1)
-        if not ready:
-            if final_deadline and time.monotonic() >= final_deadline:
-                return devices, True, last_progress, received_state
-            continue
-        line = proc.stdout.readline()
-        if not line:
-            return devices, final_deadline > 0, last_progress, received_state
-        try:
-            state = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if state.get("error"):
-            raise WbCliError(
-                code="MODBUS_SCAN_FAILED",
-                message=f"Bus scan reported error: {state['error']}",
-                details={"port": ctx.args.port, "state": state},
-                exit_code=ExitCode.DOMAIN,
-            )
-        progress = state.get("progress", 0)
-        is_ext = state.get("is_ext_scan", False)
-        devices = state.get("devices", devices)
-        last_progress = progress
-        received_state = True
-        phase = "extended" if is_ext else "standard"
-        progress_bar.update(progress, suffix=f"{phase}, {len(devices)} device(s)")
-        if 0 < progress < 100:
-            final_deadline = 0.0  # ramp-up overrides any earlier stable window
-        if progress >= 100 and received_state and _is_done(scan_type, is_ext):
-            # Start the stable-window on first done() if not yet started;
-            # extend it on each subsequent matching state so the list of
-            # discovered devices keeps growing as long as updates arrive.
-            final_deadline = time.monotonic() + _FINAL_STABLE_S
-    return devices, final_deadline > 0, last_progress, received_state
-
-
 def _is_done(scan_type: str, is_ext: bool) -> bool:
     # The phase flag in state messages mirrors the scan_type we requested:
     #   extended (default)  → is_ext_scan=True throughout
@@ -559,7 +470,7 @@ def _rpc_scan_args(args) -> dict:
     return out
 
 
-def _scan(ctx) -> dict:
+def _scan(ctx) -> dict:  # pylint: disable=too-many-statements
     # Cancel any previous scan and let the broker quiesce so we don't pick
     # up its tail state messages.
     try:
@@ -570,23 +481,70 @@ def _scan(ctx) -> dict:
 
     scan_type = ctx.args.scan_type
     spinner_label = f"{scan_type} scan of {ctx.args.port}" if ctx.args.port else f"{scan_type} RS-485 scan"
-    proc = _open_state_stream()
-    devices: list = []
-    completed = False
-    last_progress = 0
-    with proc, ProgressBar(spinner_label) as progress_bar:
+
+    scan_state: dict = {
+        "devices": [],
+        "completed": False,
+        "progress": 0,
+        "received": False,
+        "final_deadline": 0.0,
+    }
+
+    with ProgressBar(spinner_label) as progress_bar:
+
+        def on_state(payload: str) -> bool:
+            try:
+                msg = json.loads(payload)
+            except json.JSONDecodeError:
+                return False
+            if msg.get("error"):
+                raise WbCliError(
+                    code="MODBUS_SCAN_FAILED",
+                    message=f"Bus scan reported error: {msg['error']}",
+                    details={"port": ctx.args.port, "state": msg},
+                    exit_code=ExitCode.DOMAIN,
+                )
+            progress = msg.get("progress", 0)
+            is_ext = msg.get("is_ext_scan", False)
+            scan_state["devices"] = msg.get("devices", scan_state["devices"])
+            scan_state["progress"] = progress
+            scan_state["received"] = True
+            phase = "extended" if is_ext else "standard"
+            progress_bar.update(progress, suffix=f"{phase}, {len(scan_state['devices'])} device(s)")
+            if 0 < progress < 100:
+                scan_state["final_deadline"] = 0.0
+            if progress >= 100 and _is_done(scan_type, is_ext) and not scan_state["final_deadline"]:
+                scan_state["final_deadline"] = time.monotonic() + _FINAL_STABLE_S
+            return False
+
+        def on_tick() -> bool:
+            if scan_state["final_deadline"] and time.monotonic() >= scan_state["final_deadline"]:
+                scan_state["completed"] = True
+                return True
+            return False
+
         try:
-            time.sleep(_SUB_CONNECT_S)
-            ctx.rpc.call("wb-device-manager/bus-scan/Start", _rpc_scan_args(ctx.args))
-            devices, completed, last_progress, received_state = _await_scan(
-                ctx, proc, progress_bar, scan_type
+            ctx.rpc.call_watch(
+                "wb-device-manager/bus-scan/Start",
+                _rpc_scan_args(ctx.args),
+                state_topic="/wb-device-manager/state",
+                skip_retained=True,
+                settle_s=_SUB_CONNECT_S,
+                timeout=ctx.args.timeout,
+                on_state=on_state,
+                on_tick=on_tick,
+                rpc_timeout=5.0,
             )
         finally:
             try:
                 ctx.rpc.call("wb-device-manager/bus-scan/Stop", {}, timeout=_SCAN_STOP_TIMEOUT_S)
             except WbCliError:
                 pass
-            _reap(proc)
+
+    devices = scan_state["devices"]
+    completed = scan_state["completed"]
+    last_progress = scan_state["progress"]
+    received_state = scan_state["received"]
 
     envelope: dict = {
         "scan_type": scan_type,
@@ -891,11 +849,20 @@ def _load_cached_scan_devices(ctx) -> list:
     """Read the retained /wb-device-manager/state and return its devices list."""
     with ProgressBar("reading last scan state") as pb:
         pb.update(0)
-        rc, stdout, _ = ctx.shell.run(
-            ["mosquitto_sub", "-t", "/wb-device-manager/state", "-C", "1", "-W", "3"],
-            timeout=5.0,
-        )
-    if rc != 0 or not stdout.strip():
+        try:
+            msgs = ctx.mqtt.subscribe("/wb-device-manager/state", timeout=3.0)
+        except WbCliError as exc:
+            if exc.code == "MQTT_TIMEOUT":
+                raise WbCliError(
+                    code="MODBUS_NO_SCAN_STATE",
+                    message=(
+                        "No scan results available from wb-device-manager. "
+                        "Run `wb-cli serial wb-scan` first, then retry."
+                    ),
+                    exit_code=ExitCode.DOMAIN,
+                ) from exc
+            raise
+    if not msgs:
         raise WbCliError(
             code="MODBUS_NO_SCAN_STATE",
             message=(
@@ -905,7 +872,7 @@ def _load_cached_scan_devices(ctx) -> list:
             exit_code=ExitCode.DOMAIN,
         )
     try:
-        state = json.loads(stdout.strip())
+        state = json.loads(msgs[-1][1])
     except json.JSONDecodeError as exc:
         raise WbCliError(
             code="MODBUS_SCAN_STATE_INVALID",

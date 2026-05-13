@@ -9,16 +9,10 @@ flashes via Modbus bootloader, publishes progress to
 ``/wb-device-manager/firmware_update/state``). We expose it as a CLI.
 """
 
-# pylint: disable=duplicate-code
-# _open_state_stream / _reap mirror the modbus.scan helpers — same dance of
-# Popen-mosquitto_sub-on-state plus graceful reap. Sharing them via lib would
-# pull a streaming helper into a place that doesn't really want one.
-
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import time
 
 from wb_cli.errors import ExitCode, WbCliError
@@ -353,7 +347,7 @@ def _update_one(ctx, slave_id: int, port: dict, software_type: str) -> dict:
         "ok": True,
     }
     if getattr(ctx.args, "wait", False):
-        result.update(_wait_for_completion(slave_id, port.get("path")))
+        result.update(_wait_for_completion(ctx, slave_id, port.get("path")))
     return result
 
 
@@ -371,7 +365,7 @@ def _restore(ctx) -> dict:
         "ok": True,
     }
     if args.wait:
-        result.update(_wait_for_completion(args.slave_id, args.port))
+        result.update(_wait_for_completion(ctx, args.slave_id, args.port))
     return result
 
 
@@ -416,71 +410,36 @@ def _state_once(ctx) -> dict:
 def _watch(ctx) -> dict:
     """Stream the firmware-update state topic until everything settles."""
     deadline = time.monotonic() + ctx.args.timeout
-    proc = _open_state_stream()
     last_state: dict = {"devices": [], "count": 0}
-    with proc, ProgressBar("firmware updates") as progress_bar:
-        try:
+    with ctx.mqtt.live_sub(_STATE_TOPIC) as sub:
+        with ProgressBar("firmware updates") as progress_bar:
             while time.monotonic() < deadline:
-                line = proc.stdout.readline()
-                if not line:
-                    break
-                state = _parse_state(line)
-                last_state = state
-                progress_bar.update(_overall_progress(state), suffix=_summary_for_bar(state))
-                if _all_done(state):
-                    break
-        finally:
-            _reap(proc)
+                for payload in sub.poll(0.1):
+                    state = _parse_state(payload)
+                    last_state = state
+                    progress_bar.update(_overall_progress(state), suffix=_summary_for_bar(state))
+                    if _all_done(state):
+                        return last_state
     return last_state
 
 
-def _wait_for_completion(slave_id: int, port: str) -> dict:
+def _wait_for_completion(ctx, slave_id: int, port: str) -> dict:
     """Block until the (slave_id, port) entry in the state topic finishes or errors."""
     deadline = time.monotonic() + 600.0
-    proc = _open_state_stream()
-    with proc, ProgressBar(f"flashing slave_id={slave_id}") as progress_bar:
-        try:
+    with ctx.mqtt.live_sub(_STATE_TOPIC) as sub:
+        with ProgressBar(f"flashing slave_id={slave_id}") as progress_bar:
             while time.monotonic() < deadline:
-                line = proc.stdout.readline()
-                if not line:
-                    break
-                state = _parse_state(line)
-                entry = _find_entry(state, slave_id, port)
-                if entry is None:
-                    continue
-                progress_bar.update(entry.get("progress", 0), suffix=entry.get("type", ""))
-                if entry.get("error"):
-                    return {"final": "error", "error": entry["error"]}
-                if entry.get("progress", 0) >= 100:
-                    return {"final": "done"}
-        finally:
-            _reap(proc)
+                for payload in sub.poll(0.1):
+                    state = _parse_state(payload)
+                    entry = _find_entry(state, slave_id, port)
+                    if entry is None:
+                        continue
+                    progress_bar.update(entry.get("progress", 0), suffix=entry.get("type", ""))
+                    if entry.get("error"):
+                        return {"final": "error", "error": entry["error"]}
+                    if entry.get("progress", 0) >= 100:
+                        return {"final": "done"}
     return {"final": "timeout"}
-
-
-def _open_state_stream():
-    try:
-        return subprocess.Popen(
-            ["mosquitto_sub", "-t", _STATE_TOPIC, "-F", "%p"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-    except FileNotFoundError as exc:
-        raise WbCliError(  # pylint: disable=duplicate-code
-            code="MQTT_BROKER_DOWN",
-            message="mosquitto_sub not found; is mosquitto-clients installed?",
-            exit_code=ExitCode.ENVIRONMENT,
-        ) from exc
-
-
-def _reap(proc) -> None:
-    """Terminate a Popen safely with a kill fallback."""
-    proc.terminate()
-    try:
-        proc.wait(timeout=2.0)
-    except subprocess.TimeoutExpired:
-        proc.kill()
 
 
 # --------------------------------------------------------------------------- #

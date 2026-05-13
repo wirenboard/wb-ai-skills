@@ -36,6 +36,81 @@ _POLL_INTERVAL_S = 0.05
 _READ_CHUNK = 4096
 
 
+class LiveSub:
+    """Non-blocking streaming MQTT subscription.
+
+    Uses ``stdbuf -oL mosquitto_sub`` to force per-message flushing, and reads
+    the raw file descriptor via ``os.read()`` so Python's BufferedReader cannot
+    hide messages from ``select()``.  Both quirks are documented at the top of
+    this module.
+
+    Usage::
+
+        with ctx.mqtt.live_sub("/wb-device-manager/state", skip_retained=True) as sub:
+            while not done:
+                for payload in sub.poll(0.1):
+                    handle(json.loads(payload))
+    """
+
+    def __init__(self, topic: str, *, skip_retained: bool = False) -> None:
+        self._topic = topic
+        self._skip_retained = skip_retained
+        self._proc: Optional[subprocess.Popen] = None  # type: ignore[type-arg]
+        self._fd: Optional[int] = None
+        self._buf = b""
+
+    def __enter__(self) -> "LiveSub":
+        cmd = ["stdbuf", "-oL", "mosquitto_sub", "-t", self._topic, "-F", "%p"]
+        if self._skip_retained:
+            cmd.insert(3, "-R")
+        try:
+            self._proc = subprocess.Popen(  # pylint: disable=consider-using-with
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+        except FileNotFoundError as exc:
+            raise WbCliError(
+                code="MQTT_BROKER_DOWN",
+                message="mosquitto_sub not found; is mosquitto-clients installed?",
+                exit_code=ExitCode.ENVIRONMENT,
+            ) from exc
+        self._fd = self._proc.stdout.fileno()  # type: ignore[union-attr]
+        os.set_blocking(self._fd, False)
+        return self
+
+    def __exit__(self, *exc) -> None:
+        if self._proc is not None:
+            self._proc.terminate()
+            try:
+                self._proc.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                self._proc.kill()
+                self._proc.wait()
+
+    def poll(self, timeout: float = 0.1) -> List[str]:
+        """Return all payloads received since the last call (may be empty)."""
+        if self._fd is None or self._proc is None:
+            return []
+        ready, _, _ = select.select([self._fd], [], [], timeout)
+        if not ready:
+            return []
+        if self._proc.poll() is not None:
+            return []
+        try:
+            chunk = os.read(self._fd, _READ_CHUNK)
+        except (BlockingIOError, OSError):
+            return []
+        self._buf += chunk
+        lines: List[str] = []
+        while b"\n" in self._buf:
+            raw, _, self._buf = self._buf.partition(b"\n")
+            line = raw.decode("utf-8", errors="replace").strip()
+            if line:
+                lines.append(line)
+        return lines
+
+
 class MqttClient:
     """Publish and subscribe via mosquitto CLI tools."""
 
@@ -175,6 +250,10 @@ class MqttClient:
                 exit_code=ExitCode.ENVIRONMENT,
             )
         return results
+
+    def live_sub(self, topic: str, *, skip_retained: bool = False) -> "LiveSub":
+        """Return a ``LiveSub`` context manager for streaming *topic*."""
+        return LiveSub(topic, skip_retained=skip_retained)
 
     def publish(
         self,

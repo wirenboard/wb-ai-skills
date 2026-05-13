@@ -11,13 +11,12 @@ that are not already exercised in test_commands.py:
 """
 
 # pylint: disable=duplicate-code
-# Helpers (_ctx, _fake_proc_class, _scan_ctx) mirror test_commands.py on purpose —
+# Helpers (_ctx, _scan_ctx) mirror test_commands.py on purpose —
 # keeping them local avoids coupling the test modules via conftest fixtures.
 
 from __future__ import annotations
 
 import argparse
-import io
 from unittest.mock import MagicMock
 
 import pytest
@@ -83,29 +82,6 @@ def _conf(  # pylint: disable=too-many-arguments
             ]
         }
     }
-
-
-def _fake_proc_class(state_lines: str):
-    class _FakeProc:
-        def __init__(self):
-            self.stdout = io.StringIO(state_lines)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *exc):
-            return False
-
-        def terminate(self):
-            pass
-
-        def wait(self, timeout=None):
-            pass
-
-        def kill(self):
-            pass
-
-    return _FakeProc
 
 
 def _scan_ctx(*, port="/dev/ttyRS485-1", timeout=5.0, scan_type="extended"):
@@ -546,22 +522,30 @@ def test_device_set_render_multiple_params():
 # ---------------------------------------------------------------------------
 
 
+def _make_call_watch(state_jsons):
+    """Side-effect for ctx.rpc.call_watch: feeds state messages then calls on_tick once."""
+
+    def side_effect(
+        target, params=None, *, on_state, on_tick=None, **_kwargs
+    ):  # pylint: disable=unused-argument
+        for msg in state_jsons:
+            on_state(msg)
+        if on_tick is not None:
+            on_tick()
+
+    return side_effect
+
+
 def test_wb_scan_slow_completes_via_standard_phase(monkeypatch):
     """--slow scan completes when is_ext_scan=False reaches 100%."""
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx(scan_type="standard")
-    state = (
-        '{"progress": 50, "scanning": true, "is_ext_scan": false, "devices": []}\n'
-        '{"progress": 100, "scanning": false, "is_ext_scan": false, "devices": ['
-        '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}'
-        "]}\n"
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(state)(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 50, "scanning": true, "is_ext_scan": false, "devices": []}',
+            '{"progress": 100, "scanning": false, "is_ext_scan": false, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}]}',
+        ]
     )
     result = SerialPlugin().dispatch(ctx)
     assert result["completed"] is True
@@ -571,40 +555,28 @@ def test_wb_scan_slow_completes_via_standard_phase(monkeypatch):
 
 def test_wb_scan_slow_ignores_extended_phase_done(monkeypatch):
     """--slow: extended-phase progress=100 (is_ext_scan=True) must NOT trigger completion."""
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx(scan_type="standard", timeout=0.5)
-    state = (
-        '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-        '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}'
-        "]}\n"
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(state)(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}]}'
+        ]
     )
     result = SerialPlugin().dispatch(ctx)
-    # ext-phase done doesn't count for --slow; stdout EOF → completed=False
+    # Extended-phase done does not count for --slow → completed=False
     assert result["completed"] is False
 
 
 def test_wb_scan_bootloader_completes_regardless_of_phase(monkeypatch):
     """--bootloader: any progress=100 state means done."""
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx(scan_type="bootloader")
-    state = (
-        '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-        '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 11}}'
-        "]}\n"
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(state)(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 11}}]}'
+        ]
     )
     result = SerialPlugin().dispatch(ctx)
     assert result["completed"] is True

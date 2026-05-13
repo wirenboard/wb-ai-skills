@@ -8,9 +8,11 @@ a future optimisation.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+import time
+from typing import Any, Callable, Dict, Optional
 
 from wb_cli.errors import ExitCode, WbCliError
+from wb_cli.lib.mqtt import LiveSub
 from wb_cli.lib.shell import ShellRunner
 
 
@@ -105,6 +107,36 @@ class RpcClient:  # pylint: disable=too-few-public-methods
                 details={"target": target, "stdout": stdout.strip()},
                 exit_code=ExitCode.DOMAIN,
             ) from exc
+
+    def call_watch(  # pylint: disable=too-many-arguments
+        self,
+        target: str,
+        params: Optional[Dict[str, Any]] = None,
+        *,
+        state_topic: str,
+        skip_retained: bool = True,
+        settle_s: float = 0.5,
+        timeout: float = 60.0,
+        on_state: Callable[[str], bool],
+        on_tick: Optional[Callable[[], bool]] = None,
+        rpc_timeout: float = 5.0,
+    ) -> None:
+        """Call *target* RPC then stream *state_topic* until *on_state* returns True or *timeout* elapses.
+
+        Opens a ``LiveSub`` on *state_topic* before calling the RPC so no messages are missed.
+        *on_state(payload)* is called for every message; return True to stop.
+        *on_tick()* (optional) is called after each poll interval; return True to stop early.
+        """
+        with LiveSub(state_topic, skip_retained=skip_retained) as sub:
+            time.sleep(settle_s)
+            self.call(target, params, timeout=rpc_timeout)
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                for payload in sub.poll(0.1):
+                    if on_state(payload):
+                        return
+                if on_tick is not None and on_tick():
+                    return
 
 
 # Map server-side import-time failures to a "your daemon is outdated" hint.

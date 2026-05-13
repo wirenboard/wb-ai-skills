@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import argparse
-import io
 import json
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -460,47 +459,30 @@ def _scan_ctx(*, port="/dev/ttyRS485-1", timeout=5.0, scan_type="extended"):
     return ctx
 
 
-def _fake_proc_class(state_lines: str):
-    class _FakeProc:
-        def __init__(self):
-            self.stdout = io.StringIO(state_lines)
+def _make_call_watch(state_jsons):
+    """Side-effect for ctx.rpc.call_watch: feeds state messages then calls on_tick once."""
 
-        def __enter__(self):
-            return self
+    def side_effect(
+        target, params=None, *, on_state, on_tick=None, **_kwargs
+    ):  # pylint: disable=unused-argument
+        for msg in state_jsons:
+            on_state(msg)
+        if on_tick is not None:
+            on_tick()
 
-        def __exit__(self, *exc):
-            return False
-
-        def terminate(self):
-            pass
-
-        def wait(self, timeout=None):
-            pass
-
-        def kill(self):
-            pass
-
-    return _FakeProc
+    return side_effect
 
 
 def test_modbus_scan(monkeypatch):
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx()
-    final_state = (
-        '{"progress": 10, "scanning": true, "is_ext_scan": true, "devices": []}\n'
-        '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": []}\n'
-        '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": ['
-        '{"slave_id": 52, "title": "WB-MR6C", "port": {"path": "/dev/ttyRS485-1"}}'
-        "]}\n"
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(final_state)(),
-    )
-    # The real _await_scan uses select() on the subprocess fd; with a StringIO
-    # stand-in we short-circuit to "always ready" so readline does the work.
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 10, "scanning": true, "is_ext_scan": true, "devices": []}',
+            '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": []}',
+            '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"slave_id": 52, "title": "WB-MR6C", "port": {"path": "/dev/ttyRS485-1"}}]}',
+        ]
     )
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
@@ -508,34 +490,23 @@ def test_modbus_scan(monkeypatch):
 
 
 def test_modbus_scan_has_add_hint_when_devices_found(monkeypatch):
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx(port="/dev/ttyRS485-1")
-    state = (
-        '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-        '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}}'
-        "]}\n"
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(state)(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}}]}'
+        ]
     )
     result = ModbusPlugin().dispatch(ctx)
     assert result.get("add_hint") == "wb-cli serial add-devices --port /dev/ttyRS485-1"
 
 
 def test_modbus_scan_no_add_hint_when_no_devices(monkeypatch):
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx()
-    state = '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": []}\n'
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(state)(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        ['{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": []}']
     )
     result = ModbusPlugin().dispatch(ctx)
     assert "add_hint" not in result
@@ -543,35 +514,23 @@ def test_modbus_scan_no_add_hint_when_no_devices(monkeypatch):
 
 def test_modbus_scan_instant_0_to_100_completes(monkeypatch):
     """Scan that jumps 0→100% without intermediate steps must complete (not time out)."""
+    monkeypatch.setattr("wb_cli.commands.serial._actions._FINAL_STABLE_S", 0.0)
     ctx = _scan_ctx()
-    state = (
-        '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
-        '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 3}}'
-        "]}\n"
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class(state)(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 100, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 3}}]}'
+        ]
     )
     result = ModbusPlugin().dispatch(ctx)
     assert result["completed"] is True
 
 
-def test_modbus_scan_timeout_no_state_hint_mentions_ports(monkeypatch):
+def test_modbus_scan_timeout_no_state_hint_mentions_ports():
     """When wb-device-manager publishes nothing, hint must mention ports/wb-mqtt-serial."""
     ctx = _scan_ctx(timeout=0.01)
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.subprocess.Popen",
-        lambda *a, **kw: _fake_proc_class("")(),
-    )
-    monkeypatch.setattr(
-        "wb_cli.commands.serial._actions.select.select",
-        lambda r, w, x, t=None: (r, w, x),
-    )
+    # call_watch delivers no messages → completed=False, hint about ports
+    ctx.rpc.call_watch.side_effect = _make_call_watch([])
     result = ModbusPlugin().dispatch(ctx)
     assert result["completed"] is False
     assert "serial ports" in result.get("hint", "")
@@ -757,17 +716,12 @@ def test_modbus_add_devices_skips_duplicate_slave_id():
 
 
 def test_modbus_add_devices_from_cached_state():
-    """No --scan-results: reads retained state via mosquitto_sub."""
+    """No --scan-results: reads retained state via ctx.mqtt.subscribe."""
     ctx = _add_ctx()
     state_json = __import__("json").dumps({"devices": [_SCAN_DEV_7], "progress": 100})
 
-    # _find_template greps both template dirs; use a callable to route by command.
-    def _shell(cmd, **_kw):
-        if cmd[0] == "mosquitto_sub":
-            return (0, state_json, "")
-        return (1, "", "")  # grep → template not found in either dir
-
-    ctx.shell.run.side_effect = _shell
+    ctx.mqtt.subscribe.return_value = [("/wb-device-manager/state", state_json)]
+    ctx.shell.run.return_value = (1, "", "")  # grep → template not found in either dir
     ctx.rpc.call.side_effect = [_conf_with_rs1(), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
@@ -776,10 +730,10 @@ def test_modbus_add_devices_from_cached_state():
 
 
 def test_modbus_add_devices_no_state_raises():
-    """mosquitto_sub fails → clear error, not silent hang."""
+    """mqtt.subscribe returns nothing → clear error, not silent hang."""
     ctx = _add_ctx()
     ctx.rpc.call.return_value = _conf_with_rs1()
-    ctx.shell.run.return_value = (1, "", "")  # mosquitto_sub fails
+    ctx.mqtt.subscribe.return_value = []  # no retained state
     with pytest.raises(WbCliError) as exc:
         ModbusPlugin().dispatch(ctx)
     assert exc.value.code == "MODBUS_NO_SCAN_STATE"
