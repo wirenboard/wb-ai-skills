@@ -85,7 +85,12 @@ def ports_to_scan(ctx) -> List[Dict]:
     - With ``--port``: filter to that one path; fall back to default UART
       params if the driver doesn't know it (first-time discovery on an
       unconfigured port).
-    - Without ``--port``: every RS-485 port; ``/dev/ttyMOD*`` is excluded.
+    - Without ``--port``: every port the driver is serving — whatever the
+      path looks like. We do NOT exclude ``/dev/ttyMOD*`` here: on most WB
+      builds those are cellular modems, but some installs route RS-485
+      through MOD-style devices (USB-RS485 adapters, WBE2R add-ons), and
+      if the user wired one into ``/etc/wb-mqtt-serial.conf`` and the
+      driver opened it, the scan must follow.
     """
     result = ctx.rpc.call("wb-mqtt-serial/ports/Load", {})
     raw_ports = _unwrap_ports(result)
@@ -93,9 +98,7 @@ def ports_to_scan(ctx) -> List[Dict]:
 
     if ctx.args.port:
         return [serial_port.port_params_from_cfg(ctx.args.port, by_path.get(ctx.args.port))]
-    return [
-        serial_port.port_params_from_cfg(path, cfg) for path, cfg in by_path.items() if _is_rs485_port(path)
-    ]
+    return [serial_port.port_params_from_cfg(path, cfg) for path, cfg in by_path.items()]
 
 
 def _unwrap_ports(result):
@@ -104,11 +107,6 @@ def _unwrap_ports(result):
     if isinstance(result, dict):
         return result.get("ports") or []
     return []
-
-
-def _is_rs485_port(path: str) -> bool:
-    """``/dev/ttyMOD*`` on WB6+ map to cellular modems, never RS-485."""
-    return "/ttyMOD" not in path
 
 
 def _try_stop_running_scan(ctx) -> None:

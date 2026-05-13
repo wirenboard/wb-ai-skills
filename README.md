@@ -38,10 +38,11 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 | `rules list\|load\|save\|enable\|disable\|delete` | Manage wb-rules automation scripts |
 | `history get <dev/ctrl>` | Time-series data from wb-mqtt-db |
 | `history chart <dev/ctrl>` | Mermaid chart of historical data |
-| `modbus scan\|probe\|templates\|template\|ports\|device-info\|devices\|add-devices` | RS-485 / Modbus |
+| `serial wb-scan\|templates\|template\|ports\|device-info\|device-params\|device-set\|devices\|add-devices\|send` | RS-485 / Modbus operations via wb-mqtt-serial / wb-device-manager |
 | `modbus-fw check\|update\|restore\|clear-error\|watch\|state` | Firmware update of Modbus devices |
 | `cloud` | Cloud agent status |
 | `serial-debug --port <path>` | RS-485 debug capture with auto-restore |
+| `mqtt-debug enable\|disable\|status\|capture` | Verbose mosquitto PUBLISH tracing — structured records (client_id, topic, qos, retain, …) for tracing what wrote to a topic |
 | `audit` | Quick health check |
 | `snapshot save\|diff` | System state snapshots |
 | `job run\|status\|tail\|cancel\|wait\|list` | Managed background tasks |
@@ -49,16 +50,14 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 
 ## Output modes
 
-`wb-cli` picks between **JSON** and **human** output based on `stdout.isatty()`:
+`wb-cli` emits **human-friendly** output (tables / key-value lines) by default everywhere — including pipes and SSH without a TTY. JSON is opt-in via `--json` or `WB_CLI_OUTPUT=json`. A stderr spinner / progress bar is drawn for long-running calls only when stderr is a TTY, so JSON to stdout always stays clean.
 
-- Interactive terminal → compact tables / key-value lines, plus a stderr spinner during long calls.
-- Pipe, redirect, SSH without `-t` (typical for LLM agents and scripts) → JSON envelope.
+The default flipped to human in 1.0 because the previous "auto-detect based on `stdout.isatty()`" rule meant that piping wb-cli through `grep` got JSON — which is rarely what a human-on-SSH wants. LLM agents and scripts that need parsable output pass `--json` explicitly.
 
 Override anywhere:
 
 ```bash
-wb-cli --json dev               # force JSON
-wb-cli --human modbus ports     # force human view
+wb-cli --json dev               # force JSON (LLM agents / scripts)
 WB_CLI_OUTPUT=json wb-cli info  # same via env (good for shells)
 WB_CLI_NO_SPINNER=1 wb-cli ...  # silence the spinner regardless of mode
 ```
@@ -140,8 +139,10 @@ wb_cli/
   errors.py           error codes and exit codes
   output.py           JSON envelope rendering
   _registry.py        generated plugin list (make registry)
-  lib/                subsystem handles (controller, mqtt, rpc, shell, systemd, journal, job)
-  commands/           one plugin per command group; modbus/ is a subpackage
+  lib/                subsystem handles (controller, mqtt, mqtt_log, rpc, shell, systemd,
+                      journal, job, serial_conf, serial_port, modbus_crc, modbus_frame, templates)
+  commands/           one plugin per command group; serial/ is a subpackage (_register, _scan,
+                      _add, _actions, _plugin)
 tests/                pytest with FakeContext + a captured wb7 snapshot in tests/fixtures/
 skills/               LLM-facing skill guides, one .md per skill (see above)
 debian/               .deb packaging (Architecture: all)
