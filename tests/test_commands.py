@@ -641,12 +641,14 @@ def test_modbus_template_invalid_json(tmp_path, monkeypatch):
     assert exc.value.code == "MODBUS_TEMPLATE_INVALID"
 
 
-def test_modbus_device_info_finds_device_by_slave_id():
+def test_serial_config_single_finds_device_by_slave_id():
+    """`serial config <slave_id>` returns one device from /etc/wb-mqtt-serial.conf."""
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="device-info",
+            subcmd="config",
             device_id="5",
+            port=None,
         )
     )
     ctx.rpc.call.return_value = {
@@ -661,12 +663,13 @@ def test_modbus_device_info_finds_device_by_slave_id():
     assert result["device"]["device_type"] == "WB-MDM3"
 
 
-def test_modbus_device_info_not_found():
+def test_serial_config_single_not_found():
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="device-info",
+            subcmd="config",
             device_id="999",
+            port=None,
         )
     )
     ctx.rpc.call.return_value = {"content": {"ports": []}}
@@ -982,7 +985,8 @@ def test_modbus_devices_lists_from_serial_conf():
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="devices",
+            subcmd="config",
+            device_id=None,
             port=None,
         )
     )
@@ -1010,7 +1014,8 @@ def test_modbus_devices_filters_by_port():
     ctx = _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="devices",
+            subcmd="config",
+            device_id=None,
             port="/dev/ttyRS485-2",
         )
     )
