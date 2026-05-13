@@ -20,20 +20,21 @@ import argparse
 from unittest.mock import MagicMock
 
 import pytest
-from wb_cli.commands.modbus_fw import (
-    ModbusFwPlugin,
-    _render_check_bulk,
-    _render_check_one,
-)
 from wb_cli.commands.serial._actions import (
     _find_free_slave_id,
     _parse_param_assignments,
     _required_params_from_template,
+    _send_modbus,
+    _wb_set_baud,
+    _wb_set_slave_id,
 )
 from wb_cli.commands.serial._plugin import SerialPlugin
+from wb_cli.commands.serial._wb_fw import _render_check_bulk, _render_check_one
+from wb_cli.commands.serial._wb_fw import dispatch as _wb_fw_dispatch
 from wb_cli.context import CliContext
 from wb_cli.errors import WbCliError
 from wb_cli.lib import serial_conf
+from wb_cli.lib.modbus_crc import modbus_crc16
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -776,7 +777,8 @@ def test_add_devices_summary_with_warning():
 def _fw_check_args_ns(slave_id=None, port=None):
     return argparse.Namespace(
         quiet=False,
-        subcmd="check",
+        subcmd="wb-fw",
+        wb_fw_action="check",
         slave_id=slave_id,
         port=port,
         baud=9600,
@@ -814,7 +816,7 @@ def test_modbus_fw_check_bulk_includes_device_type():
         raise AssertionError(f"unexpected rpc call: {method}")
 
     ctx.rpc.call.side_effect = _call
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["devices"][0]["device_type"] == "WB-MR6C"
 
 
@@ -840,7 +842,7 @@ def test_modbus_fw_check_bulk_device_type_empty_when_missing():
         raise AssertionError(f"unexpected rpc call: {method}")
 
     ctx.rpc.call.side_effect = _call
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["devices"][0]["device_type"] == ""
 
 
@@ -893,3 +895,197 @@ def test_modbus_fw_check_render_bulk_device_type_column():
     out = _render_check_bulk(rows)
     assert "device_type" in out
     assert "WB-MR6C" in out
+
+
+# ---------------------------------------------------------------------------
+# send-modbus: PDU build, response parsing
+# ---------------------------------------------------------------------------
+
+
+def _send_modbus_args(**overrides):
+    ns = argparse.Namespace(
+        quiet=False,
+        subcmd="send-modbus",
+        port="/dev/ttyRS485-1",
+        baud=9600,
+        parity="N",
+        data_bits=8,
+        stop_bits=2,
+        slave=5,
+        fc=3,
+        reg=110,
+        count=1,
+        value=None,
+        response_timeout=500,
+        frame_timeout=20,
+        total_timeout=5000,
+    )
+    for key, val in overrides.items():
+        setattr(ns, key, val)
+    return ns
+
+
+def test_send_modbus_fc3_builds_correct_pdu_and_parses_response():
+    """FC3 read: request = slave + fc + reg + count + CRC; response payload decoded."""
+    ctx = _ctx(args=_send_modbus_args(fc=3, reg=128, count=2))
+    # Response: 05 03 04 00 13 12 34 + CRC. Two regs = [0x0013, 0x1234].
+    body = bytes.fromhex("05030400131234")
+    response_hex = (body + modbus_crc16(body)).hex()
+    ctx.rpc.call.return_value = {"response": response_hex}
+    result = _send_modbus(ctx)
+    assert result["registers"] == [0x0013, 0x1234]
+    assert result["fc"] == 3
+    assert result["count"] == 2
+    # request: slave=05, fc=03, reg=0x0080, count=0x0002, then CRC
+    assert result["request"].startswith("050300800002")
+
+
+def test_send_modbus_fc4_uses_input_register_function_code():
+    """FC4 builds a request with fc=04, response parser shape unchanged."""
+    ctx = _ctx(args=_send_modbus_args(fc=4, reg=0, count=1))
+    body = bytes.fromhex("0504020042")  # slave=5 fc=4 bc=2 val=0x0042
+    ctx.rpc.call.return_value = {"response": (body + modbus_crc16(body)).hex()}
+    result = _send_modbus(ctx)
+    assert result["fc"] == 4
+    assert result["registers"] == [0x0042]
+    assert result["request"].startswith("05040000")  # slave=05 fc=04 reg=0000
+
+
+def test_send_modbus_fc6_uses_value_and_returns_8_byte_echo():
+    """FC6 write needs --value; expected response is the 8-byte echo."""
+    ctx = _ctx(args=_send_modbus_args(fc=6, reg=128, value=19, count=1))
+    # FC6 response echoes the request.
+    body = bytes.fromhex("0506008000130000")[:6]  # slave fc reg val (6 bytes pre-CRC)
+    response = (body + modbus_crc16(body)).hex()
+    ctx.rpc.call.return_value = {"response": response}
+    result = _send_modbus(ctx)
+    assert result["fc"] == 6
+    assert result["value"] == 19
+    assert "registers" not in result
+    # request: slave=05 fc=06 reg=0080 val=0013
+    assert result["request"].startswith("050600800013")
+
+
+def test_send_modbus_fc6_without_value_raises():
+    """FC6 without --value is a usage error."""
+    ctx = _ctx(args=_send_modbus_args(fc=6, reg=128, value=None))
+    with pytest.raises(WbCliError) as exc:
+        _send_modbus(ctx)
+    assert exc.value.code == "SERIAL_FC6_NEEDS_VALUE"
+
+
+def test_send_modbus_short_response_returns_empty_register_list():
+    """A malformed/truncated response keeps the raw hex but parses to []."""
+    ctx = _ctx(args=_send_modbus_args(fc=3, reg=0, count=10))
+    ctx.rpc.call.return_value = {"response": "0503"}  # way too short
+    result = _send_modbus(ctx)
+    assert result["registers"] == []
+    assert result["response"] == "0503"
+
+
+# ---------------------------------------------------------------------------
+# wb-set-slave-id / wb-set-baud
+# ---------------------------------------------------------------------------
+
+
+def _wb_set_slave_id_args(**overrides):
+    ns = argparse.Namespace(
+        quiet=False,
+        subcmd="wb-set-slave-id",
+        port="/dev/ttyRS485-1",
+        baud=9600,
+        parity="N",
+        data_bits=8,
+        stop_bits=2,
+        current_id=5,
+        new_id=19,
+        sn=None,
+    )
+    for key, val in overrides.items():
+        setattr(ns, key, val)
+    return ns
+
+
+def test_wb_set_slave_id_standard_fc6_to_reg_128():
+    """Without --sn: standard FC6 write to reg 128 of current_id."""
+    ctx = _ctx(args=_wb_set_slave_id_args(current_id=5, new_id=19))
+    ctx.rpc.call.return_value = {"response": ""}
+    result = _wb_set_slave_id(ctx)
+    assert result["via"] == "standard-fc6-reg128"
+    assert result["current_id"] == 5
+    assert result["new_id"] == 19
+    # check the RPC payload
+    method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
+    assert method == "wb-mqtt-serial/port/Load"
+    msg = params["msg"]
+    # slave=05 fc=06 reg=0080 val=0013 + CRC = 8 bytes hex (16 chars)
+    assert msg.startswith("050600800013")
+    assert len(msg) == 16
+
+
+def test_wb_set_slave_id_fast_modbus_by_sn_when_sn_given():
+    """With --sn: Fast Modbus FD 46 08 envelope."""
+    ctx = _ctx(args=_wb_set_slave_id_args(current_id=5, new_id=19, sn="0x00020B86"))
+    ctx.rpc.call.return_value = {"response": ""}
+    result = _wb_set_slave_id(ctx)
+    assert result["via"] == "fast-modbus-by-sn"
+    method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
+    assert method == "wb-mqtt-serial/port/Load"
+    msg = params["msg"]
+    # Fast Modbus prefix FD4608 + SN(big-endian 4 bytes) + FC6 reg 128 val 19 + CRC.
+    assert msg.startswith("fd460800020b86")
+    assert "060080" in msg  # FC6 + reg 0x0080
+
+
+def test_wb_set_slave_id_invalid_sn_raises():
+    ctx = _ctx(args=_wb_set_slave_id_args(sn="not-hex"))
+    with pytest.raises(WbCliError) as exc:
+        _wb_set_slave_id(ctx)
+    assert exc.value.code == "SERIAL_INVALID_HEX"
+
+
+def _wb_set_baud_args(**overrides):
+    ns = argparse.Namespace(
+        quiet=False,
+        subcmd="wb-set-baud",
+        port="/dev/ttyRS485-1",
+        baud=9600,
+        parity="N",
+        data_bits=8,
+        stop_bits=2,
+        slave_id=5,
+        new_baud=115200,
+    )
+    for key, val in overrides.items():
+        setattr(ns, key, val)
+    return ns
+
+
+def test_wb_set_baud_writes_reg_110_with_baud_div_100():
+    """FC6 reg 110, value = new_baud / 100 (115200 → 0x0480)."""
+    ctx = _ctx(args=_wb_set_baud_args(slave_id=5, new_baud=115200))
+    ctx.rpc.call.return_value = {"response": ""}
+    result = _wb_set_baud(ctx)
+    assert result["new_baud"] == 115200
+    assert result["old_baud"] == 9600
+    method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
+    assert method == "wb-mqtt-serial/port/Load"
+    msg = params["msg"]
+    # slave=05 fc=06 reg=006E val=0480 + CRC
+    assert msg.startswith("0506006e0480")
+
+
+def test_wb_set_baud_speaks_at_current_baud_passed_via_uart_flag():
+    """The port baud sent to wb-mqtt-serial is the device's *current* baud (--baud arg)."""
+    ctx = _ctx(args=_wb_set_baud_args(slave_id=5, new_baud=9600, baud=115200))
+    ctx.rpc.call.return_value = {"response": ""}
+    _wb_set_baud(ctx)
+    params = ctx.rpc.call.call_args.args[1]
+    assert params["baud_rate"] == 115200  # we talk to the device at its current speed
+
+
+def test_wb_set_baud_rejects_non_100_multiple():
+    ctx = _ctx(args=_wb_set_baud_args(new_baud=9601))
+    with pytest.raises(WbCliError) as exc:
+        _wb_set_baud(ctx)
+    assert exc.value.code == "SERIAL_INVALID_BAUD"

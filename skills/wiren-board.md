@@ -111,7 +111,7 @@ In human mode a stderr spinner / progress bar is drawn during long operations; i
 
 ### Key commands
 
-For the full command list run `wb-cli --help` or `wb-cli <group> --help` on the controller — that is always up to date. Common entry points: `info`, `dev`, `mqtt`, `mqtt-debug`, `rules`, `serial`, `serial-debug`, `modbus-fw`, `audit`, `snapshot`, `job`, `confed`, `history`, `cloud`, `plugins`.
+For the full command list run `wb-cli --help` or `wb-cli <group> --help` on the controller — that is always up to date. Common entry points: `info`, `dev`, `mqtt`, `mqtt-debug`, `rules`, `serial` (incl. `serial wb-fw` firmware update, formerly the standalone `modbus-fw` plugin), `serial-debug`, `audit`, `snapshot`, `job`, `confed`, `history`, `cloud`, `plugins`.
 
 Addressing uses the wb-rules form `<device>/<control>`. Quote names with spaces:
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 
+from wb_cli.commands.serial import _wb_fw
 from wb_cli.lib import serial_port
 
 
@@ -22,6 +23,10 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
     _register_ports(sub)
     _register_add_devices(sub)
     _register_send(sub)
+    _register_send_modbus(sub)
+    _register_wb_set_slave_id(sub)
+    _register_wb_set_baud(sub)
+    _register_wb_fw(sub)
 
 
 def _register_wb_scan(sub: argparse._SubParsersAction) -> None:
@@ -156,8 +161,8 @@ def _register_fw_params(sub: argparse._SubParsersAction) -> None:
             "                                 reverts on next driver restart.\n"
             "\n"
             "NOT for slave_id or baud_rate — those are bus-level Modbus registers,\n"
-            "not template parameters. (Use ``serial wb-set-slave-id`` / ``wb-set-baud``\n"
-            "in a later release, or ``serial send`` raw Modbus FC6 today.)"
+            "not template parameters. Use ``serial wb-set-slave-id`` /\n"
+            "``serial wb-set-baud``."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -347,3 +352,184 @@ def _register_send(sub: argparse._SubParsersAction) -> None:
         dest="total_timeout",
         help="ms total timeout for the whole operation (default: 5000)",
     )
+
+
+def _register_send_modbus(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "send-modbus",
+        help="send a Modbus PDU (CRC + framing handled for you)",
+        description=(
+            "Higher-level wrapper over ``serial send`` for plain Modbus traffic:\n"
+            "pass slave_id, function code, register and count/value, this builds\n"
+            "the PDU + CRC and computes the expected response size automatically.\n"
+            "\n"
+            "  --fc 3   read holding registers      uses --count (default 1)\n"
+            "  --fc 4   read input registers        uses --count (default 1)\n"
+            "  --fc 6   write single holding reg    uses --value (required)\n"
+            "\n"
+            "For arbitrary bytes, Fast Modbus frames, or other FCs — use\n"
+            "``serial send``. To set slave_id / baud on a WB device use the\n"
+            "dedicated ``serial wb-set-slave-id`` / ``wb-set-baud`` shortcuts.\n"
+        ),
+        epilog=(
+            "Examples:\n"
+            "  # read holding register 110 (current baud abbrev) of slave 5\n"
+            "  wb-cli serial send-modbus --port /dev/ttyRS485-1 --slave 5 --fc 3 --reg 110\n"
+            "\n"
+            "  # read 10 input registers starting at 0 from slave 12 at 19200/N/8/2\n"
+            "  wb-cli serial send-modbus --port /dev/ttyRS485-1 --slave 12 --fc 4 \\\n"
+            "      --reg 0 --count 10 --baud 19200\n"
+            "\n"
+            "  # write reg 128 of slave 5 = 19 (slave_id change via reg 128, FC6)\n"
+            "  wb-cli serial send-modbus --port /dev/ttyRS485-1 --slave 5 --fc 6 \\\n"
+            "      --reg 128 --value 19\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("--port", required=True, help="serial port path (e.g. /dev/ttyRS485-1)")
+    serial_port.add_uart_args(p, stop_bits_choices=[1, 2])
+    p.add_argument("--slave", type=int, required=True, help="Modbus slave_id (1-247; 0 = broadcast)")
+    p.add_argument(
+        "--fc",
+        type=int,
+        required=True,
+        choices=[3, 4, 6],
+        help="Modbus function code: 3 / 4 / 6",
+    )
+    p.add_argument(
+        "--reg",
+        type=lambda s: int(s, 0),
+        required=True,
+        help="register address (decimal or 0x..)",
+    )
+    p.add_argument(
+        "--count",
+        type=int,
+        default=1,
+        help="register count for read (FC3 / FC4); default 1",
+    )
+    p.add_argument(
+        "--value",
+        type=lambda s: int(s, 0),
+        default=None,
+        help="value for write (required with FC6)",
+    )
+    p.add_argument(
+        "--response-timeout",
+        type=int,
+        default=500,
+        dest="response_timeout",
+        help="ms to wait for the first response byte (default: 500)",
+    )
+    p.add_argument(
+        "--frame-timeout",
+        type=int,
+        default=20,
+        dest="frame_timeout",
+        help="ms inter-byte gap that ends the frame (default: 20)",
+    )
+    p.add_argument(
+        "--total-timeout",
+        type=int,
+        default=5000,
+        dest="total_timeout",
+        help="ms total timeout (default: 5000)",
+    )
+
+
+def _register_wb_set_slave_id(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "wb-set-slave-id",
+        help="change a WB device's slave_id (FC6 reg 128, or Fast Modbus by SN)",
+        description=(
+            "Bus-level write to the WB Common Modbus Register 128 (slave_id).\n"
+            "Works on every WB device and any third-party device that follows\n"
+            "the same convention. NOT for arbitrary Modbus devices that don't\n"
+            "expose reg 128 (Энергомера, DOOYA, generic meters — they use\n"
+            "vendor-specific procedures; see the datasheet).\n"
+            "\n"
+            "Two ways to target the device:\n"
+            "  current_id (positional)   standard Modbus FC6 to reg 128 of\n"
+            "                            current_id. Unsafe if two devices on\n"
+            "                            the bus answer at the same address —\n"
+            "                            both will react.\n"
+            "  --sn <hex>                WB Fast Modbus, addressed by 32-bit\n"
+            "                            serial number. Safe under collisions;\n"
+            "                            current_id is still required so the\n"
+            "                            command line records what's being\n"
+            "                            replaced and matches the scan output.\n"
+        ),
+        epilog=(
+            "Examples:\n"
+            "  # standard FC6 reg 128\n"
+            "  wb-cli serial wb-set-slave-id 5 19 --port /dev/ttyRS485-1\n"
+            "\n"
+            "  # collision-safe via WB Fast Modbus by SN\n"
+            "  wb-cli serial wb-set-slave-id 5 19 --port /dev/ttyRS485-1 --sn 0x00020B86\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("current_id", type=int, help="current slave_id, 1-247")
+    p.add_argument("new_id", type=int, help="new slave_id, 1-247")
+    p.add_argument("--port", required=True, help="serial port path (e.g. /dev/ttyRS485-1)")
+    p.add_argument(
+        "--sn",
+        default=None,
+        help="device 32-bit serial number (hex, e.g. 0x00020B86); enables Fast Modbus by SN",
+    )
+    serial_port.add_uart_args(p, stop_bits_choices=[1, 2])
+
+
+def _register_wb_set_baud(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "wb-set-baud",
+        help="change a WB device's baud rate (FC6 reg 110)",
+        description=(
+            "Bus-level write to the WB Common Modbus Register 110 (baud / 100).\n"
+            "After the write the device speaks at the new baud — driver / client\n"
+            "must follow. Same WB-only caveat as ``wb-set-slave-id``: this only\n"
+            "works on devices that implement reg 110 (WB and compatible).\n"
+        ),
+        epilog=(
+            "Examples:\n"
+            "  # change slave 5 from current baud to 115200\n"
+            "  wb-cli serial wb-set-baud 5 115200 --port /dev/ttyRS485-1\n"
+            "\n"
+            "  # device runs at 19200 right now → set to 9600\n"
+            "  wb-cli serial wb-set-baud 5 9600 --port /dev/ttyRS485-1 --baud 19200\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("slave_id", type=int, help="current slave_id of the device, 1-247")
+    p.add_argument(
+        "new_baud",
+        type=int,
+        help="new baud rate (multiple of 100, e.g. 9600, 19200, 115200)",
+    )
+    p.add_argument("--port", required=True, help="serial port path (e.g. /dev/ttyRS485-1)")
+    serial_port.add_uart_args(p, stop_bits_choices=[1, 2])
+
+
+def _register_wb_fw(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "wb-fw",
+        help="firmware update of WB Modbus devices: check / update / restore",
+        description=(
+            "Update the firmware of Wiren Board Modbus devices over RS-485.\n"
+            "Same flow the web UI's 'Check / Update' buttons trigger — backed by\n"
+            "wb-device-manager's fw-update RPC.\n"
+            "\n"
+            "Typical use:\n"
+            "  1. ``wb-cli serial wb-fw check 4 --port /dev/ttyRS485-1``        # what's available\n"
+            "  2a. ``wb-cli serial wb-fw update 4 --port ... --wait``           # one device, inline\n"
+            "  2b. ``wb-cli serial wb-fw update --all --background \\           # whole bus, as a job\n"
+            "        --output /mnt/data/ai/wb-cli/fw-$(date +%s).json``\n"
+            "  3. on a failed update: ``wb-cli serial wb-fw restore 4 --port ...``\n"
+            "\n"
+            "In-flight update progress / queue:\n"
+            "  wb-cli mqtt sub /wb-device-manager/firmware_update/state"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    inner = p.add_subparsers(dest="wb_fw_action", metavar="<action>")
+    _wb_fw.register_actions(inner)

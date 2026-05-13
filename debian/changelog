@@ -1,3 +1,63 @@
+wb-cli (1.8.0) stable; urgency=medium
+
+  Closes out the serial-plugin reorganization started in 1.6.0:
+  bus-level slave_id / baud writes are now first-class commands,
+  ``send-modbus`` joins raw ``send`` as a higher-level wrapper, and
+  the ``modbus-fw`` plugin folds in as ``serial wb-fw`` — everything
+  that touches an RS-485 port lives under one plugin.
+
+  ## Added — bus-level writes
+
+  * ``serial wb-set-slave-id <current_id> <new_id> --port <path>
+    [--sn HEX] [UART overrides]`` — change a device's slave_id.
+    Default uses standard Modbus FC6 reg 128 (works on WB devices and
+    every device that follows the wiki's Common Modbus Registers).
+    With ``--sn`` the write goes via WB Fast Modbus, safe under
+    physical address collisions (two devices answering at the same
+    slave_id). NOT for third-party devices that don't implement reg
+    128 (Энергомера, DOOYA…).
+  * ``serial wb-set-baud <slave_id> <new_baud> --port <path>
+    [UART overrides]`` — change a device's baud rate via FC6 reg 110.
+    Same WB-only caveat as above.
+
+  Both share the bus-fixup helpers ``add-devices`` already uses; the
+  helpers moved into ``wb_cli/lib/serial_bus.py`` so the two flows can
+  reuse them cleanly.
+
+  ## Added — Modbus-protocol send
+
+  * ``serial send-modbus --port <path> --slave <id> --fc <code>
+    --reg <addr> [--value N | --count N]`` — convenience wrapper over
+    ``serial send``: builds the Modbus PDU + CRC for you and computes
+    the expected response size per function code. Supported function
+    codes: 3 (read holding), 4 (read input), 6 (write single).
+    Raw ``serial send`` stays as the escape hatch for arbitrary
+    protocols and unusual Fast Modbus frames.
+
+  ## Moved — modbus-fw → serial wb-fw
+
+  * ``wb-cli modbus-fw <action>`` → ``wb-cli serial wb-fw <action>``.
+    Same logic and arguments, same RPC (wb-device-manager fw-update);
+    just lives under the ``serial`` plugin now since firmware update
+    is one more thing you do over an RS-485 port. The top-level
+    ``modbus-fw`` plugin is removed.
+  * ``wb-cli serial wb-fw update --background`` schedules its job as
+    ``wb-cli --json serial wb-fw update --wait …``; existing
+    ``modbus-fw-update-*`` units finish on the old binary path and
+    are unaffected.
+
+  ## Migration
+
+  * ``modbus-fw check 4 …``           → ``serial wb-fw check 4 …``
+  * ``modbus-fw update 4 …``          → ``serial wb-fw update 4 …``
+  * ``modbus-fw restore 4 …``         → ``serial wb-fw restore 4 …``
+  * ``serial send … --msg '<addr> 06 00 80 …' --add-modbus-crc``
+                                       → ``serial wb-set-slave-id``
+  * ``serial send … --msg '<addr> 06 00 6E …' --add-modbus-crc``
+                                       → ``serial wb-set-baud``
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 13:00:00 +0000
+
 wb-cli (1.7.0) stable; urgency=medium
 
   Breaking minor — first batch of the ``serial`` plugin tidy-up

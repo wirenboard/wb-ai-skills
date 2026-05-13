@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import argparse
 
-from wb_cli.commands.serial import _actions
+from wb_cli.commands.serial import _actions, _wb_fw
 from wb_cli.commands.serial._actions import _fmt_hex
 from wb_cli.plugin import BasePlugin
 
 
 class SerialPlugin(BasePlugin):
     name = "serial"
-    help = "serial port ops: wb-scan, config, fw-params, add-devices, templates, ports, send"
+    help = "serial / RS-485 ops: scan, config, fw-params, add, send, wb-set-*, wb-fw, templates, ports"
     # `serial wb-scan` draws its own ProgressBar; don't double up.
     auto_spinner = False
 
@@ -28,6 +28,18 @@ class SerialPlugin(BasePlugin):
         return _actions.dispatch(ctx)
 
     def render(self, result):  # pylint: disable=too-many-return-statements
+        wb_fw_text = _wb_fw.render(result)
+        if wb_fw_text is not None:
+            return wb_fw_text
+        action = result.get("action")
+        if action == "wb-set-slave-id":
+            return _render_wb_set_slave_id(result)
+        if action == "wb-set-baud":
+            return _render_wb_set_baud(result)
+        if "registers" in result and "fc" in result:
+            return _render_send_modbus_read(result)
+        if "fc" in result and "value" in result:
+            return _render_send_modbus_write(result)
         if "request" in result:
             return _render_send(result)
         if "parameters" in result:
@@ -50,6 +62,48 @@ def _render_send(result):
     resp_hex = result.get("response", "")
     lines.append(f"← {_fmt_hex(bytes.fromhex(resp_hex))}" if resp_hex else "(no response)")
     return "\n".join(lines)
+
+
+def _render_send_modbus_read(result):
+    regs = result.get("registers", [])
+    count = result.get("count", len(regs))
+    lines = [
+        f"slave_id={result['slave_id']}  FC{result['fc']}  reg={result['reg']}  count={count}",
+    ]
+    if regs:
+        width = max(len(str(result["reg"] + len(regs) - 1)), 5)
+        for i, val in enumerate(regs):
+            lines.append(f"  reg[{str(result['reg'] + i).rjust(width)}] = {val:>5} (0x{val:04X})")
+    else:
+        lines.append("(empty or unparseable response)")
+    return "\n".join(lines)
+
+
+def _render_send_modbus_write(result):
+    return (
+        f"ok  FC{result['fc']} write  slave_id={result['slave_id']}  "
+        f"reg={result['reg']} = {result['value']}"
+    )
+
+
+def _render_wb_set_slave_id(result):
+    via = result.get("via", "?")
+    parts = [
+        "ok  wb-set-slave-id",
+        f"port={result['port']}",
+        f"{result['current_id']} → {result['new_id']}",
+        f"via={via}",
+    ]
+    if result.get("sn"):
+        parts.append(f"sn={result['sn']}")
+    return "  ".join(parts)
+
+
+def _render_wb_set_baud(result):
+    return (
+        f"ok  wb-set-baud  port={result['port']}  "
+        f"slave_id={result['slave_id']}  {result.get('old_baud', '?')} → {result['new_baud']}"
+    )
 
 
 def _render_device_params(result):

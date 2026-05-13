@@ -5,16 +5,19 @@ Heavy flows live in sibling modules:
   * ``_register.py`` — argparse parsers (``register_all``)
   * ``_scan.py``     — bus-scan flow
   * ``_add.py``      — add-devices flow (incl. bus-side fixups)
+  * ``_wb_fw.py``    — firmware update (folded in from ``modbus-fw`` in 1.8.0)
 
 This file keeps the dispatcher and the actions short enough to fit in one
-glance: ``send``, ``device-info``, ``device-params``, ``device-set``,
-``devices``, ``ports``, ``templates``, ``template``.
+glance: ``send``, ``send-modbus``, ``config``, ``fw-params``, ``ports``,
+``templates``, ``template``, ``wb-set-slave-id``, ``wb-set-baud``.
 """
 
 from __future__ import annotations
 
 import json
+import struct
 
+from wb_cli.commands.serial import _wb_fw
 from wb_cli.commands.serial._add import (
     add_devices as _add_devices_impl,  # re-exported for back-compat in tests
 )
@@ -25,7 +28,7 @@ from wb_cli.commands.serial._add import (
 from wb_cli.commands.serial._register import register_all  # re-export
 from wb_cli.commands.serial._scan import scan as _scan_impl
 from wb_cli.errors import ExitCode, WbCliError
-from wb_cli.lib import serial_conf, serial_port, templates
+from wb_cli.lib import serial_bus, serial_conf, serial_port, templates
 from wb_cli.lib.modbus_crc import modbus_crc16
 
 __all__ = [
@@ -39,10 +42,12 @@ __all__ = [
 ]
 
 
-def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
+def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements,too-many-branches
     subcmd = ctx.args.subcmd
     if subcmd == "send":
         return _send(ctx)
+    if subcmd == "send-modbus":
+        return _send_modbus(ctx)
     if subcmd == "wb-scan":
         return _scan_impl(ctx)
     if subcmd == "templates":
@@ -57,6 +62,12 @@ def dispatch(ctx) -> dict:  # pylint: disable=too-many-return-statements
         return _ports(ctx)
     if subcmd == "add-devices":
         return _add_devices_impl(ctx)
+    if subcmd == "wb-set-slave-id":
+        return _wb_set_slave_id(ctx)
+    if subcmd == "wb-set-baud":
+        return _wb_set_baud(ctx)
+    if subcmd == "wb-fw":
+        return _wb_fw.dispatch(ctx)
     return {}
 
 
@@ -321,3 +332,137 @@ def _ports(ctx) -> dict:
     result = ctx.rpc.call("wb-mqtt-serial/ports/Load", {})
     ports = result if isinstance(result, list) else result.get("ports", [])
     return {"ports": ports, "count": len(ports)}
+
+
+# --------------------------------------------------------------------------- #
+# send-modbus / wb-set-slave-id / wb-set-baud
+# --------------------------------------------------------------------------- #
+
+
+def _send_modbus(ctx) -> dict:
+    """Send a Modbus PDU built from structured args; parse the response."""
+    args = ctx.args
+    port = serial_port.port_params_from_args(args)
+    if args.fc in (3, 4):
+        pdu = struct.pack(">BBHH", args.slave, args.fc, args.reg, args.count)
+        frame = pdu + modbus_crc16(pdu)
+        expected = 5 + 2 * args.count  # slave + fc + bytecount + 2*N + crc(2)
+    elif args.fc == 6:
+        if args.value is None:
+            raise WbCliError(
+                code="SERIAL_FC6_NEEDS_VALUE",
+                message="FC6 (write single register) requires --value",
+                hint="Add `--value N`.",
+                exit_code=ExitCode.USAGE,
+            )
+        from wb_cli.lib import (  # local import: avoid cycle  pylint: disable=import-outside-toplevel
+            modbus_frame,
+        )
+
+        frame = modbus_frame.fc6_write(args.slave, args.reg, args.value)
+        expected = 8
+    else:  # pragma: no cover — choices=[3,4,6] in argparse keeps us out of here
+        raise WbCliError(
+            code="SERIAL_UNSUPPORTED_FC",
+            message=f"function code {args.fc} not supported by send-modbus",
+            hint="Use `serial send` with a hand-built PDU for other FCs.",
+            exit_code=ExitCode.USAGE,
+        )
+    result = serial_port.raw_send(
+        ctx.rpc,
+        port,
+        msg=frame,
+        response_size=expected,
+        response_timeout_ms=args.response_timeout,
+        frame_timeout_ms=args.frame_timeout,
+        total_timeout_ms=args.total_timeout,
+    )
+    resp_hex = (result.get("response") or "").lower()
+    out = {
+        "port": args.port,
+        "slave_id": args.slave,
+        "fc": args.fc,
+        "reg": args.reg,
+        "request": frame.hex(),
+        "response": resp_hex,
+    }
+    if args.fc in (3, 4):
+        out["count"] = args.count
+        out["registers"] = _parse_modbus_register_response(resp_hex, args.count)
+    else:
+        out["value"] = args.value
+    return out
+
+
+def _parse_modbus_register_response(resp_hex: str, count: int) -> list[int]:
+    """Decode the data portion of a Modbus FC3/FC4 response into a list of ints.
+
+    Returns ``[]`` on any malformed / short payload so the caller still gets
+    the raw hex and can decide how to handle the error.
+    """
+    if not resp_hex:
+        return []
+    try:
+        data = bytes.fromhex(resp_hex)
+    except ValueError:
+        return []
+    if len(data) < 3 + 2 * count + 2:
+        return []
+    body = data[3 : 3 + 2 * count]
+    return list(struct.unpack(f">{count}H", body))
+
+
+def _wb_set_slave_id(ctx) -> dict:
+    """Change a WB device's slave_id via FC6 reg 128 (standard or Fast Modbus by SN)."""
+    args = ctx.args
+    port = serial_port.port_params_from_args(args)
+    if args.sn is not None:
+        sn = _parse_hex_int(args.sn, "--sn")
+        serial_bus.change_slave_id_by_sn(ctx.rpc, port, sn, args.new_id)
+        via = "fast-modbus-by-sn"
+    else:
+        serial_bus.change_slave_id_standard(ctx.rpc, port, args.current_id, args.new_id)
+        via = "standard-fc6-reg128"
+    return {
+        "action": "wb-set-slave-id",
+        "port": args.port,
+        "current_id": args.current_id,
+        "new_id": args.new_id,
+        "sn": args.sn,
+        "via": via,
+        "ok": True,
+    }
+
+
+def _wb_set_baud(ctx) -> dict:
+    """Change a WB device's baud rate via FC6 reg 110."""
+    args = ctx.args
+    if args.new_baud % 100 != 0 or args.new_baud <= 0:
+        raise WbCliError(
+            code="SERIAL_INVALID_BAUD",
+            message=f"baud rate {args.new_baud!r} must be a positive multiple of 100",
+            hint="Typical values: 9600, 19200, 38400, 57600, 115200.",
+            exit_code=ExitCode.USAGE,
+        )
+    port = serial_port.port_params_from_args(args)
+    serial_bus.change_baud(ctx.rpc, port, args.slave_id, args.new_baud)
+    return {
+        "action": "wb-set-baud",
+        "port": args.port,
+        "slave_id": args.slave_id,
+        "old_baud": args.baud,
+        "new_baud": args.new_baud,
+        "ok": True,
+    }
+
+
+def _parse_hex_int(raw: str, label: str) -> int:
+    try:
+        return int(raw, 0)
+    except (TypeError, ValueError) as exc:
+        raise WbCliError(
+            code="SERIAL_INVALID_HEX",
+            message=f"invalid {label} value {raw!r}: {exc}",
+            hint="Pass a decimal or 0x-prefixed hex int (e.g. 0x00020B86 or 134022).",
+            exit_code=ExitCode.USAGE,
+        ) from exc

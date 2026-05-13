@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 
 from wb_cli.errors import ExitCode, WbCliError
-from wb_cli.lib import modbus_frame, serial_port, templates
+from wb_cli.lib import serial_bus, serial_port, templates
 from wb_cli.lib.progress import ProgressBar
 
 _SERIAL_CONF_PATH = "/etc/wb-mqtt-serial.conf"
@@ -336,34 +336,34 @@ def _transform_scan_device(dev: dict, port_config: dict, template: dict | None) 
 # --------------------------------------------------------------------------- #
 
 
-def _try_raw_send(ctx, port: dict, msg: bytes, response_size: int) -> bool:
-    """Wrap ``serial_port.raw_send``: treat any RPC failure as "not reachable"."""
+def _change_device_baud(ctx, port_path: str, slave_id: int, cfg: dict, to_baud: int) -> bool:
+    """Best-effort baud change; treat RPC failure as "device unreachable"."""
+    port = serial_port.port_params_from_cfg(port_path, cfg)
     try:
-        serial_port.raw_send(ctx.rpc, port, msg=msg, response_size=response_size)
+        serial_bus.change_baud(ctx.rpc, port, slave_id, to_baud)
         return True
     except WbCliError:
         return False
 
 
-def _change_device_baud(ctx, port_path: str, slave_id: int, cfg: dict, to_baud: int) -> bool:
-    """FC6 write to reg 110 (baud abbreviation), speaking at the device's *current* speed."""
-    port = serial_port.port_params_from_cfg(port_path, cfg)
-    frame = modbus_frame.fc6_write(slave_id, modbus_frame.REG_BAUD, to_baud // 100)
-    return _try_raw_send(ctx, port, frame, response_size=8)
-
-
 def _change_slave_id_by_sn(ctx, port_path: str, sn: int, new_id: int, cfg: dict) -> bool:
-    """Fast Modbus: change slave_id by SN. Safe under physical address collisions."""
+    """Best-effort Fast-Modbus-by-SN slave_id change."""
     port = serial_port.port_params_from_cfg(port_path, cfg)
-    frame = modbus_frame.fast_modbus_fc6_by_sn(sn, modbus_frame.REG_SLAVE_ID, new_id)
-    return _try_raw_send(ctx, port, frame, response_size=14)
+    try:
+        serial_bus.change_slave_id_by_sn(ctx.rpc, port, sn, new_id)
+        return True
+    except WbCliError:
+        return False
 
 
 def _change_slave_id_standard(ctx, port_path: str, old_id: int, new_id: int, cfg: dict) -> bool:
-    """Standard Modbus FC6 reg 128. Unsafe if two devices share ``old_id``."""
+    """Best-effort standard FC6 reg 128 slave_id change."""
     port = serial_port.port_params_from_cfg(port_path, cfg)
-    frame = modbus_frame.fc6_write(old_id, modbus_frame.REG_SLAVE_ID, new_id)
-    return _try_raw_send(ctx, port, frame, response_size=8)
+    try:
+        serial_bus.change_slave_id_standard(ctx.rpc, port, old_id, new_id)
+        return True
+    except WbCliError:
+        return False
 
 
 def find_free_slave_id(used_ids: set) -> int | None:

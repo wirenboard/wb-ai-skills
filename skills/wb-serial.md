@@ -338,6 +338,73 @@ ssh root@<HOST> wb-cli --json serial config --port /dev/ttyRS485-1
 ssh root@<HOST> wb-cli --json serial ports
 ```
 
+## Bus-level writes (WB Common Modbus Registers)
+
+WB devices (and compatible) expose two bus-level registers that aren't template parameters — `slave_id` (reg 128) and `baud rate / 100` (reg 110). Use `serial fw-params` for *template* parameters, and the two shortcuts below for these two registers:
+
+```bash
+# Change a device's slave_id (standard FC6 reg 128, current_id is required)
+ssh root@<HOST> wb-cli --json serial wb-set-slave-id 5 19 --port /dev/ttyRS485-1
+
+# Same but collision-safe via WB Fast Modbus by SN (no need to know the current address)
+ssh root@<HOST> wb-cli --json serial wb-set-slave-id 5 19 --port /dev/ttyRS485-1 --sn 0x00020B86
+
+# Change baud rate of a WB device (FC6 reg 110). Speak to the device at its current baud.
+ssh root@<HOST> wb-cli --json serial wb-set-baud 5 115200 --port /dev/ttyRS485-1
+
+# Device runs at 19200 right now → set to 9600:
+ssh root@<HOST> wb-cli --json serial wb-set-baud 5 9600 --port /dev/ttyRS485-1 --baud 19200
+```
+
+**Caveat — WB-only.** Both commands use the *WB Common Modbus Registers* convention (regs 110 and 128). Third-party devices that don't follow this convention (Энергомера, DOOYA blinds, generic Modbus meters) will reject or ignore the write — they use vendor-specific procedures, see the datasheet. The `add-devices` flow uses the same writes internally for its baud-fixup / address-collision recovery.
+
+## Sending Modbus PDUs (CRC + framing handled)
+
+`serial send-modbus` is the higher-level wrapper over `serial send`: pass slave_id, function code, register and count/value — it builds the PDU + CRC and computes the expected response size for you.
+
+```bash
+# Read 1 holding register (FC3, reg 110 = baud abbreviation)
+ssh root@<HOST> wb-cli --json serial send-modbus --port /dev/ttyRS485-1 --slave 5 --fc 3 --reg 110
+
+# Read 10 input registers from a third-party device at 19200
+ssh root@<HOST> wb-cli --json serial send-modbus --port /dev/ttyRS485-1 --slave 12 --fc 4 \
+    --reg 0 --count 10 --baud 19200
+
+# Write a single holding register (FC6) — same effect as wb-set-slave-id without the shortcut
+ssh root@<HOST> wb-cli --json serial send-modbus --port /dev/ttyRS485-1 --slave 5 --fc 6 \
+    --reg 128 --value 19
+```
+
+Supports FC3 (read holding), FC4 (read input), FC6 (write single holding). For Fast Modbus or other FCs use raw `serial send` with a hand-built message.
+
+## Firmware update — `serial wb-fw`
+
+Folded into `serial` in 1.8.0; the standalone `modbus-fw` plugin is gone. Same wb-device-manager fw-update RPC as before:
+
+```bash
+# What firmware is available — single device
+ssh root@<HOST> wb-cli --json serial wb-fw check 4 --port /dev/ttyRS485-1
+
+# Walk every device in the config
+ssh root@<HOST> wb-cli --json serial wb-fw check
+
+# Flash one device, block until done (draws a progress bar)
+ssh root@<HOST> wb-cli --json serial wb-fw update 4 --port /dev/ttyRS485-1 --wait
+
+# Flash everything that can update, in the background (logs to a file)
+ssh root@<HOST> wb-cli --json serial wb-fw update --all --background \
+    --output /mnt/data/ai/wb-cli/fw-$(date +%s).json
+
+# Recover a device stuck in bootloader after a failed update
+ssh root@<HOST> wb-cli --json serial wb-fw restore 4 --port /dev/ttyRS485-1 --wait
+```
+
+In-flight progress / queue lives on the retained MQTT topic — works for both `--wait` (drawn inline) and background jobs:
+
+```bash
+ssh root@<HOST> wb-cli mqtt sub /wb-device-manager/firmware_update/state
+```
+
 ## Loading / testing without restart
 
 ```bash

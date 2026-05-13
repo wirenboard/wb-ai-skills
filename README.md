@@ -33,9 +33,8 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 | `confed` | Read and write service config files through wb-mqtt-confed (handles validation + service reload) |
 | `rules` | Manage wb-rules automation scripts |
 | `history` | Time-series data from wb-mqtt-db (raw rows or a Mermaid xychart) |
-| `serial` | RS-485 / Modbus operations through wb-mqtt-serial and wb-device-manager |
+| `serial` | RS-485 / Modbus operations through wb-mqtt-serial and wb-device-manager (incl. `wb-fw` firmware update — folded in as a subcommand in 1.8.0) |
 | `serial-debug` | RS-485 driver debug capture (toggles wb-mqtt-serial's `Debug` control with auto-restore) |
-| `modbus-fw` | Firmware update of Modbus devices |
 | `snapshot` | Capture and diff small JSON snapshots of controller state |
 | `job` | Long-running commands as transient systemd units |
 | `plugins` | Self-introspection: which commands this wb-cli build knows about |
