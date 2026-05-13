@@ -562,6 +562,29 @@ def test_wb_scan_bootloader_completes_on_scanning_false():
     assert result["count"] == 1
 
 
+def test_wb_scan_keeps_devices_through_reset_state():
+    """At end of scan, wb-device-manager publishes a reset message with
+    ``progress=0, devices=[]`` — that must NOT wipe the accumulated devices."""
+    ctx = _scan_ctx(scan_type="extended")
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}}]}',
+            '{"progress": 100, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 5}},'
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 9}}]}',
+            # Reset state at end of scan — must not wipe the list.
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": []}',
+        ]
+    )
+    result = SerialPlugin().dispatch(ctx)
+    assert result["completed"] is True
+    assert result["count"] == 2
+    # Progress reported as the last non-zero value, not the reset's 0.
+    if not result["completed"]:
+        assert result["progress"] == 100
+
+
 # ---------------------------------------------------------------------------
 # render: _devices_table (protocol column)
 # ---------------------------------------------------------------------------

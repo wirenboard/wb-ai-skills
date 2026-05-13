@@ -108,10 +108,19 @@ def _render_devices(result):
 
 
 def _scan_dev_row(dev):
+    """Build one row for the wb-scan table.
+
+    ``device_type`` mirrors the column in ``serial devices`` (config-side
+    name) when wb-device-manager matched the scan entry to an existing
+    config row — same column lets a user / model cross-reference the two
+    tables. For unmatched entries the column shows ``—``; the bus-side
+    ``signature`` is always present in its own column.
+    """
     cfg = dev.get("cfg", {})
     fw = dev.get("fw", {})
     return {
         "slave_id": str(cfg.get("slave_id", "?")),
+        "device_type": dev.get("configured_device_type") or "—",
         "signature": dev.get("device_signature", "?"),
         "sn": str(dev.get("sn", "?")),
         "port": dev.get("port", {}).get("path", "?"),
@@ -174,7 +183,7 @@ def _add_devices_summary(result):
 def _scan_table(  # pylint: disable=too-many-arguments
     rows, *, scan_type=None, completed=True, progress=None, hint=None, add_hint=None
 ):
-    columns = ["slave_id", "signature", "sn", "port", "baud", "uart", "fw"]
+    columns = ["slave_id", "device_type", "signature", "sn", "port", "baud", "uart", "fw"]
     widths = {col: max(len(col), *(len(r[col]) for r in rows)) for col in columns}
     header = "  ".join(col.ljust(widths[col]) for col in columns)
     sep = "  ".join("-" * widths[col] for col in columns)
