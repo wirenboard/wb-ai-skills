@@ -28,7 +28,7 @@ _STATE_TOPIC = "/wb-device-manager/firmware_update/state"
 
 class ModbusFwPlugin(BasePlugin):
     name = "modbus-fw"
-    help = "firmware update of Modbus devices (check, update, restore, watch)"
+    help = "firmware update of Modbus devices: check / update / restore"
     # `watch` and `update --wait` draw their own progress; others are quick.
     auto_spinner = False
 

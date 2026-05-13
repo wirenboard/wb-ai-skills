@@ -12,7 +12,7 @@ BUILTIN_PLUGINS: dict = {
     "history": ("wb_cli.commands.history", "time-series history of a control's values"),
     "info": ("wb_cli.commands.info", "what this controller is: serial, firmware, board, uptime"),
     "job": ("wb_cli.commands.job_cmd", "run long-running commands in the background, watch them, fetch logs"),
-    "modbus-fw": ("wb_cli.commands.modbus_fw", "firmware update of Modbus devices (check, update, restore, watch)"),
+    "modbus-fw": ("wb_cli.commands.modbus_fw", "firmware update of Modbus devices: check / update / restore"),
     "mqtt": ("wb_cli.commands.mqtt_cmd", "raw MQTT: read retained, write, list topics"),
     "mqtt-debug": ("wb_cli.commands.mqtt_debug", "verbose mosquitto logging: enable / disable / status / capture"),
     "plugins": ("wb_cli.commands.plugins", "list every plugin this wb-cli build knows about"),

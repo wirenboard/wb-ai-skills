@@ -1,3 +1,27 @@
+wb-cli (1.6.1) stable; urgency=medium
+
+  Follow-up tidy after the 1.6.0 smoke.
+
+  * modbus-fw plugin help string still listed ``watch`` in the
+    parenthetical (``check, update, restore, watch``) — that
+    subcommand was removed in 1.6.0 but the class-level ``help``
+    attribute wasn't updated. Both the attribute and the generated
+    ``wb_cli/_registry.py`` are now in sync (``check / update /
+    restore``), so ``wb-cli plugins`` and the top-level ``--help``
+    no longer advertise a non-existent action.
+  * Added three unit tests for the new ``modbus-fw update --background
+    --output`` path:
+      - ``test_modbus_fw_update_background_requires_output`` — missing
+        ``--output`` raises ``MODBUS_FW_OUTPUT_REQUIRED``;
+      - ``test_modbus_fw_update_background_schedules_job`` — generated
+        ``wb-cli job run`` command line includes ``--wait``,
+        shell-quoted ``--port`` / ``--output``, redirect to file;
+      - ``test_modbus_fw_update_background_all_flag_passed_through``
+        — bulk-mode ``--all`` is propagated into the background
+        command. 286 tests total, lint 10.00/10.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 16:14:31 +0400
+
 wb-cli (1.6.0) stable; urgency=medium
 
   Breaking minor — trims low-level operations that duplicated generic
