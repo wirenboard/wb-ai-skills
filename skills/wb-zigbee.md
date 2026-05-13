@@ -26,7 +26,7 @@ WB converters turn Z2M devices into native WB MQTT (`/devices/...`) so wb-rules 
 | Converter | Topic prefix | Notes |
 |-----------|---------------|-------------|
 | **wb-mqtt-zigbee** (new) | `/devices/zigbee_*/controls/*` | Bidirectional controls, support via `/on` |
-| **wb-zigbee2mqtt** (old, `1.x`) | `/devices/0x<ieee>/controls/*` (topic name = full IEEE address) | Read-only bridge, control via `mosquitto_pub zigbee2mqtt/<friendly>/set` |
+| **wb-zigbee2mqtt** (old, `1.x`) | `/devices/0x<ieee>/controls/*` (topic name = full IEEE address) | Read-only bridge, control via `wb-cli mqtt write zigbee2mqtt/<friendly>/set` |
 
 Which one is installed — determine via `dpkg -l | grep -E 'wb-(mqtt-zigbee\|zigbee2mqtt)'` and check device names on the bus:
 ```bash
@@ -110,12 +110,12 @@ ssh root@<HOST> wb-cli --json dev zigbee_<id>/<channel> <value>
 
 **Via raw MQTT (WB converter):**
 ```bash
-ssh root@<HOST> "mosquitto_pub -t '/devices/zigbee_<id>/controls/<channel>/on' -m '<value>'"
+ssh root@<HOST> "wb-cli --json mqtt write '/devices/zigbee_<id>/controls/<channel>/on' '<value>'"
 ```
 
 **Via Z2M directly (always works, even without WB converter):**
 ```bash
-ssh root@<HOST> "mosquitto_pub -t 'zigbee2mqtt/<friendly_name>/set' -m '{\"state\":\"ON\"}'"
+ssh root@<HOST> "wb-cli --json mqtt write 'zigbee2mqtt/<friendly_name>/set' '{\"state\":\"ON\"}'"
 ```
 
 ## Pairing
@@ -124,12 +124,12 @@ ssh root@<HOST> "mosquitto_pub -t 'zigbee2mqtt/<friendly_name>/set' -m '{\"state
 
 Enable pairing mode for 4 minutes:
 ```bash
-ssh root@<HOST> "mosquitto_pub -t 'zigbee2mqtt/bridge/request/permit_join' -m '{\"value\": true, \"time\": 240}'"
+ssh root@<HOST> "wb-cli --json mqtt write 'zigbee2mqtt/bridge/request/permit_join' '{\"value\": true, \"time\": 240}'"
 ```
 
 Hold the pair button on the device. After pairing **must disable**:
 ```bash
-ssh root@<HOST> "mosquitto_pub -t 'zigbee2mqtt/bridge/request/permit_join' -m '{\"value\": false}'"
+ssh root@<HOST> "wb-cli --json mqtt write 'zigbee2mqtt/bridge/request/permit_join' '{\"value\": false}'"
 ```
 
 Verify it's disabled:

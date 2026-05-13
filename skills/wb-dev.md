@@ -290,7 +290,7 @@ Full spec: <https://github.com/wirenboard/mqtt-rpc>
 ### Discover RPC services on a controller
 
 ```bash
-ssh root@<HOST> "mosquitto_sub -t '/rpc/v1/+/+/+' -v"
+ssh root@<HOST> wb-cli --json mqtt sub '/rpc/v1/+/+/+'
 ```
 
 ### Python reference implementation
