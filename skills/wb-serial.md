@@ -302,28 +302,32 @@ After adding, `wb-mqtt-serial` reloads automatically. Verify: `wb-cli --json dev
 
 ## Reading and writing device parameters
 
-`device-params` reads the `parameters` section (firmware settings) from the device hardware via the driver's `device/LoadConfig` RPC. The device must already be in the config.
+`serial fw-params` reads / writes the `parameters` section (firmware settings) of one device. The device must already be in `/etc/wb-mqtt-serial.conf` — the driver uses the template's `parameters` to know which registers to touch, so the entry needs the correct `device_type`. Empty positional list → read; non-empty `KEY=VALUE` pairs → write.
 
 ```bash
 # Read parameters by slave_id or by device id
 ssh root@<HOST> wb-cli --json serial fw-params 52
 ssh root@<HOST> wb-cli --json serial fw-params wb-mr6c-52
 
-# Bypass driver cache (force re-read from hardware)
+# Bypass driver cache (re-read live from hardware)
 ssh root@<HOST> wb-cli --json serial fw-params 52 --force
 ```
 
 Returns `{"slave_id": 52, "device_type": "WB-MR6C", "model": "...", "fw": {"version": "..."}, "parameters": {"in0_mode": 0, ...}}`.
 
-`device-set` writes one or more parameters to the device via `device/Set` RPC:
-
 ```bash
+# Write through the config (default — persistent across driver restarts):
+# confed Load → patch device dict → confed Save → driver reload → applied
 ssh root@<HOST> wb-cli --json serial fw-params 52 in0_mode=1 in1_mode=3
+
+# Write straight to the device, skipping the config (--force — one-shot):
+# wb-mqtt-serial/device/Set RPC; reverts on next driver restart
+ssh root@<HOST> wb-cli --json serial fw-params 52 in0_mode=1 --force
 ```
 
-`KEY=VALUE` — values are coerced: integers first, then floats, then strings. Returns the parameters that were written.
+`KEY=VALUE` — values are coerced: integers first, then floats, then strings.
 
-**Note:** Both commands look up the device by `slave_id` or `id` field from `/etc/wb-mqtt-serial.conf`. The driver uses the template's `parameters` section to know which registers to read/write — so the device must be in config with the correct `device_type`.
+**Note:** `fw-params` is for *template parameters* only (`device.parameters` in the JSON template). For bus-level registers — `slave_id` (reg 128) and `baud rate` (reg 110) — use the dedicated `serial wb-set-slave-id` / `serial wb-set-baud` below.
 
 ## Listing devices and ports
 
@@ -519,7 +523,7 @@ ssh root@<HOST> 'journalctl -u wb-mqtt-serial -n 50 --no-pager | grep -iE "(temp
 
 If the firmware version of a specific WB device is needed — **don't ask the user**:
 
-1. Read device parameters directly from hardware — many WB devices expose `fw_version` in the `device-params` output without touching the config:
+1. Read device parameters directly from hardware — many WB devices expose `fw_version` in the `fw-params` output without touching the config:
    ```bash
    ssh root@<HOST> wb-cli --json serial fw-params <slave_id_or_id>
    ```

@@ -32,7 +32,7 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 | `mqtt-debug` | Verbose mosquitto PUBLISH tracing — structured `{client_id, topic, qos, retain, …}` records, optional inline / background capture |
 | `confed` | Read and write service config files through wb-mqtt-confed (handles validation + service reload) |
 | `rules` | Manage wb-rules automation scripts |
-| `history` | Time-series data from wb-mqtt-db (raw rows or a Mermaid xychart) |
+| `history` | Time-series data from wb-mqtt-db (raw rows) |
 | `serial` | RS-485 / Modbus operations through wb-mqtt-serial and wb-device-manager (incl. `wb-fw` firmware update — folded in as a subcommand in 1.8.0) |
 | `serial-debug` | RS-485 driver debug capture (toggles wb-mqtt-serial's `Debug` control with auto-restore) |
 | `snapshot` | Capture and diff small JSON snapshots of controller state |
