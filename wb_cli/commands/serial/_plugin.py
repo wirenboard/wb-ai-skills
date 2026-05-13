@@ -91,7 +91,7 @@ def _render_devices(result):
             completed=result.get("completed", True),
             progress=result.get("progress"),
             hint=result.get("hint"),
-            add_hint=result.get("add_hint"),
+            add_hints=result.get("add_hints"),
         )
     if not result["devices"]:
         scan_type = result.get("scan_type", "")
@@ -181,7 +181,7 @@ def _add_devices_summary(result):
 
 
 def _scan_table(  # pylint: disable=too-many-arguments
-    rows, *, scan_type=None, completed=True, progress=None, hint=None, add_hint=None
+    rows, *, scan_type=None, completed=True, progress=None, hint=None, add_hints=None
 ):
     columns = ["slave_id", "device_type", "signature", "sn", "port", "baud", "uart", "fw"]
     widths = {col: max(len(col), *(len(r[col]) for r in rows)) for col in columns}
@@ -196,13 +196,9 @@ def _scan_table(  # pylint: disable=too-many-arguments
     out = [title, header, sep, *body]
     if not completed and hint:
         out.append(f"hint: {hint}")
-    if completed and add_hint:
-        cmds = add_hint.split("  ")
-        if len(cmds) == 1:
-            out.append(f"\nTo add to config: {add_hint}")
-        else:
-            out.append("\nTo add to config:")
-            out.extend(f"  {cmd}" for cmd in cmds)
+    if completed and add_hints:
+        out.append("\nTo add to config:")
+        out.extend(f"  {cmd}" for cmd in add_hints)
     return "\n".join(out)
 
 

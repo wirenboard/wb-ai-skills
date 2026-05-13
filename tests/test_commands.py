@@ -490,7 +490,8 @@ def test_modbus_scan():
     assert result["completed"] is True
 
 
-def test_modbus_scan_has_add_hint_when_devices_found():
+def test_modbus_scan_has_add_hints_when_devices_found():
+    """Single-port scan: hints list shows the all-ports form first, then the explicit --port form."""
     ctx = _scan_ctx(port="/dev/ttyRS485-1")
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
@@ -501,10 +502,34 @@ def test_modbus_scan_has_add_hint_when_devices_found():
         ]
     )
     result = ModbusPlugin().dispatch(ctx)
-    assert result.get("add_hint") == "wb-cli serial add-devices --port /dev/ttyRS485-1"
+    assert result.get("add_hints") == [
+        "wb-cli serial add-devices",
+        "wb-cli serial add-devices --port /dev/ttyRS485-1",
+    ]
 
 
-def test_modbus_scan_no_add_hint_when_no_devices():
+def test_modbus_scan_add_hints_multi_port():
+    """Multi-port scan: hints list shows the all-ports form, then one entry per port."""
+    ctx = _scan_ctx()
+    ctx.rpc.call_watch.side_effect = _make_call_watch(
+        [
+            '{"progress": 50, "scanning": true, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}},'
+            '{"port": {"path": "/dev/ttyRS485-2"}, "cfg": {"slave_id": 7}}]}',
+            '{"progress": 0, "scanning": false, "is_ext_scan": true, "devices": ['
+            '{"port": {"path": "/dev/ttyRS485-1"}, "cfg": {"slave_id": 2}},'
+            '{"port": {"path": "/dev/ttyRS485-2"}, "cfg": {"slave_id": 7}}]}',
+        ]
+    )
+    result = ModbusPlugin().dispatch(ctx)
+    assert result.get("add_hints") == [
+        "wb-cli serial add-devices",
+        "wb-cli serial add-devices --port /dev/ttyRS485-1",
+        "wb-cli serial add-devices --port /dev/ttyRS485-2",
+    ]
+
+
+def test_modbus_scan_no_add_hints_when_no_devices():
     ctx = _scan_ctx()
     ctx.rpc.call_watch.side_effect = _make_call_watch(
         [
@@ -513,7 +538,7 @@ def test_modbus_scan_no_add_hint_when_no_devices():
         ]
     )
     result = ModbusPlugin().dispatch(ctx)
-    assert "add_hint" not in result
+    assert "add_hints" not in result
 
 
 def test_modbus_scan_completes_on_scanning_false():
