@@ -1,3 +1,42 @@
+wb-cli (1.5.3) stable; urgency=medium
+
+  Documentation rot — README and wiren-board skill still referenced
+  state from before the 1.0/1.2/1.5 changes.
+
+  * README: command table mentioned the removed ``modbus`` group;
+    replaced with the actual ``serial wb-scan|templates|template|ports|
+    device-info|device-params|device-set|devices|add-devices|send``
+    surface that has been in place since 1.2.0. Added the new
+    ``mqtt-debug enable|disable|status|capture`` row.
+  * README: "Output modes" section claimed wb-cli picks JSON vs human
+    via ``stdout.isatty()`` — this stopped being true in 1.0 (default
+    is now always ``human``, JSON only via ``--json`` or
+    ``WB_CLI_OUTPUT=json``). Section rewritten to match the actual
+    behaviour and explain why.
+  * README: source-tree snippet referenced ``commands/modbus/`` as the
+    only subpackage and omitted the new ``lib/`` modules
+    (``mqtt_log``, ``serial_conf``, ``serial_port``, ``modbus_crc``,
+    ``modbus_frame``, ``templates``) and ``commands/serial/`` split
+    (``_register / _scan / _add / _actions / _plugin``).
+  * skills/wiren-board: "Common entry points" list missed
+    ``mqtt-debug`` and ``cloud``. Added both.
+
+  * serial wb-scan: removed the ``/dev/ttyMOD*`` filter that excluded
+    those paths from multi-port scans. The filter assumed every
+    ``ttyMOD*`` is a cellular modem, but installs that route RS-485
+    through USB adapters or WBE2R modules wire those devices into
+    ``wb-mqtt-serial.conf`` and the driver opens them just like
+    ``/dev/ttyRS485-N``. ``wb-mqtt-serial/ports/Load`` is now the
+    only source of truth — if the driver serves a port, the scan
+    follows; if it doesn't, we don't second-guess. ``serial ports``
+    and ``serial wb-scan`` iterate the same list.
+
+  * skills/wb-serial: the "active ports" paragraph now notes that the
+    driver's view is authoritative and includes USB-RS485 / MOD-style
+    paths when they're wired into the config.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 14:34:04 +0400
+
 wb-cli (1.5.2) stable; urgency=medium
 
   * mqtt-debug: ``source`` field is renamed to ``client_id`` everywhere —

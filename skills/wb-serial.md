@@ -425,7 +425,7 @@ ssh root@<HOST> 'journalctl -u wb-mqtt-serial -n 50 --no-pager | grep -iE "(temp
 
    wb-cli handles the `bus-scan/Start` RPC, scanning-state polling, retry-after-stop, and per-port iteration. The previous raw-MQTT-RPC flow (manual `mosquitto_pub` of `bus-scan/Start` + polling `/wb-device-manager/state` in a loop) is still the underlying mechanism — use it directly only if you need custom params wb-cli doesn't expose.
 
-   `serial ports` returns only **active** ports. If a port is missing, `wb-mqtt-serial` rejected its stanza (schema validation) — repair with `wb-cli confed load /etc/wb-mqtt-serial.conf` + `confed save`. For a full filesystem-level list — `ls /dev/ttyRS485-* /dev/ttyMOD*` (cellular modems are filtered out of scans).
+   `serial ports` returns only **active** ports — the same list `wb-cli serial wb-scan` iterates over. If a port is missing, `wb-mqtt-serial` rejected its stanza (schema validation) — repair with `wb-cli confed load /etc/wb-mqtt-serial.conf` + `confed save`. For a full filesystem-level list — `ls /dev/ttyRS485-* /dev/ttyMOD* /dev/ttyUSB*` (any path that the driver opens is scanned — USB-RS485 adapters, WBE2R add-ons routed through MOD-style devices, etc. — the driver's view is authoritative).
 
 6. **WB device health** — uptime + power:
    ```bash
