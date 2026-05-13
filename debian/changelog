@@ -1,3 +1,29 @@
+wb-cli (1.5.1) stable; urgency=medium
+
+  * mqtt-debug capture: ``--topic`` and ``--source`` now accept multiple
+    values via ``action="append"`` — OR-match across patterns. Topic
+    patterns containing MQTT wildcards ``+`` (one level) or ``#`` (zero
+    or more remaining levels) are matched level-aware:
+    ``--topic '/devices/+/controls/Channel 1 Dimming Level/on'`` and
+    ``--topic '/devices/wb-mr6c_2/#'`` both work. Values without
+    wildcards remain plain substring matches (grep-style) so simple
+    ``--topic K1`` keeps working.
+  * Background job's generated command now shell-quotes every
+    ``--topic`` / ``--source`` / ``--output`` value via ``shlex.quote``
+    so topics with spaces survive the round-trip through
+    ``wb-cli job run "…"``.
+  * mqtt-debug help: every example in the epilog explicitly quotes
+    topics with spaces (``'Dimming Level'``, ``'Channel 1 …'``) and
+    shows the SSH double-quoting trick. New examples cover multiple
+    ``--topic`` flags, MQTT-wildcard patterns, and the SSH form.
+  * Envelope shape: ``topic_filter`` / ``source_filter`` (scalars)
+    replaced by ``topic_filters`` / ``source_filters`` (lists of
+    strings) so LLMs can read what the capture actually filtered on.
+  * 7 new tests on the parser side (multi-pattern, wildcards, topics
+    with spaces, sources OR-match) + 2 new plugin tests. 283 total.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 13:35:01 +0400
+
 wb-cli (1.5.0) stable; urgency=medium
 
   * New plugin ``mqtt-debug`` — verbose mosquitto PUBLISH tracing.

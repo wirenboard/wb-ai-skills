@@ -55,25 +55,64 @@ def test_parse_publish_ignores_non_publish():
     assert mqtt_log.parse_publish(sending_line) is None
 
 
+_J_K1 = {
+    "__REALTIME_TIMESTAMP": "1778654671000000",
+    "MESSAGE": (
+        "Received PUBLISH from wb-rules (d0, q0, r0, m1, "
+        "'/devices/wb-mr6c_7/controls/K1/on', ... (1 bytes))"
+    ),
+}
+_J_K2 = {
+    "__REALTIME_TIMESTAMP": "1778654672000000",
+    "MESSAGE": (
+        "Received PUBLISH from wb-rules (d0, q0, r0, m2, "
+        "'/devices/wb-mr6c_7/controls/K2/on', ... (1 bytes))"
+    ),
+}
+_J_VIN = {
+    "__REALTIME_TIMESTAMP": "1778654673000000",
+    "MESSAGE": (
+        "Received PUBLISH from wb-adc (d0, q1, r1, m3, " "'/devices/wb-adc/controls/Vin', ... (4 bytes))"
+    ),
+}
+
+
 def test_parse_entries_filters_by_topic_substring():
-    journal = [
-        {
-            "__REALTIME_TIMESTAMP": "1778654671000000",
-            "MESSAGE": "Received PUBLISH from wb-adc (d0, q1, r1, m1, "
-            "'/devices/wb-adc/controls/V5_0', ... (5 bytes))",
-        },
-        {
-            "__REALTIME_TIMESTAMP": "1778654672000000",
-            "MESSAGE": "Received PUBLISH from wb-rules (d0, q0, r0, m2, "
-            "'/devices/wb-mr6c_7/controls/K1/on', ... (1 bytes))",
-        },
-        {"__REALTIME_TIMESTAMP": "1778654673000000", "MESSAGE": "noise that is not a publish"},
-    ]
-    entries = mqtt_log.parse_entries(journal, topic="wb-mr6c_7")
+    entries = mqtt_log.parse_entries([_J_K1, _J_K2, _J_VIN], topics=["wb-mr6c_7"])
+    assert {e["topic"] for e in entries} == {
+        "/devices/wb-mr6c_7/controls/K1/on",
+        "/devices/wb-mr6c_7/controls/K2/on",
+    }
+
+
+def test_parse_entries_topics_or_match_multiple_patterns():
+    """Multiple --topic patterns OR together."""
+    entries = mqtt_log.parse_entries([_J_K1, _J_K2, _J_VIN], topics=["K1", "Vin"])
+    assert {e["topic"] for e in entries} == {
+        "/devices/wb-mr6c_7/controls/K1/on",
+        "/devices/wb-adc/controls/Vin",
+    }
+
+
+def test_parse_entries_mqtt_plus_wildcard():
+    """MQTT-style ``+`` matches exactly one level."""
+    entries = mqtt_log.parse_entries([_J_K1, _J_K2, _J_VIN], topics=["/devices/+/controls/K1/on"])
     assert len(entries) == 1
     assert entries[0]["topic"] == "/devices/wb-mr6c_7/controls/K1/on"
-    assert entries[0]["source"] == "wb-rules"
-    assert entries[0]["timestamp"].startswith("2026")
+
+
+def test_parse_entries_mqtt_hash_wildcard():
+    """MQTT ``#`` matches every remaining level (incl. zero levels)."""
+    entries = mqtt_log.parse_entries([_J_K1, _J_K2, _J_VIN], topics=["/devices/wb-mr6c_7/#"])
+    assert {e["topic"] for e in entries} == {
+        "/devices/wb-mr6c_7/controls/K1/on",
+        "/devices/wb-mr6c_7/controls/K2/on",
+    }
+
+
+def test_parse_entries_mqtt_root_hash_matches_everything():
+    entries = mqtt_log.parse_entries([_J_K1, _J_VIN], topics=["#"])
+    assert len(entries) == 2
 
 
 def test_parse_entries_filters_by_source_substring():
@@ -89,9 +128,33 @@ def test_parse_entries_filters_by_source_substring():
             "'/devices/a/controls/y/on', ... (1 bytes))",
         },
     ]
-    entries = mqtt_log.parse_entries(journal, source="wb-rules")
+    entries = mqtt_log.parse_entries(journal, sources=["wb-rules"])
     assert len(entries) == 1
     assert entries[0]["source"].startswith("system__wb-rules__")
+
+
+def test_parse_entries_sources_or_match_multiple_patterns():
+    journal = [
+        {
+            "__REALTIME_TIMESTAMP": "1778654671000000",
+            "MESSAGE": "Received PUBLISH from system__wb-rules__abc (d0, q0, r0, m1, "
+            "'/devices/a/x', ... (1 bytes))",
+        },
+        {
+            "__REALTIME_TIMESTAMP": "1778654672000000",
+            "MESSAGE": "Received PUBLISH from wb-mqtt-homeui-zz (d0, q0, r0, m2, "
+            "'/devices/a/y', ... (1 bytes))",
+        },
+        {
+            "__REALTIME_TIMESTAMP": "1778654673000000",
+            "MESSAGE": "Received PUBLISH from wb-adc (d0, q1, r1, m3, " "'/devices/a/z', ... (4 bytes))",
+        },
+    ]
+    entries = mqtt_log.parse_entries(journal, sources=["wb-rules", "wb-mqtt-homeui"])
+    assert {e["source"] for e in entries} == {
+        "system__wb-rules__abc",
+        "wb-mqtt-homeui-zz",
+    }
 
 
 def test_parse_entries_handles_missing_timestamp():

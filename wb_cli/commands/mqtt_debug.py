@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import time
 from pathlib import Path
 
@@ -63,15 +64,31 @@ class MqttDebugPlugin(BasePlugin):  # pylint: disable=duplicate-code
                 "the Unix socket survive it)."
             ),
             epilog=(
-                "Examples:\n"
+                "Examples (always quote topics — WB control names can contain spaces):\n"
                 "  wb-cli mqtt-debug enable                        # turn on, leave on\n"
                 "  wb-cli mqtt-debug disable                       # turn off\n"
                 "  wb-cli mqtt-debug status\n"
-                "  wb-cli mqtt-debug capture --seconds 60          # short inline capture\n"
-                "  wb-cli mqtt-debug capture --seconds 60 \\\n"
-                "      --topic '/devices/wb-mr6c_7' --source wb-rules\n"
-                "  # long captures (hours/days) — run as a job, write JSON to disk:\n"
-                "  wb-cli mqtt-debug capture --seconds 3600 --background \\\n"
+                "\n"
+                "  # Short inline capture — substring match (grep-style):\n"
+                "  wb-cli --json mqtt-debug capture --seconds 60 --topic 'Dimming Level'\n"
+                "\n"
+                "  # Multiple topics or sources (OR-match) — repeat the flag:\n"
+                "  wb-cli --json mqtt-debug capture --seconds 60 \\\n"
+                "      --topic 'wb-mr6c_2/controls/K1' --topic 'wb-mr6c_2/controls/K2' \\\n"
+                "      --source wb-rules --source wb-mqtt-homeui\n"
+                "\n"
+                "  # MQTT-style wildcards work too (+ = one level, # = the rest):\n"
+                "  wb-cli --json mqtt-debug capture --seconds 60 \\\n"
+                "      --topic '/devices/+/controls/Channel 1 Dimming Level/on'\n"
+                "  wb-cli --json mqtt-debug capture --seconds 60 --topic '/devices/wb-mr6c_2/#'\n"
+                "\n"
+                "  # Over SSH, double-quote whole arg so the controller shell sees the\n"
+                "  # spaces and the wildcard isn't expanded locally:\n"
+                '  ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \\\n'
+                "      --topic '/devices/wb-mdm3_5/controls/Channel 1 Dimming Level/on'\"\n"
+                "\n"
+                "  # Long captures (hours/days) — runs as a job, JSON written to disk:\n"
+                "  wb-cli --json mqtt-debug capture --seconds 86400 --background \\\n"
                 "      --output /mnt/data/ai/wb-cli/mqtt-debug-$(date +%s).json\n"
             ),
             formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -120,8 +137,25 @@ class MqttDebugPlugin(BasePlugin):  # pylint: disable=duplicate-code
             default=30,
             help="capture window in seconds (default: 30)",
         )
-        cap.add_argument("--topic", default=None, help="substring filter on the topic name")
-        cap.add_argument("--source", default=None, help="substring filter on the client id")
+        cap.add_argument(
+            "--topic",
+            action="append",
+            default=None,
+            help=(
+                "topic filter — substring match by default; values with MQTT "
+                "wildcards `+` or `#` are matched level-aware. Repeat the flag "
+                "to match any of several patterns. Quote topics with spaces."
+            ),
+        )
+        cap.add_argument(
+            "--source",
+            action="append",
+            default=None,
+            help=(
+                "client-id substring filter (e.g. `wb-rules`, `wb-mqtt-homeui`). "
+                "Repeat to match any of several sources."
+            ),
+        )
         cap.add_argument(
             "--output",
             default=None,
@@ -288,8 +322,8 @@ def _capture(ctx) -> dict:  # pylint: disable=too-many-locals
         )
         parsed = mqtt_log.parse_entries(
             entries,
-            topic=args.topic,
-            source=args.source,
+            topics=args.topic,
+            sources=args.source,
         )
     finally:
         if we_enabled_it and not args.keep_enabled:
@@ -303,8 +337,8 @@ def _capture(ctx) -> dict:  # pylint: disable=too-many-locals
         "seconds": seconds,
         "entries": parsed,
         "count": len(parsed),
-        "topic_filter": args.topic,
-        "source_filter": args.source,
+        "topic_filters": args.topic or [],
+        "source_filters": args.source or [],
         "verbose_was_already_enabled": was_enabled,
     }
     if args.output:
@@ -315,6 +349,11 @@ def _capture(ctx) -> dict:  # pylint: disable=too-many-locals
         )
         result["output"] = str(args.output)
     return result
+
+
+def _shquote(value: str) -> str:
+    """Quote a value safely for the shell command that ``ctx.job.run`` runs."""
+    return shlex.quote(value)
 
 
 def _capture_background(ctx) -> dict:
@@ -330,13 +369,13 @@ def _capture_background(ctx) -> dict:
             exit_code=ExitCode.USAGE,
         )
     parts = ["wb-cli", "--json", "mqtt-debug", "capture", "--seconds", str(args.seconds)]
-    if args.topic:
-        parts += ["--topic", args.topic]
-    if args.source:
-        parts += ["--source", args.source]
+    for pattern in args.topic or []:
+        parts += ["--topic", _shquote(pattern)]
+    for pattern in args.source or []:
+        parts += ["--source", _shquote(pattern)]
     if args.keep_enabled:
         parts.append("--keep-enabled")
-    parts += ["--output", args.output]
+    parts += ["--output", _shquote(args.output)]
     # Pipe stdout to /dev/null — the JSON envelope lives in --output, the job
     # log only needs stderr (countdown / warnings).
     command = " ".join(parts) + " >/dev/null"
@@ -391,10 +430,10 @@ def _render_capture(result: dict) -> str:
 
 def _filter_suffix(result: dict) -> str:
     parts = []
-    if result.get("topic_filter"):
-        parts.append(f"topic~{result['topic_filter']}")
-    if result.get("source_filter"):
-        parts.append(f"source~{result['source_filter']}")
+    for pattern in result.get("topic_filters") or []:
+        parts.append(f"topic~{pattern}")
+    for pattern in result.get("source_filters") or []:
+        parts.append(f"source~{pattern}")
     return f"  [{', '.join(parts)}]" if parts else ""
 
 
