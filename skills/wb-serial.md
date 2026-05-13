@@ -240,12 +240,19 @@ ssh root@<HOST> wb-cli --json serial wb-scan
 # Slow scan (third-party devices without Fast Modbus support)
 ssh root@<HOST> wb-cli --json serial wb-scan --slow --timeout 300
 
-# Add all found devices on a port (reads last scan result, no re-scan)
+# Add all found devices across every port the scan touched (one call)
+ssh root@<HOST> wb-cli --json serial add-devices
+
+# Or limit to a single port
 ssh root@<HOST> wb-cli --json serial add-devices --port /dev/ttyRS485-1
 ```
 
 `add-devices` reads the retained wb-device-manager state — so you can run any scan type
 (extended or slow) and then add without re-scanning. Devices already in config are skipped.
+
+Without `--port`, every port mentioned in the scan results is processed in one call;
+each `added` / `skipped` row carries a `port` field and the envelope has a top-level
+`ports` list. With `--port`, only that port is touched.
 
 **Automatic fixups** applied before adding (scan mode only):
 
@@ -266,14 +273,21 @@ Looks up the template, fills required parameters from defaults, appends to confi
 
 ### `add-devices` result
 
+Multi-port (no `--port`) — the canonical shape; per-row `port` lets a model
+group results without losing context:
+
 ```json
 {
-  "port": "/dev/ttyRS485-1",
+  "port": null,
+  "ports": ["/dev/ttyRS485-1", "/dev/ttyRS485-2"],
   "added": [
-    {"slave_id": 7,  "device_type": "WB-MR6C"},
-    {"slave_id": 1,  "device_type": "WB-MAO4-20mA", "slave_id_changed": "18 → 1", "baud_changed": "115200 → 9600"}
+    {"slave_id": 7,  "device_type": "WB-MR6C",     "port": "/dev/ttyRS485-1"},
+    {"slave_id": 1,  "device_type": "WB-MAO4-20mA", "port": "/dev/ttyRS485-2",
+     "slave_id_changed": "18 → 1", "baud_changed": "115200 → 9600"}
   ],
-  "skipped": [],
+  "skipped": [
+    {"slave_id": 4, "port": "/dev/ttyRS485-1"}
+  ],
   "count": 2,
   "warnings": []
 }
