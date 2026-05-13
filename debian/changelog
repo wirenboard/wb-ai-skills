@@ -1,3 +1,11 @@
+wb-cli (1.8.1) stable; urgency=medium
+
+  * ci: add Jenkinsfile invoking buildDebArchAll from the shared
+    jenkins-pipeline-lib (the package is Architecture: all, so the
+    noarch pipeline applies). Lintian enabled.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 22:30:00 +0300
+
 wb-cli (1.8.0) stable; urgency=medium
 
   Closes out the serial-plugin reorganization started in 1.6.0:
