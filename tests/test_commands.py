@@ -1126,7 +1126,7 @@ def test_modbus_fw_check_bulk_attaches_per_device_error():
     assert by_slave[7]["can_update"] is False
 
 
-def _fw_update_args(slave_id=None, port=None, all_flag=False):
+def _fw_update_args(slave_id=None, port=None, all_flag=False, background=False, output=None):
     return argparse.Namespace(
         quiet=False,
         subcmd="update",
@@ -1139,6 +1139,8 @@ def _fw_update_args(slave_id=None, port=None, all_flag=False):
         software_type="firmware",
         all=all_flag,
         wait=False,
+        background=background,
+        output=output,
     )
 
 
@@ -1191,6 +1193,62 @@ def test_modbus_fw_update_single_passes_software_type():
     method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
     assert method == "wb-device-manager/fw-update/Update"
     assert params["type"] == "bootloader"
+
+
+def test_modbus_fw_update_background_requires_output():
+    """--background without --output is refused with a clear error."""
+    ctx = _ctx(args=_fw_update_args(slave_id=5, port="/dev/ttyRS485-1", background=True, output=None))
+    with pytest.raises(WbCliError) as exc:
+        ModbusFwPlugin().dispatch(ctx)
+    assert exc.value.code == "MODBUS_FW_OUTPUT_REQUIRED"
+
+
+def test_modbus_fw_update_background_schedules_job(tmp_path):
+    """--background schedules `wb-cli modbus-fw update --wait ... > <out>` via ctx.job.run.
+
+    Verifies the generated command line: shell-quotes --port / --output, includes
+    --wait inside the job (so the job blocks until the actual flash finishes),
+    and returns the job unit name in the envelope.
+    """
+    out = tmp_path / "fw.json"
+    ctx = _ctx(
+        args=_fw_update_args(
+            slave_id=5,
+            port="/dev/ttyRS485-1",
+            background=True,
+            output=str(out),
+        )
+    )
+    ctx.job.run.return_value = {"unit": "wb-cli-job-modbus-fw-update-1", "log": "/tmp/foo.log"}
+    result = ModbusFwPlugin().dispatch(ctx)
+    assert result["unit"] == "wb-cli-job-modbus-fw-update-1"
+    assert result["output"] == str(out)
+    assert result["background"] is True
+    cmd = ctx.job.run.call_args.args[1]
+    assert "wb-cli --json modbus-fw update 5" in cmd
+    assert "--port /dev/ttyRS485-1" in cmd
+    assert "--wait" in cmd
+    assert f"> {out}" in cmd
+
+
+def test_modbus_fw_update_background_all_flag_passed_through(tmp_path):
+    """`--all` in background mode is propagated into the generated command."""
+    out = tmp_path / "fw.json"
+    ctx = _ctx(
+        args=_fw_update_args(
+            slave_id=None,
+            port=None,
+            all_flag=True,
+            background=True,
+            output=str(out),
+        )
+    )
+    ctx.job.run.return_value = {"unit": "wb-cli-job-modbus-fw-update-2", "log": "/tmp/bar.log"}
+    ModbusFwPlugin().dispatch(ctx)
+    cmd = ctx.job.run.call_args.args[1]
+    assert "wb-cli --json modbus-fw update" in cmd
+    assert "--all" in cmd
+    assert "--wait" in cmd
 
 
 # --- serial-debug ---
