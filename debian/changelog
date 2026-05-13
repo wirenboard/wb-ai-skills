@@ -1,3 +1,19 @@
+wb-cli (1.2.2) stable; urgency=medium
+
+  * serial ports / serial wb-scan: always go through wb-mqtt-serial RPCs
+    instead of reading /etc/wb-mqtt-serial.conf directly. An empty result
+    is now a signalled error (driver dropped its config — usually schema
+    validation) with a hint pointing at `wb-cli confed load/save` and the
+    wb-mqtt-serial journal. The previous fallback into the raw JSON file
+    silently hid those failures from the user.
+  * serial wb-scan hint when no ports: explicit suggestion to repair the
+    config via confed RPC, plus `--port /dev/ttyRS485-N` as a bypass for
+    scanning an unconfigured port without enumerating.
+  * serial wb-scan hint on per-port-failure timeout: mention --bootloader
+    alongside --slow.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 05:30:00 +0300
+
 wb-cli (1.2.1) stable; urgency=medium
 
   * serial wb-scan: pass `port` to wb-device-manager as a dict with UART

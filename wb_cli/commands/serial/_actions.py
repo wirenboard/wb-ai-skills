@@ -145,8 +145,13 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
 
     sub.add_parser(
         "ports",
-        help="list serial ports configured in wb-mqtt-serial",
-        description="Read /etc/wb-mqtt-serial.conf and dump every port stanza (path + UART params).",
+        help="list active serial ports (wb-mqtt-serial/ports/Load RPC)",
+        description=(
+            "List every port the wb-mqtt-serial driver is currently serving, "
+            "with its UART params. Empty result == driver dropped its config "
+            "(usually schema validation); inspect the journal and repair via "
+            "`wb-cli confed load/save`."
+        ),
     )
 
     p = sub.add_parser(
@@ -467,36 +472,31 @@ def _is_rs485_port(path: str) -> bool:
 def _ports_to_scan(ctx) -> list[dict]:
     """Resolve the list of port-param dicts to scan in this command run.
 
-    - If --port is given: a single explicit entry with UART params from the
-      serial config (if the port exists there) or defaults. The RS-485
-      filter is not applied — the user explicitly picked that port.
-    - Without --port: every RS-485 port from /etc/wb-mqtt-serial.conf.
+    Source of truth: ``wb-mqtt-serial/ports/Load`` — returns the UART params
+    of every port the driver is currently serving. If the driver dropped a
+    port because of schema validation, that port simply won't be scanned;
+    the user is expected to repair the config (``wb-cli confed save``)
+    rather than have wb-cli bypass the driver.
 
-    wb-mqtt-serial/ports/Load is *not* consulted — that RPC only returns
-    ports the driver currently opens, which excludes ports failing schema
-    validation. We want to scan everything the user has configured.
+    - With --port: filter to that one path; if the driver doesn't know it,
+      fall back to default UART params so the user can still scan an
+      unconfigured port (e.g. for first-time discovery).
+    - Without --port: every RS-485 port from the RPC; ``/dev/ttyMOD*``
+      (cellular modem) is filtered out.
     """
-    if ctx.args.port:
-        port_cfg = None
-        try:
-            content = serial_conf.load_config(ctx)
-            for port in content.get("ports") or []:
-                if port.get("path") == ctx.args.port:
-                    port_cfg = port
-                    break
-        except WbCliError:
-            pass
-        return [_port_params(ctx.args.port, port_cfg)]
+    result = ctx.rpc.call("wb-mqtt-serial/ports/Load", {})
+    if isinstance(result, list):
+        raw_ports = result
+    elif isinstance(result, dict):
+        raw_ports = result.get("ports") or []
+    else:
+        raw_ports = []
+    by_path = {p["path"]: p for p in raw_ports if isinstance(p, dict) and p.get("path")}
 
-    try:
-        content = serial_conf.load_config(ctx)
-    except WbCliError:
-        return []
-    return [
-        _port_params(port["path"], port)
-        for port in content.get("ports") or []
-        if port.get("path") and _is_rs485_port(port["path"])
-    ]
+    if ctx.args.port:
+        return [_port_params(ctx.args.port, by_path.get(ctx.args.port))]
+
+    return [_port_params(path, cfg) for path, cfg in by_path.items() if _is_rs485_port(path)]
 
 
 def _scan_one_port(ctx, port_params: dict, timeout: float) -> dict:
@@ -585,8 +585,12 @@ def _scan(ctx) -> dict:  # pylint: disable=too-many-locals
             "count": 0,
             "completed": False,
             "hint": (
-                "No ports configured in /etc/wb-mqtt-serial.conf to scan. "
-                "Add a port stanza first, or pass --port /dev/ttyRS485-N."
+                "wb-mqtt-serial/ports/Load returned no ports — the driver likely "
+                "rejected its config (schema validation). Inspect with "
+                "`wb-cli --json confed load /etc/wb-mqtt-serial.conf` and the journal "
+                "(`journalctl -u wb-mqtt-serial`); repair the offending stanza via "
+                "`wb-cli confed save`. Or pass --port /dev/ttyRS485-N to scan one "
+                "specific port without enumerating."
             ),
         }
 
@@ -636,7 +640,7 @@ def _scan(ctx) -> dict:  # pylint: disable=too-many-locals
         elif not failed_ports:
             envelope["hint"] = (
                 "Scan did not finish in time. Re-run with a larger --timeout; "
-                "--slow scans typically need several minutes per port."
+                "--slow and --bootloader scans typically need several minutes per port."
             )
     if ctx.args.port:
         envelope["port"] = ctx.args.port
@@ -701,6 +705,13 @@ def _devices(ctx) -> dict:
 
 
 def _ports(ctx) -> dict:
+    """List active serial ports as wb-mqtt-serial sees them.
+
+    Empty result == driver dropped the port (usually because some stanza in
+    /etc/wb-mqtt-serial.conf failed schema validation). The fix in that case
+    is to repair the config, not to bypass the RPC — see
+    `wb-cli confed load /etc/wb-mqtt-serial.conf` + `confed save`.
+    """
     result = ctx.rpc.call("wb-mqtt-serial/ports/Load", {})
     ports = result if isinstance(result, list) else result.get("ports", [])
     return {"ports": ports, "count": len(ports)}
