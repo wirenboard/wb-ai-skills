@@ -4,7 +4,6 @@ Priority: optional
 Maintainer: Wiren Board Team <info@wirenboard.com>
 Build-Depends: debhelper-compat (= 12),
                dh-python,
-               pybuild-plugin-pyproject,
                python3-all,
                python3-setuptools
 Standards-Version: 4.5.1
