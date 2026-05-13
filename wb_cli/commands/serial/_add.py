@@ -23,40 +23,94 @@ _SERIAL_CONF_PATH = "/etc/wb-mqtt-serial.conf"
 _INHERITED_UART_KEYS = ("baud_rate", "parity", "data_bits", "stop_bits")
 
 
-def add_devices(ctx) -> dict:  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
-    """Top-level dispatcher for ``add-devices`` — picks the right mode."""
+def add_devices(ctx) -> dict:  # pylint: disable=too-many-locals
+    """Top-level dispatcher for ``add-devices`` — picks the right mode.
+
+    With ``--device-type``: single named device on the explicit ``--port``.
+
+    Without ``--device-type``: scan-results flow. If ``--port`` is given,
+    add only to that port; otherwise iterate every port mentioned in the
+    scan results and add to each in one go.
+    """
     device_type = getattr(ctx.args, "device_type", None)
     slave_id = getattr(ctx.args, "slave_id", None)
     scan_results_arg = getattr(ctx.args, "scan_results", None)
 
     content = _load_config(ctx)
-    target_port = _load_target_port(ctx, content)
-    existing_slave_ids = {d.get("slave_id") for d in target_port.get("devices", [])}
 
     if device_type is not None:
+        if not ctx.args.port:
+            raise WbCliError(
+                code="MODBUS_ADD_MISSING_PORT",
+                message="--port is required with --device-type",
+                hint="Specify the target port, e.g. --port /dev/ttyRS485-1.",
+                exit_code=ExitCode.USAGE,
+            )
+        target_port = _load_target_port(content, ctx.args.port)
+        existing_slave_ids = {d.get("slave_id") for d in target_port.get("devices", [])}
         added, skipped, warnings = _add_one_named(
             target_port,
             existing_slave_ids,
             device_type=device_type,
             slave_id=slave_id,
         )
-    else:
-        scan_devices = _resolve_scan_devices(ctx, scan_results_arg)
-        added, skipped, warnings = _add_from_scan(
+        result = _save_and_envelope(ctx, content, [ctx.args.port], added, skipped, warnings)
+        return result
+
+    scan_devices = _resolve_scan_devices(ctx, scan_results_arg)
+    ports_to_process = _resolve_ports_to_process(ctx, scan_devices)
+    port_explicit = bool(ctx.args.port)
+
+    aggregated_added: list = []
+    aggregated_skipped: list = []
+    aggregated_warnings: list = []
+    for port_path in ports_to_process:
+        try:
+            target_port = _load_target_port(content, port_path)
+        except WbCliError:
+            if port_explicit:
+                # User typed the wrong port → surface the error.
+                raise
+            aggregated_warnings.append(f"{port_path}: not present in {_SERIAL_CONF_PATH} — skipped")
+            continue
+        existing_slave_ids = {d.get("slave_id") for d in target_port.get("devices", [])}
+        port_added, port_skipped, port_warnings = _add_from_scan(
             ctx,
             target_port,
             existing_slave_ids,
             scan_devices,
+            port_path=port_path,
         )
+        aggregated_added.extend({**row, "port": port_path} for row in port_added)
+        aggregated_skipped.extend({"slave_id": sid, "port": port_path} for sid in port_skipped)
+        aggregated_warnings.extend(f"{port_path}: {w}" for w in port_warnings)
 
+    return _save_and_envelope(
+        ctx,
+        content,
+        ports_to_process,
+        aggregated_added,
+        aggregated_skipped,
+        aggregated_warnings,
+    )
+
+
+def _save_and_envelope(  # pylint: disable=too-many-arguments
+    ctx,
+    content: dict,
+    ports: list,
+    added: list,
+    skipped: list,
+    warnings: list,
+) -> dict:
     if added:
         ctx.rpc.call(
             "confed/Editor/Save",
             {"path": _SERIAL_CONF_PATH, "content": content},
         )
-
     result = {
-        "port": ctx.args.port,
+        "port": ctx.args.port if ctx.args.port else None,
+        "ports": ports,
         "added": added,
         "skipped": skipped,
         "count": len(added),
@@ -64,6 +118,29 @@ def add_devices(ctx) -> dict:  # pylint: disable=too-many-branches,too-many-stat
     if warnings:
         result["warnings"] = warnings
     return result
+
+
+def _resolve_ports_to_process(ctx, scan_devices: list) -> list:
+    """Pick which ports we'll iterate over for the scan-results flow.
+
+    With ``--port``: just that port. Without: every unique port present in
+    the scan results.
+    """
+    if ctx.args.port:
+        return [ctx.args.port]
+    seen = []
+    for dev in scan_devices:
+        path = dev.get("port", {}).get("path")
+        if path and path not in seen:
+            seen.append(path)
+    if not seen:
+        raise WbCliError(
+            code="MODBUS_ADD_EMPTY",
+            message="Scan results contain no devices with a port — nothing to add.",
+            hint="Run `wb-cli serial wb-scan` first, or pass --port explicitly.",
+            exit_code=ExitCode.DOMAIN,
+        )
+    return seen
 
 
 # --------------------------------------------------------------------------- #
@@ -107,18 +184,20 @@ def _add_one_named(
 # --------------------------------------------------------------------------- #
 
 
-def _add_from_scan(  # pylint: disable=too-many-locals
+def _add_from_scan(  # pylint: disable=too-many-arguments,too-many-locals
     ctx,
     target_port: dict,
     existing_slave_ids: set,
     scan_devices: list,
+    *,
+    port_path: str,
 ) -> tuple[list, list, list]:
     added: list = []
     skipped: list = []
     warnings: list = []
 
     # Filter to the target port.
-    scan_devices = [d for d in scan_devices if d.get("port", {}).get("path") == ctx.args.port]
+    scan_devices = [d for d in scan_devices if d.get("port", {}).get("path") == port_path]
     all_used_ids: set = {
         d.get("cfg", {}).get("slave_id") for d in scan_devices if d.get("cfg", {}).get("slave_id")
     } | existing_slave_ids
@@ -131,7 +210,7 @@ def _add_from_scan(  # pylint: disable=too-many-locals
         if sid is None:
             continue
         if sid in seen_ids:
-            if not _reassign_slave_id(ctx, dev, all_used_ids, warnings, ctx.args.port, bus_collision=True):
+            if not _reassign_slave_id(ctx, dev, all_used_ids, warnings, port_path, bus_collision=True):
                 dev["cfg"]["slave_id"] = None  # unresolvable — skipped in main loop
         else:
             seen_ids.add(sid)
@@ -144,6 +223,7 @@ def _add_from_scan(  # pylint: disable=too-many-locals
             all_used_ids,
             warnings,
             dev,
+            port_path=port_path,
         )
         if entry is None:
             sid = dev.get("cfg", {}).get("slave_id")
@@ -164,6 +244,8 @@ def _process_one_scan_device(  # pylint: disable=too-many-arguments,too-many-ret
     all_used_ids: set,
     warnings: list,
     dev: dict,
+    *,
+    port_path: str,
 ):
     """Add one device from a scan entry. Returns the ``added`` row, or None if skipped."""
     cfg = dev.get("cfg", {})
@@ -177,11 +259,11 @@ def _process_one_scan_device(  # pylint: disable=too-many-arguments,too-many-ret
         if dev.get("configured_device_type") is not None:
             return None
         # Different physical device at a conflicting address → reassign.
-        if not _reassign_slave_id(ctx, dev, all_used_ids, warnings, ctx.args.port, bus_collision=False):
+        if not _reassign_slave_id(ctx, dev, all_used_ids, warnings, port_path, bus_collision=False):
             return None
         sid = cfg.get("slave_id")
 
-    baud_changed = _maybe_fix_baud(ctx, dev, target_port, warnings)
+    baud_changed = _maybe_fix_baud(ctx, dev, target_port, warnings, port_path=port_path)
     if baud_changed is False:  # explicit failure flag — skip this device
         return None
 
@@ -205,7 +287,7 @@ def _process_one_scan_device(  # pylint: disable=too-many-arguments,too-many-ret
     return entry
 
 
-def _maybe_fix_baud(ctx, dev: dict, target_port: dict, warnings: list):
+def _maybe_fix_baud(ctx, dev: dict, target_port: dict, warnings: list, *, port_path: str):
     """If device baud differs from port baud, switch device via FC6 reg 110.
 
     Returns:
@@ -218,7 +300,7 @@ def _maybe_fix_baud(ctx, dev: dict, target_port: dict, warnings: list):
     port_baud = target_port.get("baud_rate", serial_port.DEFAULT_BAUD_RATE)
     if not dev_baud or dev_baud == port_baud:
         return None
-    if _change_device_baud(ctx, ctx.args.port, cfg.get("slave_id"), cfg, port_baud):
+    if _change_device_baud(ctx, port_path, cfg.get("slave_id"), cfg, port_baud):
         cfg["baud_rate"] = port_baud
         return f"{dev_baud} → {port_baud}"
     warnings.append(
@@ -379,15 +461,15 @@ def _load_config(ctx) -> dict:
     return result.get("content", {}) if isinstance(result, dict) else {}
 
 
-def _load_target_port(ctx, content: dict) -> dict:
+def _load_target_port(content: dict, port_path: str) -> dict:
     ports = content.get("ports", []) if isinstance(content, dict) else []
     for port in ports:
-        if port.get("path") == ctx.args.port:
+        if port.get("path") == port_path:
             return port
     raise WbCliError(
         code="MODBUS_ADD_PORT_NOT_FOUND",
-        message=f"Port '{ctx.args.port}' not found in {_SERIAL_CONF_PATH}",
-        details={"port": ctx.args.port},
+        message=f"Port '{port_path}' not found in {_SERIAL_CONF_PATH}",
+        details={"port": port_path},
         exit_code=ExitCode.DOMAIN,
     )
 

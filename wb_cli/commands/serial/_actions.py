@@ -89,7 +89,16 @@ def _fmt_hex(data: bytes) -> str:
 
 def _send(ctx) -> dict:
     args = ctx.args
-    msg = _parse_hex_msg(args.msg)
+    try:
+        msg = _parse_hex_msg(args.msg)
+    except ValueError as exc:
+        raise WbCliError(
+            code="SERIAL_INVALID_HEX",
+            message=str(exc),
+            hint='Use a hex string like "FD 46 01" or "fd4601" — spaces and 0x-prefix are optional.',
+            details={"msg": args.msg},
+            exit_code=ExitCode.USAGE,
+        ) from exc
     if args.add_modbus_crc:
         msg += modbus_crc16(msg)
     port = serial_port.port_params_from_args(args)

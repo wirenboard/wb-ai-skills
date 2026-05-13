@@ -232,8 +232,12 @@ def _register_add_devices(sub: argparse._SubParsersAction) -> None:
     )
     p.add_argument(
         "--port",
-        required=True,
-        help="target serial port path (must already exist in the config)",
+        default=None,
+        help=(
+            "target serial port path (must already exist in the config). "
+            "Omit to add to every port the scan results mention (scan modes only); "
+            "required with --device-type."
+        ),
     )
     p.add_argument(
         "--scan-results",
@@ -246,7 +250,7 @@ def _register_add_devices(sub: argparse._SubParsersAction) -> None:
     p.add_argument(
         "--device-type",
         default=None,
-        help="device_type from the template (e.g. WB-MAI6); requires --slave-id; skips scanning",
+        help="device_type from the template (e.g. WB-MAI6); requires --slave-id and --port; skips scanning",
     )
     p.add_argument(
         "--slave-id",

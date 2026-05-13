@@ -709,7 +709,11 @@ def test_modbus_add_devices_appends_to_target_port():
     ctx.rpc.call.side_effect = [_conf_with_rs1([{"slave_id": 1}]), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
-    assert result["added"][0] == {"slave_id": 7, "device_type": "WB-MR6C"}
+    assert result["added"][0] == {
+        "slave_id": 7,
+        "device_type": "WB-MR6C",
+        "port": "/dev/ttyRS485-1",
+    }
     save_call = ctx.rpc.call.call_args_list[1]
     rs1 = next(p for p in save_call.args[1]["content"]["ports"] if p["path"] == "/dev/ttyRS485-1")
     assert any(d["slave_id"] == 7 and d["device_type"] == "WB-MR6C" for d in rs1["devices"])
@@ -738,7 +742,7 @@ def test_modbus_add_devices_skips_duplicate_slave_id():
     ctx.rpc.call.return_value = _conf_with_rs1([{"slave_id": 7, "device_type": "WB-MR6C"}])
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 0
-    assert 7 in result["skipped"]
+    assert any(s["slave_id"] == 7 for s in result["skipped"])
     # No save call when nothing is added
     assert ctx.rpc.call.call_count == 1
 
@@ -793,6 +797,7 @@ def test_modbus_add_devices_by_device_type(tmp_path, monkeypatch):
     ctx.rpc.call.side_effect = [_conf_with_rs1(), {"ok": True}]
     result = ModbusPlugin().dispatch(ctx)
     assert result["count"] == 1
+    # --device-type mode adds without the per-row "port" field (single explicit port).
     assert result["added"][0] == {"slave_id": 19, "device_type": "WB-MAI6"}
     save_call = ctx.rpc.call.call_args_list[1]
     rs1 = next(p for p in save_call.args[1]["content"]["ports"] if p["path"] == "/dev/ttyRS485-1")

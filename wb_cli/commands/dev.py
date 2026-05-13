@@ -15,7 +15,6 @@ No subcommands, no separate ``devices`` plugin — just one verb, one argument.
 from __future__ import annotations
 
 import argparse
-import shutil
 from typing import Any, Dict, List, Tuple
 
 from wb_cli.errors import ExitCode, WbCliError
@@ -122,18 +121,27 @@ def _list_all(ctx) -> dict:
 
 def _controls_of(ctx, device: str) -> dict:
     """Controls of one device, with the same columns as the full list."""
-    vals = ctx.mqtt.subscribe(f"/devices/{device}/controls/+", timeout=5.0)
+    try:
+        vals = ctx.mqtt.subscribe(f"/devices/{device}/controls/+", timeout=5.0)
+    except WbCliError as exc:
+        if exc.code == "MQTT_TIMEOUT":
+            _raise_device_not_found(device)
+        raise
     if not vals:
-        raise WbCliError(
-            code="DEV_DEVICE_NOT_FOUND",
-            message=f"Device '{device}' not found",
-            hint="Run `wb-cli dev` (or `dev --all`) for the available devices.",
-            details={"device": device},
-            exit_code=ExitCode.DOMAIN,
-        )
+        _raise_device_not_found(device)
     metas = ctx.mqtt.subscribe(f"/devices/{device}/controls/+/meta/+", timeout=5.0)
     controls = _build_full(vals, metas)
     return {"device": device, "controls": controls, "count": len(controls)}
+
+
+def _raise_device_not_found(device: str) -> None:
+    raise WbCliError(
+        code="DEV_DEVICE_NOT_FOUND",
+        message=f"Device '{device}' not found",
+        hint="Run `wb-cli dev` (or `dev --all`) for the available devices.",
+        details={"device": device},
+        exit_code=ExitCode.DOMAIN,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -143,7 +151,12 @@ def _controls_of(ctx, device: str) -> dict:
 
 def _get(ctx, device: str, control: str) -> dict:
     topic = f"/devices/{device}/controls/{control}"
-    msgs = ctx.mqtt.subscribe(topic, timeout=5.0)
+    try:
+        msgs = ctx.mqtt.subscribe(topic, timeout=5.0)
+    except WbCliError as exc:
+        if exc.code == "MQTT_TIMEOUT":
+            _raise_control_not_found(device, control)
+        raise
     if not msgs:
         _raise_control_not_found(device, control)
     meta = ctx.mqtt.subscribe(f"{topic}/meta/+", timeout=5.0)
@@ -160,7 +173,12 @@ def _get(ctx, device: str, control: str) -> dict:
 
 def _set(ctx, device: str, control: str, value: str) -> dict:
     base = f"/devices/{device}/controls/{control}"
-    existing = ctx.mqtt.subscribe(base, timeout=3.0)
+    try:
+        existing = ctx.mqtt.subscribe(base, timeout=3.0)
+    except WbCliError as exc:
+        if exc.code == "MQTT_TIMEOUT":
+            _raise_control_not_found(device, control)
+        raise
     if not existing:
         _raise_control_not_found(device, control)
     meta = ctx.mqtt.subscribe(f"{base}/meta/+", timeout=3.0)
@@ -255,58 +273,54 @@ def _build_full(
     return rows
 
 
+_VALUE_COL_MAX = 20
+
+
 def _render_table(  # pylint: disable=too-many-locals
     rows: List[Dict[str, Any]], *, device: str = None
 ) -> str:
     """Render the controls list as a compact fixed-width table.
 
-    Keeps the line under ~120 columns by merging type+flags into a single
-    ``type/rw`` column and omitting the ``error`` column when no row has an
-    error. ``device``: when given, the "address" column shows just
-    ``<control>`` instead of ``<device>/<control>``.
+    ``type`` and ``flags`` (``rw`` / ``ro``) are separate columns. The
+    ``value`` column is capped at 20 characters with an ellipsis — for
+    longer payloads, read the control directly with
+    ``wb-cli dev <device>/<control>``. The ``error`` column appears only
+    when at least one row has an error set. When ``device`` is given, the
+    address column shows just ``<control>``.
     """
     if not rows:
         return "(no controls)"
 
     has_errors = any(r.get("error") for r in rows)
-    term_width = max(60, shutil.get_terminal_size((120, 24)).columns)
 
     def addr(row):
         return row["control"] if device else f"{row['device']}/{row['control']}"
 
     def value(row):
-        return str(row.get("value", "")).replace("\n", " ").replace("\t", " ")
+        text = str(row.get("value", "")).replace("\n", " ").replace("\t", " ")
+        if len(text) > _VALUE_COL_MAX:
+            return text[: _VALUE_COL_MAX - 1] + "…"
+        return text
 
-    def kind(row):
-        ctype = row.get("type") or "?"
-        return f"{ctype}/{'ro' if row.get('readonly') else 'rw'}"
+    def type_col(row):
+        return row.get("type") or "?"
+
+    def flags_col(row):
+        return "ro" if row.get("readonly") else "rw"
 
     columns = [
-        ("address", addr, 40),  # name, getter, max-width
-        ("value", value, 0),  # value soaks up whatever room is left
-        ("type", kind, 20),
+        ("address", addr),
+        ("value", value),
+        ("type", type_col),
+        ("flags", flags_col),
     ]
     if has_errors:
-        columns.append(("error", lambda r: r.get("error") or "", 30))
+        columns.append(("error", lambda r: r.get("error") or ""))
 
-    # First measure natural widths, then squeeze `value` to fit the terminal.
-    natural = {name: max(len(name), *(len(get(r)) for r in rows)) for name, get, _ in columns}
-    for name, _, cap in columns:
-        if cap and natural[name] > cap:
-            natural[name] = cap
-
-    overhead = 2 * (len(columns) - 1)  # "  " separators
-    other = sum(natural[name] for name, _, _ in columns if name != "value")
-    natural["value"] = max(5, term_width - overhead - other)
-
-    def fit(text: str, width: int) -> str:
-        return text if len(text) <= width else text[: width - 1] + "…"
-
-    header = "  ".join(name.ljust(natural[name]) for name, _, _ in columns)
-    sep = "  ".join("-" * natural[name] for name, _, _ in columns)
-    body = [
-        "  ".join(fit(get(r), natural[name]).ljust(natural[name]) for name, get, _ in columns) for r in rows
-    ]
+    widths = {name: max(len(name), *(len(get(r)) for r in rows)) for name, get in columns}
+    header = "  ".join(name.ljust(widths[name]) for name, _ in columns)
+    sep = "  ".join("-" * widths[name] for name, _ in columns)
+    body = ["  ".join(get(r).ljust(widths[name]) for name, get in columns) for r in rows]
     return "\n".join([header, sep, *body])
 
 

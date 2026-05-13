@@ -1,3 +1,35 @@
+wb-cli (1.4.1) stable; urgency=medium
+
+  UX polish driven by an extended smoke test on a live controller.
+
+  * serial send: invalid hex argument now raises ``SERIAL_INVALID_HEX``
+    (exit USAGE) with a hint instead of dumping a Python traceback as
+    ``CLI_INTERNAL``.
+  * dev <device>/<control> and dev <device>: when the topic returns no
+    retained value (driver isn't publishing, name is wrong), surface
+    ``DEV_CONTROL_NOT_FOUND`` / ``DEV_DEVICE_NOT_FOUND`` with a hint
+    pointing at ``wb-cli dev`` instead of the raw ``MQTT_TIMEOUT`` from
+    the broker layer.
+  * dev table: split the ``type/rw`` merged column into separate
+    ``type`` and ``flags`` columns; cap ``value`` at 20 characters
+    (long strings have ``…``). For the full value read the control
+    directly with ``wb-cli dev <device>/<control>``.
+  * serial device-params (human): handle ``fw`` returned both as a
+    bare string and as ``{"version": "..."}`` — the firmware version
+    is shown either way.
+  * snapshot diff (human): instead of dumping whole nested JSON blobs
+    side-by-side in a table, walk the structure recursively and emit
+    one ``key.path  old → new`` line per actual leaf change. Lists are
+    summarised as added/removed items.
+  * serial add-devices: ``--port`` is now optional in the scan-results
+    flows. With no ``--port``, iterate every port mentioned in the scan
+    results and add per-port in one call. Each ``added`` / ``skipped``
+    row now carries a ``port`` field, and the envelope has a top-level
+    ``ports`` list. ``--port`` is still required with ``--device-type``
+    (and a clear ``MODBUS_ADD_MISSING_PORT`` error surfaces otherwise).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 11:36:41 +0400
+
 wb-cli (1.4.0) stable; urgency=medium
 
   * Full serial refactor — no behaviour change, but every duplicated frame /
