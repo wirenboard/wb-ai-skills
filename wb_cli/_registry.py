@@ -14,6 +14,7 @@ BUILTIN_PLUGINS: dict = {
     "job": ("wb_cli.commands.job_cmd", "run long-running commands in the background, watch them, fetch logs"),
     "modbus-fw": ("wb_cli.commands.modbus_fw", "firmware update of Modbus devices (check, update, restore, watch)"),
     "mqtt": ("wb_cli.commands.mqtt_cmd", "raw MQTT: read retained, write, list topics"),
+    "mqtt-debug": ("wb_cli.commands.mqtt_debug", "verbose mosquitto logging: enable / disable / status / capture"),
     "plugins": ("wb_cli.commands.plugins", "list every plugin this wb-cli build knows about"),
     "rules": ("wb_cli.commands.rules", "manage wb-rules automation scripts (list / read / save / disable / delete)"),
     "serial": ("wb_cli.commands.serial", "serial port ops: send, wb-scan, device-params, device-set, add-devices, templates, devices, ports"),

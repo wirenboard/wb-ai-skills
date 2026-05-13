@@ -65,6 +65,50 @@ ssh root@<HOST> wb-cli --json dev wb-mr6c_2      # all controls with types and v
 
 Use raw `mosquitto_sub`/`mosquitto_pub` only when `wb-cli` can't help: broker config testing with `-u`/`-P` auth flags (wb-cli connects via Unix socket, not TCP), and TLS certificate verification with `--cafile`.
 
+### Verbose PUBLISH tracing — `wb-cli mqtt-debug`
+
+To find **who** publishes to a given topic (wb-rules, web UI, an external client, a misbehaving driver), use the dedicated plugin instead of editing `/etc/mosquitto/conf.d/` by hand:
+
+```bash
+# Short ad-hoc capture (default 30 s; up to 600 s inline)
+ssh root@<HOST> wb-cli --json mqtt-debug capture --seconds 60 \
+    --topic '/devices/wb-mr6c_7/controls/K1' --source wb-rules
+
+# Toggle persistently (verbose logging stays on after capture)
+ssh root@<HOST> wb-cli mqtt-debug enable
+ssh root@<HOST> wb-cli mqtt-debug status
+ssh root@<HOST> wb-cli mqtt-debug disable
+
+# Long capture (hours / days) — runs as a job, JSON envelope written to disk
+ssh root@<HOST> wb-cli --json mqtt-debug capture --seconds 86400 --background \
+    --output /mnt/data/ai/wb-cli/mqtt-debug-$(date +%s).json
+# poll the job:
+ssh root@<HOST> wb-cli --json job wait <unit>
+ssh root@<HOST> jq '.data.entries[] | select(.source != "wb-adc")' \
+    /mnt/data/ai/wb-cli/mqtt-debug-<TS>.json
+```
+
+The plugin writes the same drop-in (`/etc/mosquitto/conf.d/debug-verbose.conf` with `log_type all`) that you would put there manually, restarts `mosquitto`, parses every `Received PUBLISH …` line out of the journal into structured records:
+
+```json
+{"timestamp": "2026-05-13T09:44:31+00:00",
+ "source": "system__wb-rules__cAbCdEfGhIjK",
+ "topic": "/devices/wb-mr6c_7/controls/K1/on",
+ "qos": 0, "retain": false, "dup": false,
+ "message_id": 1234, "payload_size": 1}
+```
+
+After an inline capture the previous on/off state is restored automatically (try/finally). For long captures, `--background` writes the JSON to `--output` and the plugin still restores the previous state when the job finishes. To leave verbose logging on after a capture, pass `--keep-enabled`.
+
+Common `source` values to grep for:
+
+- `system__wb-rules__*` — wb-rules automation script
+- `wb-mqtt-homeui-*` — web UI
+- `wb-modbus` — wb-mqtt-serial / RS-485 driver
+- `wb-zigbee2mqtt`, `wb-mqtt-knx` — protocol converters
+- `tasmota_*`, `shellyplus_*` — external IoT clients
+- `mosquitto_pub-*` — ad-hoc `mosquitto_pub` calls
+
 ## Authentication: passwords
 
 ### Create password file

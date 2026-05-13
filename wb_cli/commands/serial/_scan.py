@@ -233,7 +233,12 @@ class _Aggregate:
             ports_seen = sorted(
                 {d.get("port", {}).get("path") for d in self.devices if d.get("port", {}).get("path")}
             )
-            env["add_hint"] = "  ".join(f"wb-cli serial add-devices --port {p}" for p in ports_seen)
+            # Always show two forms: the all-ports-at-once command (from
+            # 1.4.1: ``add-devices`` without ``--port`` iterates every port
+            # the scan touched), and per-port variants for selective adds.
+            env["add_hints"] = ["wb-cli serial add-devices"] + [
+                f"wb-cli serial add-devices --port {p}" for p in ports_seen
+            ]
         return env
 
     def _hint(self):
