@@ -1,3 +1,22 @@
+wb-cli (1.5.2) stable; urgency=medium
+
+  * mqtt-debug: ``source`` field is renamed to ``client_id`` everywhere —
+    JSON envelope key, human-mode column header, the ``--source`` flag is
+    now ``--client-id``, and the filter list in the envelope is
+    ``client_id_filters`` instead of ``source_filters``. The previous name
+    was misleading: this is the literal MQTT ``client_id`` mosquitto
+    reports after ``Received PUBLISH from``, not a systemd unit name or
+    a logical service identifier.
+  * wb-cli mqtt write: now passes ``mosquitto_pub -i wb-cli-<pid>`` so
+    its publishes appear in mosquitto's verbose log as
+    ``wb-cli-<pid>`` instead of the opaque ``auto-<UUID>``
+    mosquitto-2.0 generates for client_id-less connects. Visible
+    immediately in ``mqtt-debug capture`` output.
+  * Help / epilog / skill (wb-mqtt-broker) updated to use ``client_id``
+    terminology and explain what mosquitto literally reports.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 14:15:35 +0400
+
 wb-cli (1.5.1) stable; urgency=medium
 
   * mqtt-debug capture: ``--topic`` and ``--source`` now accept multiple

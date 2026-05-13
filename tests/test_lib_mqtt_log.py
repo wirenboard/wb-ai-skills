@@ -12,7 +12,7 @@ def test_parse_publish_basic():
     )
     entry = mqtt_log.parse_publish(line)
     assert entry == {
-        "source": "wb-adc",
+        "client_id": "wb-adc",
         "dup": False,
         "qos": 1,
         "retain": True,
@@ -30,7 +30,7 @@ def test_parse_publish_wb_rules_source():
     )
     entry = mqtt_log.parse_publish(line)
     assert entry is not None
-    assert entry["source"] == "system__wb-rules__cAbCdEfGhIjK"
+    assert entry["client_id"] == "system__wb-rules__cAbCdEfGhIjK"
     assert entry["qos"] == 0
     assert entry["retain"] is False
 
@@ -115,7 +115,7 @@ def test_parse_entries_mqtt_root_hash_matches_everything():
     assert len(entries) == 2
 
 
-def test_parse_entries_filters_by_source_substring():
+def test_parse_entries_filters_by_client_id_substring():
     journal = [
         {
             "__REALTIME_TIMESTAMP": "1778654671000000",
@@ -128,12 +128,12 @@ def test_parse_entries_filters_by_source_substring():
             "'/devices/a/controls/y/on', ... (1 bytes))",
         },
     ]
-    entries = mqtt_log.parse_entries(journal, sources=["wb-rules"])
+    entries = mqtt_log.parse_entries(journal, client_ids=["wb-rules"])
     assert len(entries) == 1
-    assert entries[0]["source"].startswith("system__wb-rules__")
+    assert entries[0]["client_id"].startswith("system__wb-rules__")
 
 
-def test_parse_entries_sources_or_match_multiple_patterns():
+def test_parse_entries_client_ids_or_match_multiple_patterns():
     journal = [
         {
             "__REALTIME_TIMESTAMP": "1778654671000000",
@@ -150,8 +150,8 @@ def test_parse_entries_sources_or_match_multiple_patterns():
             "MESSAGE": "Received PUBLISH from wb-adc (d0, q1, r1, m3, " "'/devices/a/z', ... (4 bytes))",
         },
     ]
-    entries = mqtt_log.parse_entries(journal, sources=["wb-rules", "wb-mqtt-homeui"])
-    assert {e["source"] for e in entries} == {
+    entries = mqtt_log.parse_entries(journal, client_ids=["wb-rules", "wb-mqtt-homeui"])
+    assert {e["client_id"] for e in entries} == {
         "system__wb-rules__abc",
         "wb-mqtt-homeui-zz",
     }

@@ -263,8 +263,22 @@ class MqttClient:
         retain: bool = False,
         timeout: float = 5.0,
     ) -> None:
-        """Publish a single message."""
-        cmd = ["mosquitto_pub", "-t", topic, "-m", payload]
+        """Publish a single message.
+
+        Passes an explicit ``mosquitto_pub -i wb-cli-<pid>`` so the broker
+        logs and ``mqtt-debug`` capture see wb-cli writes by name instead of
+        the anonymous ``auto-<UUID>`` mosquitto assigns to client_id-less
+        connects.
+        """
+        cmd = [
+            "mosquitto_pub",
+            "-i",
+            f"wb-cli-{os.getpid()}",
+            "-t",
+            topic,
+            "-m",
+            payload,
+        ]
         if retain:
             cmd.append("-r")
         try:

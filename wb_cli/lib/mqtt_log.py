@@ -21,19 +21,26 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 #   Received PUBLISH from <source> (d<DUP>, q<QOS>, r<RETAIN>, m<MID>, '<TOPIC>', ... (<SIZE> bytes))
 # We anchor on "Received PUBLISH from " — a single robust marker.
 _PUBLISH_RE = re.compile(
-    r"Received PUBLISH from (?P<source>\S+) "
+    r"Received PUBLISH from (?P<client_id>\S+) "
     r"\(d(?P<dup>\d+), q(?P<qos>\d+), r(?P<retain>\d+), m(?P<mid>\d+), "
     r"'(?P<topic>[^']*)', \.\.\. \((?P<size>\d+) bytes\)\)"
 )
 
 
 def parse_publish(line: str) -> Optional[Dict[str, Any]]:
-    """Parse a single mosquitto log line. ``None`` if it isn't a PUBLISH entry."""
+    """Parse a single mosquitto log line. ``None`` if it isn't a PUBLISH entry.
+
+    ``client_id`` is the literal MQTT client identifier the publisher used at
+    CONNECT time — wb-modbus, wb-mqtt-homeui-*, wb-rules, etc. for WB
+    services; ``mosquitto_pub-<pid>`` for raw ``mosquitto_pub`` invocations
+    that pass ``-i``; ``auto-<UUID>`` for clients that connect with an empty
+    client_id (mosquitto 2.0+ auto-generates one). Not the systemd unit name.
+    """
     match = _PUBLISH_RE.search(line)
     if not match:
         return None
     return {
-        "source": match["source"],
+        "client_id": match["client_id"],
         "dup": match["dup"] == "1",
         "qos": int(match["qos"]),
         "retain": match["retain"] == "1",
@@ -47,7 +54,7 @@ def parse_entries(
     journal_entries: Iterable[Dict[str, Any]],
     *,
     topics: Optional[Sequence[str]] = None,
-    sources: Optional[Sequence[str]] = None,
+    client_ids: Optional[Sequence[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Walk journald entries (from ``ctx.journal.read``), extract PUBLISH events.
 
@@ -60,7 +67,8 @@ def parse_entries(
       * otherwise a plain substring (``K1`` matches every topic containing
         ``K1`` — handy for grep-style searches).
 
-    ``sources`` is a list of substring patterns matched against the client id.
+    ``client_ids`` is a list of substring patterns matched against the MQTT
+    ``client_id`` of the publisher.
 
     Each returned entry carries the structured fields from
     :func:`parse_publish` plus ``timestamp`` (ISO-8601 UTC, derived from
@@ -75,7 +83,7 @@ def parse_entries(
             continue
         if topic_matchers and not any(m(publish["topic"]) for m in topic_matchers):
             continue
-        if sources and not any(s in publish["source"] for s in sources):
+        if client_ids and not any(c in publish["client_id"] for c in client_ids):
             continue
         publish["timestamp"] = _journal_timestamp(entry)
         out.append(publish)

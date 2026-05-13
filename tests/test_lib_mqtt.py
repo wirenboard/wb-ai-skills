@@ -219,6 +219,18 @@ def test_publish_without_retain_omits_flag(shell_returning):
     assert "-r" not in cmd
 
 
+def test_publish_sets_explicit_client_id(shell_returning):
+    """``mosquitto_pub`` is called with ``-i wb-cli-<pid>`` so wb-cli writes
+    are identifiable in mosquitto's verbose log instead of anonymous
+    ``auto-<UUID>`` connections."""
+    shell = shell_returning(0)
+    MqttClient(shell).publish("topic/x", "v")
+    cmd = shell.run.call_args.args[0]
+    assert "-i" in cmd
+    idx = cmd.index("-i")
+    assert cmd[idx + 1].startswith("wb-cli-")
+
+
 def test_publish_failed_on_nonzero_rc(shell_returning):
     shell = shell_returning(1, "", "boom")
     with pytest.raises(WbCliError) as exc:

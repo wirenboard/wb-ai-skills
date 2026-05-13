@@ -72,10 +72,12 @@ class MqttDebugPlugin(BasePlugin):  # pylint: disable=duplicate-code
                 "  # Short inline capture — substring match (grep-style):\n"
                 "  wb-cli --json mqtt-debug capture --seconds 60 --topic 'Dimming Level'\n"
                 "\n"
-                "  # Multiple topics or sources (OR-match) — repeat the flag:\n"
+                "  # Multiple topics / client_ids (OR-match) — repeat the flag.\n"
+                "  # client_id is the MQTT client identifier as logged by mosquitto\n"
+                "  # (e.g. wb-modbus, wb-mqtt-homeui-*, wb-rules) — NOT systemd unit name:\n"
                 "  wb-cli --json mqtt-debug capture --seconds 60 \\\n"
                 "      --topic 'wb-mr6c_2/controls/K1' --topic 'wb-mr6c_2/controls/K2' \\\n"
-                "      --source wb-rules --source wb-mqtt-homeui\n"
+                "      --client-id wb-rules --client-id wb-mqtt-homeui\n"
                 "\n"
                 "  # MQTT-style wildcards work too (+ = one level, # = the rest):\n"
                 "  wb-cli --json mqtt-debug capture --seconds 60 \\\n"
@@ -126,8 +128,8 @@ class MqttDebugPlugin(BasePlugin):  # pylint: disable=duplicate-code
                 f"to {_INLINE_MAX_SECONDS} runs inline; longer captures require\n"
                 "``--background`` + ``--output``.\n"
                 "\n"
-                "``--topic`` and ``--source`` are substring filters applied to the\n"
-                "parsed records (LLMs can also filter the JSON via ``jq``)."
+                "``--topic`` and ``--client-id`` are filters applied to the parsed\n"
+                "records (LLMs can also filter the JSON via ``jq``)."
             ),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
@@ -148,12 +150,14 @@ class MqttDebugPlugin(BasePlugin):  # pylint: disable=duplicate-code
             ),
         )
         cap.add_argument(
-            "--source",
+            "--client-id",
+            dest="client_id",
             action="append",
             default=None,
             help=(
-                "client-id substring filter (e.g. `wb-rules`, `wb-mqtt-homeui`). "
-                "Repeat to match any of several sources."
+                "MQTT client_id substring filter (e.g. `wb-rules`, `wb-mqtt-homeui`, "
+                "`wb-modbus`). This is the literal client_id mosquitto reports, "
+                "not the systemd unit name. Repeat to match any of several values."
             ),
         )
         cap.add_argument(
@@ -323,7 +327,7 @@ def _capture(ctx) -> dict:  # pylint: disable=too-many-locals
         parsed = mqtt_log.parse_entries(
             entries,
             topics=args.topic,
-            sources=args.source,
+            client_ids=args.client_id,
         )
     finally:
         if we_enabled_it and not args.keep_enabled:
@@ -338,7 +342,7 @@ def _capture(ctx) -> dict:  # pylint: disable=too-many-locals
         "entries": parsed,
         "count": len(parsed),
         "topic_filters": args.topic or [],
-        "source_filters": args.source or [],
+        "client_id_filters": args.client_id or [],
         "verbose_was_already_enabled": was_enabled,
     }
     if args.output:
@@ -371,8 +375,8 @@ def _capture_background(ctx) -> dict:
     parts = ["wb-cli", "--json", "mqtt-debug", "capture", "--seconds", str(args.seconds)]
     for pattern in args.topic or []:
         parts += ["--topic", _shquote(pattern)]
-    for pattern in args.source or []:
-        parts += ["--source", _shquote(pattern)]
+    for pattern in args.client_id or []:
+        parts += ["--client-id", _shquote(pattern)]
     if args.keep_enabled:
         parts.append("--keep-enabled")
     parts += ["--output", _shquote(args.output)]
@@ -413,14 +417,14 @@ def _render_capture(result: dict) -> str:
         rows.append(
             {
                 "time": (entry.get("timestamp") or "")[11:19] or "?",
-                "source": entry.get("source", "?"),
+                "client_id": entry.get("client_id", "?"),
                 "topic": entry.get("topic", "?"),
                 "qos": str(entry.get("qos", "?")),
                 "retain": "r" if entry.get("retain") else "-",
                 "size": str(entry.get("payload_size", "?")),
             }
         )
-    columns = ["time", "source", "topic", "qos", "retain", "size"]
+    columns = ["time", "client_id", "topic", "qos", "retain", "size"]
     widths = {c: max(len(c), *(len(r[c]) for r in rows)) for c in columns}
     line = "  ".join(c.ljust(widths[c]) for c in columns)
     sep = "  ".join("-" * widths[c] for c in columns)
@@ -432,8 +436,8 @@ def _filter_suffix(result: dict) -> str:
     parts = []
     for pattern in result.get("topic_filters") or []:
         parts.append(f"topic~{pattern}")
-    for pattern in result.get("source_filters") or []:
-        parts.append(f"source~{pattern}")
+    for pattern in result.get("client_id_filters") or []:
+        parts.append(f"client_id~{pattern}")
     return f"  [{', '.join(parts)}]" if parts else ""
 
 

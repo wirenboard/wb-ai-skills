@@ -104,7 +104,7 @@ def _capture_args(**overrides):
         "quiet": False,
         "seconds": 5,
         "topic": None,  # list[str] | None (action=append)
-        "source": None,  # list[str] | None (action=append)
+        "client_id": None,  # list[str] | None (action=append)
         "output": None,
         "background": False,
         "keep_enabled": False,
@@ -113,10 +113,10 @@ def _capture_args(**overrides):
     return argparse.Namespace(**base)
 
 
-def _publish_entry(topic="/devices/x/y", source="wb-adc", ts="1778654671000000"):
+def _publish_entry(topic="/devices/x/y", client_id="wb-adc", ts="1778654671000000"):
     return {
         "__REALTIME_TIMESTAMP": ts,
-        "MESSAGE": f"Received PUBLISH from {source} (d0, q1, r0, m1, '{topic}', ... (3 bytes))",
+        "MESSAGE": f"Received PUBLISH from {client_id} (d0, q1, r0, m1, '{topic}', ... (3 bytes))",
     }
 
 
@@ -154,8 +154,8 @@ def test_capture_filters_by_topic(monkeypatch, fake_config):  # pylint: disable=
     monkeypatch.setattr(mqtt_debug, "countdown", lambda *a, **kw: None)
     ctx = _ctx(_capture_args(seconds=1, topic=["K1"]))
     ctx.journal.read.return_value = [
-        _publish_entry(topic="/devices/wb-mr6c_7/controls/K1/on", source="wb-rules"),
-        _publish_entry(topic="/devices/wb-adc/controls/V5_0", source="wb-adc"),
+        _publish_entry(topic="/devices/wb-mr6c_7/controls/K1/on", client_id="wb-rules"),
+        _publish_entry(topic="/devices/wb-adc/controls/V5_0", client_id="wb-adc"),
     ]
     result = MqttDebugPlugin().dispatch(ctx)
     assert result["count"] == 1
@@ -231,7 +231,7 @@ def test_capture_background_schedules_job(fake_config, tmp_path):  # pylint: dis
             background=True,
             output=str(out),
             topic=["K1", "/devices/wb-mdm3_5/controls/Channel 1 Dimming Level/on"],
-            source=["wb-rules"],
+            client_id=["wb-rules"],
         )
     )
     ctx.job.run.return_value = {"unit": "wb-cli-job-mqtt-debug-capture-1", "log": "/tmp/foo.log"}
@@ -243,7 +243,7 @@ def test_capture_background_schedules_job(fake_config, tmp_path):  # pylint: dis
     assert "--topic K1" in cmd
     # Topic with spaces must be single-quoted so the shell sees it as one token.
     assert "'/devices/wb-mdm3_5/controls/Channel 1 Dimming Level/on'" in cmd
-    assert "--source wb-rules" in cmd
+    assert "--client-id wb-rules" in cmd
     assert f"--output {out}" in cmd
 
 
