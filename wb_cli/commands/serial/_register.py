@@ -17,10 +17,8 @@ def register_all(sub: argparse._SubParsersAction) -> None:  # pylint: disable=to
     _register_wb_scan(sub)
     _register_templates(sub)
     _register_template(sub)
-    _register_device_info(sub)
-    _register_device_params(sub)
-    _register_device_set(sub)
-    _register_devices(sub)
+    _register_config(sub)
+    _register_fw_params(sub)
     _register_ports(sub)
     _register_add_devices(sub)
     _register_send(sub)
@@ -107,60 +105,73 @@ def _register_template(sub: argparse._SubParsersAction) -> None:
     )
 
 
-def _register_device_info(sub: argparse._SubParsersAction) -> None:
+def _register_config(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser(
-        "device-info",
-        help="show one configured device from /etc/wb-mqtt-serial.conf",
-        description="Look up a configured device by `slave_id` or by string `id`.",
-    )
-    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
-
-
-def _register_device_params(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser(
-        "device-params",
-        help="read configurable parameters from device hardware",
-        description="Read device parameters from hardware via wb-mqtt-serial/device/LoadConfig RPC.",
-    )
-    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
-    p.add_argument(
-        "--force",
-        action="store_true",
-        help="bypass driver cache, read directly from device",
-    )
-
-
-def _register_device_set(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser(
-        "device-set",
-        help="write parameters to device hardware",
-        description="Write parameters to hardware via wb-mqtt-serial/device/Set RPC.",
-    )
-    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
-    p.add_argument(
-        "--set",
-        metavar="KEY=VALUE",
-        action="append",
-        dest="params",
-        required=True,
-        help="parameter to write (repeat for multiple): --set input1_mode=1",
-    )
-
-
-def _register_devices(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser(
-        "devices",
-        help="list every device configured in /etc/wb-mqtt-serial.conf",
+        "config",
+        help="serial config (/etc/wb-mqtt-serial.conf): list / show one device",
         description=(
-            "Dump every enabled device from the serial config with its effective UART\n"
-            "parameters (port-level defaults overridden by device-level fields)."
+            "Inspect what's wired into /etc/wb-mqtt-serial.conf:\n"
+            "\n"
+            "  (no args)     compact table of every enabled device\n"
+            "  <slave_id>    full dict of one device (looks up by slave_id or by\n"
+            "                the string `id` field that some templates set)\n"
+            "\n"
+            "Source of truth for the config layer. For actual firmware-parameter\n"
+            "values on the hardware use ``wb-cli serial fw-params``."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument(
+        "device_id",
+        nargs="?",
+        default=None,
+        help="numeric slave_id or string id; omit to list all",
+    )
+    p.add_argument(
         "--port",
         default=None,
-        help="filter to a single serial port path",
+        help="filter the list to a single serial port path",
+    )
+
+
+def _register_fw_params(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "fw-params",
+        help="read / write firmware parameters of one device",
+        description=(
+            "Read or write the firmware-configurable parameters of one device —\n"
+            "every value exposed in the device's template under\n"
+            "``device.parameters`` (input modes, channel ranges, calibration, etc.).\n"
+            "\n"
+            "  fw-params <id>                 read params via driver cache\n"
+            "  fw-params <id> --force         read live from hardware (bypass cache)\n"
+            "  fw-params <id> k=v k=v ...     write — goes through the config:\n"
+            "                                 1) confed Load /etc/wb-mqtt-serial.conf\n"
+            "                                 2) patch the device dict\n"
+            "                                 3) confed Save → driver reload\n"
+            "                                 Persistent across driver restart.\n"
+            "  fw-params <id> k=v --force     write straight through the driver\n"
+            "                                 (wb-mqtt-serial/device/Set RPC), WITHOUT\n"
+            "                                 touching the config. One-shot — value\n"
+            "                                 reverts on next driver restart.\n"
+            "\n"
+            "NOT for slave_id or baud_rate — those are bus-level Modbus registers,\n"
+            "not template parameters. (Use ``serial wb-set-slave-id`` / ``wb-set-baud``\n"
+            "in a later release, or ``serial send`` raw Modbus FC6 today.)"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("device_id", help="numeric slave_id or string id from the serial config")
+    p.add_argument(
+        "params",
+        nargs="*",
+        metavar="KEY=VALUE",
+        help="parameters to write (positional pairs). Omit to read.",
+    )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="on read: bypass driver cache. On write: skip config, go straight to device.",
     )
 
 

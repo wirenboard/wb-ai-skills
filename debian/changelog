@@ -1,3 +1,51 @@
+wb-cli (1.7.0) stable; urgency=medium
+
+  Breaking minor — first batch of the ``serial`` plugin tidy-up
+  promised in 1.6.0. Renames four legacy subcommands to two with
+  cleaner semantics; no functional regressions.
+
+  ## Removed (renamed)
+  * ``serial devices`` and ``serial device-info`` → folded into one
+    ``serial config [<slave_id>] [--port <path>]``. Without an id —
+    compact list, optionally port-filtered (was ``devices``). With
+    an id — full dict of one device (was ``device-info``). One name
+    for the config layer, easier to find from help.
+  * ``serial device-params`` (read) and ``serial device-set`` (write)
+    → folded into one ``serial fw-params <slave_id> [k=v ...] [--force]``.
+    Empty positional list → read (was ``device-params``); non-empty
+    pairs → write (was ``device-set``, dropped the ``--set k=v --set
+    k=v`` flag-repeat for plain positional ``k=v k=v``).
+
+  ## Changed semantics — fw-params write
+  * Default ``fw-params <id> k=v`` writes **through the config**
+    (confed Load → patch device dict → confed Save → driver reload).
+    Persistent: the value survives a wb-mqtt-serial restart because
+    the config is the source of truth. Previous ``device-set`` went
+    straight through ``device/Set`` RPC and was therefore one-shot:
+    next driver restart would replay the old value from the config.
+  * ``--force`` on write keeps the old one-shot behaviour (direct
+    ``wb-mqtt-serial/device/Set`` RPC, no config write) — explicit
+    opt-in for tests / probes where you don't want to persist.
+  * ``--force`` on read still bypasses the driver's parameter cache
+    (unchanged from ``device-params --force``).
+
+  ## Tests
+  * Rewrote 11 existing ``test_serial`` tests onto the new names and
+    the two write paths (``via=config`` / ``via=device``). Existing
+    ``test_modbus_device_info_*`` and ``test_modbus_devices_*`` in
+    ``test_commands`` renamed to ``test_serial_config_*``. 287 tests
+    total, lint 10.00/10.
+  * skills/wb-serial: every ``serial devices`` / ``device-info`` /
+    ``device-params`` / ``device-set`` reference rewritten.
+
+  Still scheduled separately:
+  * ``serial wb-set-slave-id`` / ``wb-set-baud`` (bus-level via WB
+    Common Modbus Registers / Fast Modbus by SN)
+  * ``serial send-modbus`` (Modbus-protocol wrapper over ``port/Load``)
+  * Plugin ``modbus-fw`` → subcommand ``serial wb-fw``
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 13 May 2026 16:35:49 +0400
+
 wb-cli (1.6.1) stable; urgency=medium
 
   Follow-up tidy after the 1.6.0 smoke.

@@ -31,10 +31,10 @@ diagnostics flow needs; prefer it to raw MQTT RPCs.
 ssh root@<HOST> wb-cli --json serial wb-scan --port /dev/ttyRS485-1     # bus scan (Fast Modbus)
 ssh root@<HOST> wb-cli --json serial wb-scan --slow --timeout 300       # exhaustive UART poll
 ssh root@<HOST> wb-cli --json serial wb-scan --bootloader               # devices in bootloader mode
-ssh root@<HOST> wb-cli --json serial devices                            # what's in /etc/wb-mqtt-serial.conf
+ssh root@<HOST> wb-cli --json serial config                            # what's in /etc/wb-mqtt-serial.conf
 ssh root@<HOST> wb-cli --json serial ports                              # ports the driver currently serves
-ssh root@<HOST> wb-cli --json serial device-params 52                   # current firmware settings
-ssh root@<HOST> wb-cli --json serial device-set 52 --set in0_mode=1     # update firmware settings
+ssh root@<HOST> wb-cli --json serial fw-params 52                   # current firmware settings
+ssh root@<HOST> wb-cli --json serial fw-params 52 in0_mode=1     # update firmware settings
 ssh root@<HOST> wb-cli --json serial-debug --port /dev/ttyRS485-1 --seconds 60
 ssh root@<HOST> wb-cli --json dev wb-mr6c_52                            # live values from the device
 ```
@@ -306,11 +306,11 @@ After adding, `wb-mqtt-serial` reloads automatically. Verify: `wb-cli --json dev
 
 ```bash
 # Read parameters by slave_id or by device id
-ssh root@<HOST> wb-cli --json serial device-params 52
-ssh root@<HOST> wb-cli --json serial device-params wb-mr6c-52
+ssh root@<HOST> wb-cli --json serial fw-params 52
+ssh root@<HOST> wb-cli --json serial fw-params wb-mr6c-52
 
 # Bypass driver cache (force re-read from hardware)
-ssh root@<HOST> wb-cli --json serial device-params 52 --force
+ssh root@<HOST> wb-cli --json serial fw-params 52 --force
 ```
 
 Returns `{"slave_id": 52, "device_type": "WB-MR6C", "model": "...", "fw": {"version": "..."}, "parameters": {"in0_mode": 0, ...}}`.
@@ -318,7 +318,7 @@ Returns `{"slave_id": 52, "device_type": "WB-MR6C", "model": "...", "fw": {"vers
 `device-set` writes one or more parameters to the device via `device/Set` RPC:
 
 ```bash
-ssh root@<HOST> wb-cli --json serial device-set 52 --set in0_mode=1 --set in1_mode=3
+ssh root@<HOST> wb-cli --json serial fw-params 52 in0_mode=1 in1_mode=3
 ```
 
 `KEY=VALUE` — values are coerced: integers first, then floats, then strings. Returns the parameters that were written.
@@ -329,10 +329,10 @@ ssh root@<HOST> wb-cli --json serial device-set 52 --set in0_mode=1 --set in1_mo
 
 ```bash
 # All devices from /etc/wb-mqtt-serial.conf (with protocol column)
-ssh root@<HOST> wb-cli --json serial devices
+ssh root@<HOST> wb-cli --json serial config
 
 # Filter to one port
-ssh root@<HOST> wb-cli --json serial devices --port /dev/ttyRS485-1
+ssh root@<HOST> wb-cli --json serial config --port /dev/ttyRS485-1
 
 # Active ports (driver-side, only what's currently open)
 ssh root@<HOST> wb-cli --json serial ports
@@ -447,12 +447,12 @@ If the firmware version of a specific WB device is needed — **don't ask the us
 
 1. Read device parameters directly from hardware — many WB devices expose `fw_version` in the `device-params` output without touching the config:
    ```bash
-   ssh root@<HOST> wb-cli --json serial device-params <slave_id_or_id>
+   ssh root@<HOST> wb-cli --json serial fw-params <slave_id_or_id>
    ```
    Look at `.data.fw.version` / `.data.parameters.fw_version`. Done if present.
 2. Otherwise, look up the device's `device_type` from config:
    ```bash
-   ssh root@<HOST> wb-cli --json serial devices | jq -r '.data.devices[] | select(.slave_id==<slave_id>) | .device_type'
+   ssh root@<HOST> wb-cli --json serial config | jq -r '.data.devices[] | select(.slave_id==<slave_id>) | .device_type'
    ```
 3. Read the template via wb-cli (it knows both `/etc/wb-mqtt-serial.conf.d/templates` and `/usr/share/wb-mqtt-serial/templates`, custom takes precedence):
    ```bash
@@ -612,13 +612,13 @@ This is how `wb-cli serial add-devices` and `modbus_client_rpc` work internally 
 When you suspect misconfigured firmware settings, read them directly from hardware:
 
 ```bash
-ssh root@<HOST> wb-cli --json serial device-params <slave_id>
+ssh root@<HOST> wb-cli --json serial fw-params <slave_id>
 ```
 
 Returns the current `parameters` values (e.g. input modes, relay behaviours, thresholds). Compare with expected values from the template or user settings. To apply a fix in-place without editing the config file:
 
 ```bash
-ssh root@<HOST> wb-cli --json serial device-set <slave_id> --set <param>=<value>
+ssh root@<HOST> wb-cli --json serial fw-params <slave_id> <param>=<value>
 ```
 
 Protocol spec: <https://github.com/wirenboard/wb-modbus-ext-scanner/blob/main/docs/protocol.en.md>

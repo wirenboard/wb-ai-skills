@@ -103,40 +103,40 @@ def _scan_ctx(*, port="/dev/ttyRS485-1", timeout=5.0, scan_type="extended"):
 
 
 def test_parse_param_int():
-    result = _parse_param_assignments(argparse.Namespace(params=["mode=1"]))
+    result = _parse_param_assignments(["mode=1"])
     assert result == {"mode": 1}
     assert isinstance(result["mode"], int)
 
 
 def test_parse_param_float():
-    result = _parse_param_assignments(argparse.Namespace(params=["scale=1.5"]))
+    result = _parse_param_assignments(["scale=1.5"])
     assert result == {"scale": 1.5}
     assert isinstance(result["scale"], float)
 
 
 def test_parse_param_string_fallback():
-    result = _parse_param_assignments(argparse.Namespace(params=["label=hello"]))
+    result = _parse_param_assignments(["label=hello"])
     assert result == {"label": "hello"}
     assert isinstance(result["label"], str)
 
 
 def test_parse_param_multiple():
-    result = _parse_param_assignments(argparse.Namespace(params=["a=1", "b=2.5", "c=text"]))
+    result = _parse_param_assignments(["a=1", "b=2.5", "c=text"])
     assert result == {"a": 1, "b": 2.5, "c": "text"}
 
 
 def test_parse_param_invalid_format_raises():
     with pytest.raises(WbCliError) as exc:
-        _parse_param_assignments(argparse.Namespace(params=["noequals"]))
+        _parse_param_assignments(["noequals"])
     assert exc.value.code == "SERIAL_INVALID_PARAM"
 
 
 def test_parse_param_none_returns_empty():
-    assert not _parse_param_assignments(argparse.Namespace(params=None))
+    assert not _parse_param_assignments(None)
 
 
 def test_parse_param_zero_int():
-    result = _parse_param_assignments(argparse.Namespace(params=["mode=0"]))
+    result = _parse_param_assignments(["mode=0"])
     assert result == {"mode": 0}
     assert isinstance(result["mode"], int)
 
@@ -264,11 +264,13 @@ def test_iter_devices_port_protocol_inherited():
 
 
 def _device_params_ctx(device_id="5", force=False):
+    """Build a ctx for `serial fw-params <id>` read flow (no positional params)."""
     return _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="device-params",
+            subcmd="fw-params",
             device_id=device_id,
+            params=[],
             force=force,
         )
     )
@@ -398,68 +400,110 @@ def test_device_params_render_no_fw_info():
 # ---------------------------------------------------------------------------
 
 
-def _device_set_ctx(device_id="5", params=None):
+def _fw_params_write_ctx(device_id="5", params=None, force=False):
+    """Build a ctx for `serial fw-params <id> k=v...` write flow."""
     return _ctx(
         args=argparse.Namespace(
             quiet=False,
-            subcmd="device-set",
+            subcmd="fw-params",
             device_id=device_id,
-            params=params or ["output_mode=1"],
+            params=params if params is not None else ["output_mode=1"],
+            force=force,
         )
     )
 
 
-def test_device_set_happy_path():
-    ctx = _device_set_ctx(params=["output_mode=1", "relay_delay=500"])
-    ctx.rpc.call.side_effect = [_conf(), None]
+def test_fw_params_write_through_config_default():
+    """Default write path: confed Load → patch device dict → confed Save.
+
+    Persistent: the value survives a driver restart because the config is
+    the source of truth.
+    """
+    ctx = _fw_params_write_ctx(params=["output_mode=1", "relay_delay=500"])
+    # iter_devices view (used by _resolve_device_from_config) + raw content
+    # (used to mutate the device dict before Save) come from the same
+    # confed/Editor/Load call. Patch the latter to return the raw content
+    # twice so both code paths see the same data.
+    raw_load = _conf()
+    # Sequence:
+    #   1. confed/Editor/Load — for _resolve_device_from_config (serial_conf.load_config)
+    #   2. confed/Editor/Load — for _fw_params_write_via_config
+    #   3. confed/Editor/Save — patch persisted
+    ctx.rpc.call.side_effect = [raw_load, raw_load, {"ok": True}]
     result = SerialPlugin().dispatch(ctx)
 
     assert result["slave_id"] == 5
     assert result["device_type"] == "WB-MDM3"
     assert result["set"] == {"output_mode": 1, "relay_delay": 500}
+    assert result["via"] == "config"
+
+    save_call = ctx.rpc.call.call_args_list[2]
+    assert save_call.args[0] == "confed/Editor/Save"
+    saved_dev = next(
+        d
+        for port in save_call.args[1]["content"]["ports"]
+        for d in port.get("devices", [])
+        if d.get("slave_id") == 5
+    )
+    assert saved_dev["output_mode"] == 1
+    assert saved_dev["relay_delay"] == 500
+
+
+def test_fw_params_write_force_goes_through_driver():
+    """--force on write: skip the config, drive RPC `wb-mqtt-serial/device/Set` directly.
+
+    One-shot: the value will revert on the next driver restart because the
+    config still holds the old value.
+    """
+    ctx = _fw_params_write_ctx(params=["output_mode=1"], force=True)
+    ctx.rpc.call.side_effect = [_conf(), {"ok": True}]
+    result = SerialPlugin().dispatch(ctx)
+
+    assert result["set"] == {"output_mode": 1}
+    assert result["via"] == "device"
 
     set_call = ctx.rpc.call.call_args_list[1]
     assert set_call.args[0] == "wb-mqtt-serial/device/Set"
     p = set_call.args[1]
-    assert p["parameters"] == {"output_mode": 1, "relay_delay": 500}
+    assert p["parameters"] == {"output_mode": 1}
     assert p["slave_id"] == 5
     assert p["device_type"] == "WB-MDM3"
 
 
-def test_device_set_invalid_param_raises():
-    ctx = _device_set_ctx(params=["noequals"])
+def test_fw_params_write_invalid_param_raises():
+    ctx = _fw_params_write_ctx(params=["noequals"])
     ctx.rpc.call.return_value = _conf()
     with pytest.raises(WbCliError) as exc:
         SerialPlugin().dispatch(ctx)
     assert exc.value.code == "SERIAL_INVALID_PARAM"
 
 
-def test_device_set_int_value():
-    ctx = _device_set_ctx(params=["mode=2"])
-    ctx.rpc.call.side_effect = [_conf(), None]
+def test_fw_params_write_int_value():
+    ctx = _fw_params_write_ctx(params=["mode=2"], force=True)
+    ctx.rpc.call.side_effect = [_conf(), {"ok": True}]
     result = SerialPlugin().dispatch(ctx)
     assert result["set"]["mode"] == 2
     assert isinstance(result["set"]["mode"], int)
 
 
-def test_device_set_float_value():
-    ctx = _device_set_ctx(params=["scale=1.5"])
-    ctx.rpc.call.side_effect = [_conf(), None]
+def test_fw_params_write_float_value():
+    ctx = _fw_params_write_ctx(params=["scale=1.5"], force=True)
+    ctx.rpc.call.side_effect = [_conf(), {"ok": True}]
     result = SerialPlugin().dispatch(ctx)
     assert result["set"]["scale"] == 1.5
     assert isinstance(result["set"]["scale"], float)
 
 
-def test_device_set_string_value():
-    ctx = _device_set_ctx(params=["label=hello"])
-    ctx.rpc.call.side_effect = [_conf(), None]
+def test_fw_params_write_string_value():
+    ctx = _fw_params_write_ctx(params=["label=hello"], force=True)
+    ctx.rpc.call.side_effect = [_conf(), {"ok": True}]
     result = SerialPlugin().dispatch(ctx)
     assert result["set"]["label"] == "hello"
     assert isinstance(result["set"]["label"], str)
 
 
-def test_device_set_not_found_raises():
-    ctx = _device_set_ctx(device_id="999")
+def test_fw_params_write_not_found_raises():
+    ctx = _fw_params_write_ctx(device_id="999", force=True)
     ctx.rpc.call.return_value = {"content": {"ports": []}}
     with pytest.raises(WbCliError) as exc:
         SerialPlugin().dispatch(ctx)
@@ -467,7 +511,7 @@ def test_device_set_not_found_raises():
 
 
 # ---------------------------------------------------------------------------
-# device-set: render
+# fw-params write render (same envelope shape `{slave_id, device_type, set}`)
 # ---------------------------------------------------------------------------
 
 
