@@ -15,11 +15,11 @@ from wb_cli.commands.cloud import CloudPlugin
 from wb_cli.commands.confed import ConfedPlugin
 from wb_cli.commands.history import HistoryPlugin
 from wb_cli.commands.job_cmd import JobPlugin
-from wb_cli.commands.modbus_fw import ModbusFwPlugin
 from wb_cli.commands.mqtt_cmd import MqttPlugin
 from wb_cli.commands.rules import RulesPlugin
 from wb_cli.commands.serial._actions import _parse_hex_msg
 from wb_cli.commands.serial._plugin import SerialPlugin as ModbusPlugin
+from wb_cli.commands.serial._wb_fw import dispatch as _wb_fw_dispatch
 from wb_cli.commands.serial_debug import SerialDebugPlugin
 from wb_cli.commands.snapshot import SnapshotPlugin
 from wb_cli.context import CliContext
@@ -1036,10 +1036,11 @@ def test_modbus_devices_filters_by_port():
 
 
 def _fw_check_args(slave_id=None, port=None):
-    """Common Namespace for `modbus-fw check`."""
+    """Common Namespace for `serial wb-fw check`."""
     return argparse.Namespace(
         quiet=False,
-        subcmd="check",
+        subcmd="wb-fw",
+        wb_fw_action="check",
         slave_id=slave_id,
         port=port,
         baud=9600,
@@ -1059,7 +1060,7 @@ def test_modbus_fw_check_single():
         "bootloader": "1.0.0",
         "available_bootloader": "1.0.0",
     }
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["slave_id"] == 4
     assert result["can_update"] is True
     method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
@@ -1091,7 +1092,7 @@ def test_modbus_fw_check_bulk_walks_serial_conf():
         raise AssertionError(f"unexpected rpc call: {method}")
 
     ctx.rpc.call.side_effect = _call
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["count"] == 2
     assert {row["slave_id"] for row in result["devices"]} == {4, 7}
     assert all("can_update" in row for row in result["devices"])
@@ -1124,7 +1125,7 @@ def test_modbus_fw_check_bulk_attaches_per_device_error():
         raise AssertionError(f"unexpected rpc call: {method}")
 
     ctx.rpc.call.side_effect = _call
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert calls["n"] == 2  # both devices probed
     by_slave = {row["slave_id"]: row for row in result["devices"]}
     assert by_slave[4]["error"] == "no answer"
@@ -1134,7 +1135,8 @@ def test_modbus_fw_check_bulk_attaches_per_device_error():
 def _fw_update_args(slave_id=None, port=None, all_flag=False, background=False, output=None):
     return argparse.Namespace(
         quiet=False,
-        subcmd="update",
+        subcmd="wb-fw",
+        wb_fw_action="update",
         slave_id=slave_id,
         port=port,
         baud=9600,
@@ -1153,7 +1155,7 @@ def test_modbus_fw_update_bulk_requires_all_flag():
     """Bulk update without --all is refused — flashing every device is destructive."""
     ctx = _ctx(args=_fw_update_args(slave_id=None, all_flag=False))
     with pytest.raises(WbCliError) as exc:
-        ModbusFwPlugin().dispatch(ctx)
+        _wb_fw_dispatch(ctx)
     assert exc.value.code == "MODBUS_FW_BULK_NEEDS_FLAG"
 
 
@@ -1181,7 +1183,7 @@ def test_modbus_fw_update_bulk_skips_up_to_date_devices():
         raise AssertionError(f"unexpected rpc call: {method}")
 
     ctx.rpc.call.side_effect = _call
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["count"] == 1
     assert result["queued"][0]["slave_id"] == 7
     assert result["skipped"][0]["slave_id"] == 4
@@ -1192,7 +1194,7 @@ def test_modbus_fw_update_single_passes_software_type():
     ctx = _ctx(args=_fw_update_args(slave_id=4, port="/dev/ttyRS485-1", all_flag=False))
     ctx.args.software_type = "bootloader"
     ctx.rpc.call.return_value = {"ok": True}
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["type"] == "bootloader"
     assert result["ok"] is True
     method, params = ctx.rpc.call.call_args.args[0], ctx.rpc.call.call_args.args[1]
@@ -1204,7 +1206,7 @@ def test_modbus_fw_update_background_requires_output():
     """--background without --output is refused with a clear error."""
     ctx = _ctx(args=_fw_update_args(slave_id=5, port="/dev/ttyRS485-1", background=True, output=None))
     with pytest.raises(WbCliError) as exc:
-        ModbusFwPlugin().dispatch(ctx)
+        _wb_fw_dispatch(ctx)
     assert exc.value.code == "MODBUS_FW_OUTPUT_REQUIRED"
 
 
@@ -1225,12 +1227,12 @@ def test_modbus_fw_update_background_schedules_job(tmp_path):
         )
     )
     ctx.job.run.return_value = {"unit": "wb-cli-job-modbus-fw-update-1", "log": "/tmp/foo.log"}
-    result = ModbusFwPlugin().dispatch(ctx)
+    result = _wb_fw_dispatch(ctx)
     assert result["unit"] == "wb-cli-job-modbus-fw-update-1"
     assert result["output"] == str(out)
     assert result["background"] is True
     cmd = ctx.job.run.call_args.args[1]
-    assert "wb-cli --json modbus-fw update 5" in cmd
+    assert "wb-cli --json serial wb-fw update 5" in cmd
     assert "--port /dev/ttyRS485-1" in cmd
     assert "--wait" in cmd
     assert f"> {out}" in cmd
@@ -1249,9 +1251,9 @@ def test_modbus_fw_update_background_all_flag_passed_through(tmp_path):
         )
     )
     ctx.job.run.return_value = {"unit": "wb-cli-job-modbus-fw-update-2", "log": "/tmp/bar.log"}
-    ModbusFwPlugin().dispatch(ctx)
+    _wb_fw_dispatch(ctx)
     cmd = ctx.job.run.call_args.args[1]
-    assert "wb-cli --json modbus-fw update" in cmd
+    assert "wb-cli --json serial wb-fw update" in cmd
     assert "--all" in cmd
     assert "--wait" in cmd
 

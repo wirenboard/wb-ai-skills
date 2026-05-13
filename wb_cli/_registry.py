@@ -12,12 +12,11 @@ BUILTIN_PLUGINS: dict = {
     "history": ("wb_cli.commands.history", "time-series history of a control's values"),
     "info": ("wb_cli.commands.info", "what this controller is: serial, firmware, board, uptime"),
     "job": ("wb_cli.commands.job_cmd", "run long-running commands in the background, watch them, fetch logs"),
-    "modbus-fw": ("wb_cli.commands.modbus_fw", "firmware update of Modbus devices: check / update / restore"),
     "mqtt": ("wb_cli.commands.mqtt_cmd", "raw MQTT: read retained, write, list topics"),
     "mqtt-debug": ("wb_cli.commands.mqtt_debug", "verbose mosquitto logging: enable / disable / status / capture"),
     "plugins": ("wb_cli.commands.plugins", "list every plugin this wb-cli build knows about"),
     "rules": ("wb_cli.commands.rules", "manage wb-rules automation scripts (list / read / save / disable / delete)"),
-    "serial": ("wb_cli.commands.serial", "serial port ops: wb-scan, config, fw-params, add-devices, templates, ports, send"),
+    "serial": ("wb_cli.commands.serial", "serial / RS-485 ops: scan, config, fw-params, add, send, wb-set-*, wb-fw, templates, ports"),
     "serial-debug": ("wb_cli.commands.serial_debug", "turn on RS-485 debug logging, capture for N seconds, then restore"),
     "snapshot": ("wb_cli.commands.snapshot", "save controller state to disk and compare snapshots later"),
 }

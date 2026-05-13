@@ -1,14 +1,20 @@
-"""``wb-cli modbus-fw`` — firmware update of Modbus / RS-485 devices.
+"""``wb-cli serial wb-fw`` — firmware update of WB Modbus devices.
 
-Wraps the ``wb-device-manager/fw-update/*`` RPC: ``check`` available
-firmware, ``update`` (inline ``--wait`` or ``--background`` via
-``wb-cli job run`` for hours-long bulk flashes), and ``restore`` a
-device stuck in bootloader.
+Folded in from the standalone ``modbus-fw`` plugin in 1.8.0 — same logic
+and arguments, same wb-device-manager fw-update RPC, just lives under
+the ``serial`` plugin since firmware update is one more thing you do
+over an RS-485 port. Exposed as a flat module here (no Plugin class);
+``serial/_register.py`` wires the parsers, ``_actions.py`` dispatches.
 
-The wb-device-manager service does the heavy lifting (downloads the
-binary, flashes via Modbus bootloader, publishes progress to
-``/wb-device-manager/firmware_update/state``). To observe an in-flight
-update from elsewhere: ``wb-cli mqtt sub /wb-device-manager/firmware_update/state``.
+Subcommands:
+  * ``check``   — what firmware is available (one device, or every device
+                  in /etc/wb-mqtt-serial.conf).
+  * ``update``  — flash (single device, ``--all`` for a bulk pass, ``--wait``
+                  or ``--background`` for long flashes).
+  * ``restore`` — re-flash a device stuck in bootloader after a failed update.
+
+In-flight progress / queue lives on the retained MQTT topic
+``/wb-device-manager/firmware_update/state``.
 """
 
 from __future__ import annotations
@@ -21,148 +27,89 @@ import time
 from wb_cli.errors import ExitCode, WbCliError
 from wb_cli.lib import serial_conf, serial_port
 from wb_cli.lib.progress import ProgressBar
-from wb_cli.plugin import BasePlugin
 
 _STATE_TOPIC = "/wb-device-manager/firmware_update/state"
 
 
-class ModbusFwPlugin(BasePlugin):
-    name = "modbus-fw"
-    help = "firmware update of Modbus devices: check / update / restore"
-    # `watch` and `update --wait` draw their own progress; others are quick.
-    auto_spinner = False
-
-    def register(self, subparsers: argparse._SubParsersAction) -> None:
-        parser = subparsers.add_parser(
-            self.name,
-            help=self.help,
-            description=(
-                "Update the firmware of Wiren Board Modbus devices over RS-485.\n"
-                "Same flow the web UI's 'Check / Update' buttons trigger — backed by\n"
-                "wb-device-manager's fw-update RPC.\n"
-                "\n"
-                "Typical use:\n"
-                "  1. `wb-cli modbus-fw check 4 --port /dev/ttyRS485-1`           # what's available\n"
-                "  2a. `wb-cli modbus-fw update 4 --port ... --wait`              # one device, inline\n"
-                "  2b. `wb-cli modbus-fw update --all --background \\             # whole bus, as a job\n"
-                "        --output /mnt/data/ai/wb-cli/fw-$(date +%s).json`\n"
-                "  3. on a failed update: `wb-cli modbus-fw restore 4 --port ...`\n"
-                "\n"
-                "In-flight update progress / queue:\n"
-                "  wb-cli mqtt sub /wb-device-manager/firmware_update/state"
-            ),
-            formatter_class=argparse.RawDescriptionHelpFormatter,
-        )
-        sub = parser.add_subparsers(dest="subcmd", metavar="<action>")
-
-        sp = sub.add_parser(
-            "check",
-            help="show available firmware (one device, or every device the scan finds)",
-            description=(
-                "Without slave_id: run a Fast Modbus scan on --port (or the whole bus)"
-                " and check every device.\nWith slave_id: check just that device."
-            ),
-            formatter_class=argparse.RawDescriptionHelpFormatter,
-        )
-        _add_optional_target_args(sp)
-
-        sp = sub.add_parser(
-            "update",
-            help="flash the latest firmware (one device, or `--all` everything updatable)",
-            description=(
-                "Without slave_id, requires --all (and either --port to limit the scope\n"
-                "or no --port to update everything in flight): finds every device with\n"
-                "`can_update=true` and queues an update for each.\n"
-                "With slave_id: update just that one device."
-            ),
-            formatter_class=argparse.RawDescriptionHelpFormatter,
-        )
-        _add_optional_target_args(sp)
-        sp.add_argument(
-            "--all",
-            action="store_true",
-            help="(no slave_id) acknowledge bulk update of every updatable device",
-        )
-        sp.add_argument(
-            "--type",
-            dest="software_type",
-            choices=("firmware", "bootloader"),
-            default="firmware",
-            help="which component to flash (default: firmware)",
-        )
-        sp.add_argument(
-            "--wait",
-            action="store_true",
-            help="block until the update finishes or fails (draws a progress bar)",
-        )
-        sp.add_argument(
-            "--background",
-            action="store_true",
-            help=("run as a wb-cli job (use for bulk / hours-long flashes); " "requires --output"),
-        )
-        sp.add_argument(
-            "--output",
-            default=None,
-            help="write the JSON envelope to this file (required with --background)",
-        )
-
-        sp = sub.add_parser(
-            "restore",
-            help="re-flash a device stuck in bootloader after a failed update",
-        )
-        _add_target_args(sp)
-        sp.add_argument(
-            "--wait",
-            action="store_true",
-            help="block until restore finishes",
-        )
-
-    def dispatch(self, ctx) -> dict:
-        subcmd = ctx.args.subcmd
-        if subcmd == "check":
-            return _check(ctx)
-        if subcmd == "update":
-            return _update(ctx)
-        if subcmd == "restore":
-            return _restore(ctx)
-        return {}
-
-    def render(self, result):
-        # `check` single
-        if "can_update" in result:
-            return _render_check_one(result)
-        # `check` bulk — rows carry either `can_update` (success) or `error`.
-        if (
-            "devices" in result
-            and result["devices"]
-            and ("can_update" in result["devices"][0] or "error" in result["devices"][0])
-        ):
-            return _render_check_bulk(result["devices"])
-        # `update` bulk
-        if "queued" in result:
-            return _render_update_bulk(result)
-        # `update --background` scheduled
-        if "unit" in result and "output" in result:
-            return f"update started in background: {result['unit']}\noutput: {result['output']}"
-        # `update` / `restore` single
-        if "ok" in result and "slave_id" in result:
-            return f"ok  {result['action']}  slave_id={result['slave_id']} port={result['port']}"
-        return None
-
-
 # --------------------------------------------------------------------------- #
-# argument helpers
+# parser registration — called from ``serial/_register.py``
 # --------------------------------------------------------------------------- #
+
+
+def register_actions(sub: argparse._SubParsersAction) -> None:
+    """Register ``check`` / ``update`` / ``restore`` onto the wb-fw sub-parser."""
+    sp = sub.add_parser(
+        "check",
+        help="show available firmware (one device, or every device the scan finds)",
+        description=(
+            "Without slave_id: walk every device in /etc/wb-mqtt-serial.conf"
+            " (optionally filtered by --port) and check each.\n"
+            "With slave_id: check just that device."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_optional_target_args(sp)
+
+    sp = sub.add_parser(
+        "update",
+        help="flash the latest firmware (one device, or `--all` everything updatable)",
+        description=(
+            "Without slave_id, requires --all (and either --port to limit the scope\n"
+            "or no --port to update everything in flight): finds every device with\n"
+            "``can_update=true`` and queues an update for each.\n"
+            "With slave_id: update just that one device."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_optional_target_args(sp)
+    sp.add_argument(
+        "--all",
+        action="store_true",
+        help="(no slave_id) acknowledge bulk update of every updatable device",
+    )
+    sp.add_argument(
+        "--type",
+        dest="software_type",
+        choices=("firmware", "bootloader"),
+        default="firmware",
+        help="which component to flash (default: firmware)",
+    )
+    sp.add_argument(
+        "--wait",
+        action="store_true",
+        help="block until the update finishes or fails (draws a progress bar)",
+    )
+    sp.add_argument(
+        "--background",
+        action="store_true",
+        help="run as a wb-cli job (for bulk / hours-long flashes); requires --output",
+    )
+    sp.add_argument(
+        "--output",
+        default=None,
+        help="write the JSON envelope to this file (required with --background)",
+    )
+
+    sp = sub.add_parser(
+        "restore",
+        help="re-flash a device stuck in bootloader after a failed update",
+    )
+    _add_target_args(sp)
+    sp.add_argument(
+        "--wait",
+        action="store_true",
+        help="block until restore finishes",
+    )
 
 
 def _add_target_args(p):
-    """slave_id required + UART overrides — used by `restore` and `clear-error`."""
+    """slave_id required + UART overrides — used by ``restore``."""
     p.add_argument("slave_id", type=int, help="Modbus slave address, 1-247")
     _add_uart_args(p, require_port=True)
 
 
 def _add_optional_target_args(p):
-    """slave_id optional — used by `check` and `update` (bulk vs targeted)."""
+    """slave_id optional — used by ``check`` and ``update`` (bulk vs targeted)."""
     p.add_argument(
         "slave_id",
         type=int,
@@ -182,12 +129,47 @@ def _add_uart_args(p, *, require_port: bool):
     serial_port.add_uart_args(p)
 
 
-_port_arg = serial_port.port_params_from_args  # alias for back-compat in this module
+# --------------------------------------------------------------------------- #
+# dispatch — called from ``serial/_actions.py``
+# --------------------------------------------------------------------------- #
+
+
+def dispatch(ctx) -> dict:
+    action = getattr(ctx.args, "wb_fw_action", None)
+    if action == "check":
+        return _check(ctx)
+    if action == "update":
+        return _update(ctx)
+    if action == "restore":
+        return _restore(ctx)
+    return {}
+
+
+def render(result):
+    """Render a wb-fw result for human mode. Returns ``None`` if not ours."""
+    if "can_update" in result:
+        return _render_check_one(result)
+    if (
+        "devices" in result
+        and result["devices"]
+        and ("can_update" in result["devices"][0] or "error" in result["devices"][0])
+    ):
+        return _render_check_bulk(result["devices"])
+    if "queued" in result:
+        return _render_update_bulk(result)
+    if "unit" in result and "output" in result:
+        return f"update started in background: {result['unit']}\noutput: {result['output']}"
+    if "ok" in result and "slave_id" in result and result.get("action") in {"update", "restore"}:
+        return f"ok  {result['action']}  slave_id={result['slave_id']} port={result['port']}"
+    return None
 
 
 # --------------------------------------------------------------------------- #
 # RPC actions
 # --------------------------------------------------------------------------- #
+
+
+_port_arg = serial_port.port_params_from_args  # alias used in places below
 
 
 def _check(ctx) -> dict:
@@ -197,7 +179,6 @@ def _check(ctx) -> dict:
         with ProgressBar(f"checking slave_id={ctx.args.slave_id}") as pb:
             pb.update(0, suffix=port_str)
             return _check_one(ctx, ctx.args.slave_id, _port_arg(ctx.args), device_type=device_type)
-    # Bulk: walk every device in /etc/wb-mqtt-serial.conf.
     content = serial_conf.load_config(ctx)
     targets = serial_conf.list_devices(content, port=ctx.args.port)
     total = len(targets)
@@ -312,11 +293,11 @@ def _update_background(ctx) -> dict:
             message="--background requires --output PATH",
             hint=(
                 "Write the long-flash JSON to a file under /mnt/data, "
-                "e.g. --output /mnt/data/ai/wb-cli/modbus-fw-$(date +%s).json"
+                "e.g. --output /mnt/data/ai/wb-cli/wb-fw-$(date +%s).json"
             ),
             exit_code=ExitCode.USAGE,
         )
-    parts = ["wb-cli", "--json", "modbus-fw", "update"]
+    parts = ["wb-cli", "--json", "serial", "wb-fw", "update"]
     if args.slave_id is not None:
         parts.append(str(args.slave_id))
     if args.port:
@@ -328,7 +309,7 @@ def _update_background(ctx) -> dict:
     parts.append("--wait")  # the whole point of background is inside-the-job wait
     parts += [">", shlex.quote(args.output)]
     command = " ".join(parts)
-    info = ctx.job.run("modbus-fw-update", command)
+    info = ctx.job.run("serial-wb-fw-update", command)
     return {
         "action": "update",
         "background": True,
@@ -479,6 +460,3 @@ def _render_update_bulk(result: dict) -> str:
     for s in skipped:
         lines.append(f"  . slave_id={s['slave_id']:<4} port={s['port']} (no update)")
     return "\n".join(lines)
-
-
-PLUGIN = ModbusFwPlugin()
