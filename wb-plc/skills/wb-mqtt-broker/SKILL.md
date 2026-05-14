@@ -67,220 +67,30 @@ Use raw `mosquitto_sub`/`mosquitto_pub` only when `wb-cli` can't help: broker co
 
 ### Verbose PUBLISH tracing — `wb-cli mqtt-debug`
 
-To find **which MQTT client** publishes to a given topic (wb-rules, web UI, an external client, a misbehaving driver), use the dedicated plugin instead of editing `/etc/mosquitto/conf.d/` by hand. **Always quote topics — WB control names commonly contain spaces** (e.g. `Channel 1 Dimming Level`), and over SSH wrap the whole command in double quotes so the controller shell sees the spaces.
+To find **which MQTT client** publishes to a given topic (wb-rules, web UI, an external client, a misbehaving driver), use the dedicated `wb-cli mqtt-debug` plugin instead of editing `/etc/mosquitto/conf.d/` by hand. It writes the same `log_type all` drop-in you would write manually, restarts `mosquitto`, parses every `Received PUBLISH …` line out of the journal into structured JSON records, then restores the previous state when done.
 
-> The `client_id` column / field is the **literal MQTT identifier** the publisher chose at CONNECT time, as reported by mosquitto after `Received PUBLISH from`. It's not a systemd unit name and not always equal to the package name — see the table below.
+Quick form:
 
 ```bash
-# Short ad-hoc capture — single substring filter (grep-style)
 ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
     --topic '/devices/wb-mr6c_7/controls/K1' --client-id wb-rules"
-
-# Multiple --topic / --client-id values OR together
-ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
-    --topic 'wb-mr6c_2/controls/K1' --topic 'wb-mr6c_2/controls/K2' \
-    --client-id wb-rules --client-id wb-mqtt-homeui"
-
-# MQTT-style wildcards: + matches one level, # matches all remaining levels
-ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
-    --topic '/devices/+/controls/Channel 1 Dimming Level/on'"
-ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 60 \
-    --topic '/devices/wb-mr6c_2/#'"
-
-# Toggle persistently (verbose logging stays on after capture)
-ssh root@<HOST> wb-cli mqtt-debug enable
-ssh root@<HOST> wb-cli mqtt-debug status
-ssh root@<HOST> wb-cli mqtt-debug disable
-
-# Long capture (hours / days) — runs as a wb-cli job, JSON envelope on disk
-ssh root@<HOST> "wb-cli --json mqtt-debug capture --seconds 86400 --background \
-    --output /mnt/data/ai/wb-cli/mqtt-debug-\$(date +%s).json"
-# poll the job:
-ssh root@<HOST> wb-cli --json job wait <unit>
-ssh root@<HOST> "jq '.data.entries[] | select(.client_id != \"wb-adc\")' \
-    /mnt/data/ai/wb-cli/mqtt-debug-<TS>.json"
 ```
 
-The plugin writes the same drop-in (`/etc/mosquitto/conf.d/debug-verbose.conf` with `log_type all`) that you would put there manually, restarts `mosquitto`, parses every `Received PUBLISH …` line out of the journal into structured records:
+For multi-filter captures, MQTT wildcards (`+`, `#`), persistent toggle (`enable`/`status`/`disable`), long background captures with `--output`, the JSON record schema, and the `client_id` lookup table for matching ID → process — see **`references/mqtt-debug.md`**.
 
-```json
-{"timestamp": "2026-05-13T09:44:31+00:00",
- "client_id": "system__wb-rules__cAbCdEfGhIjK",
- "topic": "/devices/wb-mr6c_7/controls/K1/on",
- "qos": 0, "retain": false, "dup": false,
- "message_id": 1234, "payload_size": 1}
-```
+## Authentication: passwords and ACL
 
-After an inline capture the previous on/off state is restored automatically (try/finally). For long captures, `--background` writes the JSON to `--output` and the plugin still restores the previous state when the job finishes. To leave verbose logging on after a capture, pass `--keep-enabled`.
+External listeners (port 1883 / 8883) need `allow_anonymous false` + a password file (`mosquitto_passwd -c …`) + an ACL file (per-user topic permissions). The internal `00default_listener.conf` keeps anonymous-allow over the Unix socket so WB services aren't affected — this is what `per_listener_settings true` enables; don't reset it.
 
-Common `client_id` values to expect in captures:
+ACL reloads on `systemctl reload mosquitto`; passwords too. Listener / TLS / bridge changes need `restart`.
 
-| `client_id` mosquitto reports | who that is |
-|---|---|
-| `wb-modbus` | `wb-mqtt-serial` (legacy client_id, kept for back-compat) |
-| `system__wb-rules__<hex>` | a wb-rules engine instance |
-| `wb-mqtt-homeui-<hex>` | the web UI |
-| `wb-mqtt-knx`, `wb-zigbee2mqtt`, `wb-w1` | corresponding drivers — each picks a sensible client_id |
-| `wb-cli-<pid>` | `wb-cli mqtt write` (since 1.5.2) |
-| `mosquitto_pub-<pid>` | `mosquitto_pub` invoked with `-i` set automatically |
-| `auto-<UUID>` | a client that connected with an **empty** client_id — mosquitto ≥2.0 auto-generates a UUID. Cannot be tied to a specific process |
-| `tasmota_*`, `shellyplus_*` | external IoT clients |
+For the full procedure (create password file, edit listener, test; ACL example with admin / frontend / external_app users) — see **`references/auth.md`**.
 
-If you see `auto-<UUID>` for your own ad-hoc publishes, pass `-i some-name` to `mosquitto_pub` to make them identifiable in the capture.
+## TLS on port 8883 and bridges to other brokers
 
-## Authentication: passwords
+TLS listener on 8883 uses a CA + server cert (self-signed for home, Let's Encrypt for production) plus the same password / ACL files. A bridge is a mode where mosquitto connects out to another broker and copies selected topics in/out — typical use: replication to Home Assistant, copy to cloud, backup broker. `cleansession false` keeps QoS≥1 messages across disconnects.
 
-### Create password file
-
-```bash
-ssh root@<HOST> 'mkdir -p /etc/mosquitto/passwd; chown mosquitto:mosquitto /etc/mosquitto/passwd'
-ssh root@<HOST> 'mosquitto_passwd -c /etc/mosquitto/passwd/default.conf <username>'
-# enter password: ****
-ssh root@<HOST> 'chown mosquitto:mosquitto /etc/mosquitto/passwd/default.conf; chmod 0640 /etc/mosquitto/passwd/default.conf'
-```
-
-`-c` — create file (overwrites existing!). Without `-c` — add a user to an existing file. Delete user: `mosquitto_passwd -D /etc/mosquitto/passwd/default.conf <username>`.
-
-### Configure listener to use passwords
-
-In `/etc/mosquitto/conf.d/10listeners.conf` there's already an example. Edit to disable anonymous:
-
-```bash
-ssh root@<HOST> 'cat > /etc/mosquitto/conf.d/10listeners.conf' <<'EOF'
-listener 1883
-allow_anonymous false
-acl_file /etc/mosquitto/acl/default.conf
-password_file /etc/mosquitto/passwd/default.conf
-EOF
-ssh root@<HOST> 'systemctl restart mosquitto'
-```
-
-`per_listener_settings true` (in `00default_listener.conf`) is key: allows different `allow_anonymous` for different listeners. The internal socket stays anonymous, the external one requires a password.
-
-### Test
-
-```bash
-ssh root@<HOST> "mosquitto_sub -h localhost -p 1883 -u <user> -P <pwd> -t '/devices/+/meta/name' -C 3 -W 3"
-```
-
-Without -u/-P should refuse (`Connection error: Connection Refused: not authorised.`).
-
-## ACL — per-user permissions
-
-ACL file — user permissions on topics:
-
-```bash
-ssh root@<HOST> 'cat > /etc/mosquitto/acl/default.conf' <<'EOF'
-# Default — anonymous deny
-topic deny #
-
-# user "admin" — full access
-user admin
-topic readwrite #
-
-# user "frontend" — read /devices/ only, write /devices/+/controls/+/on
-user frontend
-topic read /devices/#
-topic write /devices/+/controls/+/on
-
-# user "external_app" — only its own namespace
-user external_app
-topic readwrite app/external_app/#
-EOF
-ssh root@<HOST> 'systemctl reload mosquitto'   # ACLs reload (no restart required)
-```
-
-Each message is checked against the ACL before publishing. **Internal WB services via the Unix socket are not affected by the ACL** — they have their own section in `00default_listener.conf` (`allow_anonymous true`, no acl_file).
-
-## TLS on port 8883
-
-### Certificates
-
-A self-signed CA + server certificate for home tasks. For production prefer Let's Encrypt (via certbot/acme.sh) with a public domain.
-
-```bash
-# self-signed CA + server cert (one-time)
-ssh root@<HOST> 'mkdir -p /etc/mosquitto/certs && cd /etc/mosquitto/certs && \
-  openssl genrsa -out ca.key 2048 && \
-  openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 -out ca.crt -subj "/CN=WB-MQTT-CA" && \
-  openssl genrsa -out server.key 2048 && \
-  openssl req -new -key server.key -out server.csr -subj "/CN=wirenboard-<SN>.local" && \
-  openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650 -sha256 && \
-  chown mosquitto:mosquitto *.key *.crt && chmod 0640 *.key'
-```
-
-### TLS listener
-
-```bash
-ssh root@<HOST> 'cat >> /etc/mosquitto/conf.d/10listeners.conf' <<'EOF'
-
-listener 8883
-allow_anonymous false
-acl_file /etc/mosquitto/acl/default.conf
-password_file /etc/mosquitto/passwd/default.conf
-cafile /etc/mosquitto/certs/ca.crt
-certfile /etc/mosquitto/certs/server.crt
-keyfile /etc/mosquitto/certs/server.key
-EOF
-ssh root@<HOST> 'systemctl restart mosquitto'
-```
-
-### TLS test
-
-```bash
-ssh root@<HOST> "mosquitto_sub -h localhost -p 8883 --cafile /etc/mosquitto/certs/ca.crt -u <u> -P <p> -t test -C 1 -W 5"
-```
-
-From an external host — distribute `ca.crt` to the client, connect to `wirenboard-<SN>.local:8883`. Self-signed without `--cafile` — `tls_version mismatch`/`certificate verify failed`.
-
-For Let's Encrypt — `cafile` not needed (system CA), `certfile`/`keyfile` point to the certbot paths.
-
-## Bridges — bridges to other brokers
-
-A bridge is a mode where mosquitto itself connects to another broker and copies selected topics back and forth. Typical cases: replication to Home Assistant, copy to cloud, backup broker.
-
-### Example: bridge to Home Assistant
-
-`/etc/mosquitto/conf.d/20bridges.conf`:
-
-```bash
-ssh root@<HOST> 'cat > /etc/mosquitto/conf.d/20bridges.conf' <<'EOF'
-connection ha-bridge
-address ha.local:1883
-topic /devices/# out 0 wb/A25NDEMJ/
-topic ha/wb/cmd/+ in 0
-remote_username <ha_mqtt_user>
-remote_password <ha_mqtt_password>
-keepalive_interval 60
-restart_timeout 10
-notifications true
-notifications_topic wb/A25NDEMJ/bridge/state
-cleansession false
-try_private false
-EOF
-ssh root@<HOST> 'systemctl restart mosquitto'
-```
-
-Topic parameter: `<pattern> <direction> <qos> <local-prefix> <remote-prefix>`.
-- `out` — publish there (outbound), `in` — pull here, `both` — both directions.
-- `wb/A25NDEMJ/` — prefix on the remote side (the topics `wb/A25NDEMJ/devices/...` will be visible there).
-
-`wb-notifications` creates `wb/A25NDEMJ/bridge/state` with `online`/`offline` — convenient for monitoring connectivity.
-
-`cleansession false` is important: on disconnect, messages with QoS≥1 accumulate and are delivered after recovery.
-
-### Bridge with TLS
-
-Add to the connection block:
-
-```
-bridge_cafile /etc/mosquitto/certs/ha-ca.crt
-bridge_certfile /etc/mosquitto/certs/wb-client.crt
-bridge_keyfile /etc/mosquitto/certs/wb-client.key
-bridge_insecure false
-```
-
-`bridge_insecure true` disables hostname verification — only for debugging.
+For full certificate generation, listener config, bridge config (Home Assistant example), and TLS-on-bridge setup — see **`references/tls-and-bridges.md`**.
 
 ## Changes without restart
 
