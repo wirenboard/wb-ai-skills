@@ -112,275 +112,29 @@ ssh root@<HOST> 'apt install -y /tmp/package.deb'
 
 `apt install ./file.deb` resolves dependencies automatically. Never run binaries from `/tmp` in production.
 
-## Codestyle: C++
+## Codestyle
 
-Canonical reference: <https://github.com/wirenboard/codestyle/blob/main/C%2B%2B.ru.md>
+Canonical configs (clang-format, pyproject.toml, find-python-files) live in <https://github.com/wirenboard/codestyle>. Apply formatters before every commit; CI checks them.
 
-Base: [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html).
+- **C++** — Google base + WB extensions (T-prefix classes, `Base`/`I` suffixes, `CamelCase` methods, `.clang-format`).
+- **Python** — PEP8 with WB diffs: line length 110, double quotes, type annotations, trailing comma; black + isort + pylint.
+- **Go** — `go fmt`, `staticcheck`.
 
-**Naming:**
-- Classes: `TModbusClient` (T-prefix), base classes end with `Base`: `TModbusClientBase`, interfaces: `IException`
-- Methods: `CamelCase` starting with a verb: `GetValue`, `SetEnabled`
-- Class fields: start with capital letter
-- Local variables: `camelCase` or `snake_case` (never mix in one file)
-- Abbreviations keep only first capital: `TMqttClient`
-- Macros: avoid; use C++ constructs instead
+For naming rules, exact CLI invocations and config paths — see **`references/codestyle.md`**.
 
-**Formatting:** use `.clang-format` from <https://github.com/wirenboard/codestyle>. Apply before every commit.
+## MQTT conventions and MQTT-RPC
 
-```bash
-# Check formatting
-find src -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror -style=file
+Every integration on WB must expose state through the `/devices/<id>/controls/<id>` topic space; the web UI, wb-rules, and other services consume that namespace. All `/meta` topics are retained; `/meta/error` doubles as the LWT. Specific typed controls (`temperature`, `voltage`) are deprecated — use `type: value` + `units`.
 
-# Apply formatting
-find src -name '*.cpp' -o -name '*.h' | xargs clang-format -i -style=file
-```
+MQTT-RPC uses paired topics `/rpc/v1/<driver>/<service>/<method>/<client_id>{,/reply}` with strict JSON requests (`{id, params}`) and responses (`{id, result, error}`).
 
-## Codestyle: Python
-
-Canonical reference: <https://github.com/wirenboard/codestyle/blob/main/python.ru.md>
-
-Base: PEP8. Key differences:
-- Max line length: **110** characters (not 78)
-- **Double quotes** for strings: `"string"` (not `'string'`)
-- Type annotations required
-- Trailing comma after last element in multi-line collections
-
-**Tools — run before every commit:**
-
-```bash
-# Install
-pip install black isort pylint
-
-# Check (dry-run)
-python3 -m black --config pyproject.toml --check --diff $(../codestyle/python/ci/find-python-files)
-python3 -m isort --settings-file pyproject.toml --check --diff $(../codestyle/python/ci/find-python-files)
-python3 -m pylint $(../codestyle/python/ci/find-python-files)
-
-# Autoformat
-python3 -m black --config pyproject.toml $(../codestyle/python/ci/find-python-files)
-python3 -m isort --settings-file pyproject.toml $(../codestyle/python/ci/find-python-files)
-```
-
-`pyproject.toml` and `find-python-files` are taken from the [codestyle repo](https://github.com/wirenboard/codestyle).
-
-## Codestyle: Go
-
-Canonical reference: <https://github.com/wirenboard/codestyle/blob/main/go.en.md>
-
-```bash
-go fmt ./...
-
-# Static analysis
-go mod vendor
-staticcheck -go 1.13 ./...
-```
-
-## MQTT conventions
-
-Full spec: <https://github.com/wirenboard/conventions/blob/main/README.md>
-
-### Topic structure
-
-```
-/devices/<device-id>/meta                    — device metadata (JSON, retained)
-/devices/<device-id>/meta/error              — device error state / LWT (non-null = error)
-/devices/<device-id>/controls/<ctrl-id>      — current control value (retained)
-/devices/<device-id>/controls/<ctrl-id>/on   — write target here to set the value
-/devices/<device-id>/controls/<ctrl-id>/meta — control metadata (JSON, retained)
-```
-
-### Naming (2024+ rules)
-
-- Lowercase, words separated by underscores, no punctuation/special chars
-- Device topic: max 4 words + numbers
-- Good: `/devices/room_light/meta`
-- Bad: `/devices/Room-Light#1/meta`
-
-### Device `/meta` JSON
-
-```json
-{
-  "driver": "my-driver",
-  "title": { "en": "Room Light", "ru": "Освещение комнаты" }
-}
-```
-
-### Control `/meta` JSON
-
-```jsonc
-{
-  "type": "switch",           // required — see types below
-  "units": "W",              // for type=value only
-  "min": 0, "max": 100,
-  "precision": 0.1,
-  "order": 1,
-  "readonly": false,
-  "hidden": false,
-  "title": { "en": "Lamp", "ru": "Лампа" }
-}
-```
-
-### Control types
-
-| Type | `meta/type` | Values |
-|---|---|---|
-| Switch (toggle) | `switch` | `0` / `1` |
-| Alarm indicator | `alarm` | `0` / `1` |
-| Push button (stateless) | `pushbutton` | `1` (no retained) |
-| Range slider | `range` | integer in [min, max] |
-| Generic float value | `value` | float, use `units` field |
-| Text | `text` | any string |
-| RGB color | `rgb` | `"R;G;B"` (0–255 each) |
-| Unix timestamp | `unixtime` | integer |
-
-Specific typed controls (`temperature`, `voltage`, etc.) are **deprecated** — use `type: value` + `units` instead.
-
-### Publishing rules
-
-- All `/meta` topics: published with **retained** flag on driver startup
-- `/devices/<id>/meta/error` used as **LWT** (Last Will and Testament) — set to non-empty value on connect
-- Each device must be published by a **single driver**; no two drivers share the same device ID
-
-### Subscribing
-
-```bash
-# Monitor all controls live
-mosquitto_sub -t '/devices/+/controls/+' -v
-
-# Write to a control
-mosquitto_pub -t '/devices/room_light/controls/lamp/on' -m '1'
-```
-
-## MQTT-RPC
-
-Full spec: <https://github.com/wirenboard/mqtt-rpc>
-
-### Topic pattern
-
-```
-/rpc/v1/<driver>/<service>/<method>/<client_id>        — send request here
-/rpc/v1/<driver>/<service>/<method>/<client_id>/reply  — receive response here
-```
-
-`client_id`: unique per request — use UUID v4 or MQTT client ID.
-
-### Request format
-
-```json
-{ "id": "1234", "params": { "A": 1, "B": 2 } }
-```
-
-`id`: decimal string representation of uint64.
-
-### Success response
-
-```json
-{ "id": "1234", "result": 42, "error": null }
-```
-
-### Error response
-
-```json
-{ "id": "1234", "error": { "message": "divide by zero", "code": -1, "data": "ErrorType" } }
-```
-
-**Rules:** strict JSON — no comments, no `Inf`/`NaN` values, all keys in quotes.
-
-### Discover RPC services on a controller
-
-```bash
-ssh root@<HOST> wb-cli --json mqtt sub '/rpc/v1/+/+/+'
-```
-
-### Python reference implementation
-
-<https://github.com/wirenboard/python-mqtt-rpc>
+For the full topic structure, naming rules, meta JSON shapes, control types table, publishing rules, MQTT-RPC details, and the Python reference implementation — see **`references/mqtt-conventions.md`**.
 
 ## JSON editor (confed) — configuration UI for services
 
-The WB web UI has a **pre-installed JSON editor** (`wb-mqtt-confed` + `homeui`). Any service can get a configuration page in the web interface for free by dropping a JSON Schema file into `/etc/wb-mqtt-confed/schemas/`.
+Drop a JSON Schema at `/etc/wb-mqtt-confed/schemas/<name>.schema.json` to get a "Device configurations" page in the web UI for free. `wb-mqtt-confed` renders the schema as a form, validates on save, writes the config file, and restarts the service. Plain-JSON configs need no converters; custom formats use `toJSON`/`fromJSON`.
 
-Wiki: <https://wiki.wirenboard.com/wiki/JSON-editor-Wirenboard-Implementation-Features>
-
-### How it works
-
-`wb-mqtt-confed` watches the schemas directory. When the user opens the web UI → "Device configurations", it renders each schema as a form. On save, it writes the config file and restarts the service.
-
-**If the config file is plain JSON** — no conversion scripts needed, confed reads/writes it directly.  
-**If the config is a custom format** — provide `toJSON`/`fromJSON` converter scripts.
-
-### Schema file structure
-
-Place the file at `/etc/wb-mqtt-confed/schemas/my-service.schema.json`:
-
-```jsonc
-{
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": "object",
-  "title": "My Service Configuration",
-  "configFile": {
-    "path": "/etc/my-service/config.json",
-    "service": "my-service",
-    "restartDelayMS": 2000
-  },
-  "properties": {
-    "server_url": {
-      "type": "string",
-      "title": "Server URL",
-      "propertyOrder": 1
-    },
-    "poll_interval": {
-      "type": "integer",
-      "title": "Poll interval (s)",
-      "default": 30,
-      "propertyOrder": 2
-    },
-    "enabled": {
-      "type": "boolean",
-      "title": "Enable service",
-      "default": true,
-      "_format": "checkbox",
-      "propertyOrder": 3
-    }
-  }
-}
-```
-
-### `configFile` parameters
-
-| Parameter | Required | Description |
-|---|---|---|
-| `path` | yes | Path to the config file on the controller |
-| `service` | no | Service name (or list) to restart after save |
-| `toJSON` | no | Command: config file → JSON for homeui (stdin → stdout) |
-| `fromJSON` | no | Command: JSON from homeui → config file (stdin → stdout) |
-| `restartDelayMS` | no | Delay before service restart in ms |
-| `validate` | no | Validate JSON against schema before writing (default: true) |
-| `hide` | no | Hide from "Device configurations" page (for internal schemas) |
-| `needReload` | no | Reload config from confed after save |
-
-### WB-specific schema extensions
-
-| Extension | Effect |
-|---|---|
-| `"_format": "checkbox"` | Boolean rendered as checkbox |
-| `"_format": "wb-autocomplete"` | Text field with MQTT device autocomplete |
-| `"_format": "edWb"` | Dropdown for integer/string via `enum_values` |
-| `"headerTemplate"` on array items | Item label in collapsed array row |
-| `"propertyOrder"` | Controls field ordering in the form |
-
-### Installing the schema via deb
-
-In your package's `debian/install` (or `debian/<pkg>.install`):
-```
-debian/my-service.schema.json  etc/wb-mqtt-confed/schemas/
-```
-
-After placing the schema file, restart confed to pick it up:
-```bash
-ssh root@<HOST> 'systemctl restart wb-mqtt-confed'
-```
+For the schema skeleton, full `configFile` parameter table, WB-specific extensions (`_format: checkbox`, `wb-autocomplete`, etc.) and install instructions — see **`references/confed-schema.md`**.
 
 ## ATECCx08 hardware security chip
 
