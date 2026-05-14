@@ -148,6 +148,23 @@ ssh root@<HOST> wb-cli --json mqtt read 'zigbee2mqtt/bridge/info' | jq -r '.data
 - LQI < 80 + voltage < 2900 mV — battery is about to die, even if `battery: 100%` (CR2032 reports 100% until the very end, then drops sharply).
 - WBE2R-R-ZIGBEE modules and similar aren't visible on the web UI "Devices" page — that's normal, they're on the Z2M side.
 
+## What the agent does NOT do
+
+- **Run `bridge/request/permit_join` without user confirmation.** Pairing mode lets ANY nearby Zigbee device join — security boundary.
+- **Forget to disable `permit_join` after pairing.** If the agent moves on, the network stays open. Always re-check `bridge/info → permit_join == false`.
+- **`wb-cli mqtt list 'zigbee2mqtt/#'`** — pulls megabytes of retained history.
+- **Pipe `bridge/devices` through `head -c 200`** — breaks the JSON. Parse cleanly with `jq -r '.payload | fromjson'`.
+- **Use `systemctl is-active zigbee2mqtt`** to decide if the bridge is alive — Docker installs always show `inactive`. Use the retained `bridge/state` topic instead.
+- **Assume battery is fine because `battery: 100%`.** CR2032 reports 100% until it falls off a cliff — also read LQI < 80 and voltage < 2900 mV as warning signals.
+
+## When to ask the user
+
+- About to pair a new device on a production controller — confirm timing (240-sec open window) and which device exactly.
+- Removing a device from the network — confirm; some devices need manual factory-reset afterwards.
+- Initiating OTA on a live device — confirm; lights / switches may flicker or restart during firmware update.
+- The bridge JSON shows a device the user doesn't recognize — surface it (rogue device may have joined during a previous `permit_join` window).
+- About to switch the WB-Zigbee converter (wb-zigbee2mqtt 1.x → wb-mqtt-zigbee) — confirm; topic structure changes and existing wb-rules break.
+
 ## Documentation
 
 - <https://wiki.wirenboard.com/wiki/Zigbee>

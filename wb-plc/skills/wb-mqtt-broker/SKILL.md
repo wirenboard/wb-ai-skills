@@ -123,6 +123,24 @@ ssh root@<HOST> wb-cli --json dev                   # all WB devices with names 
 - **TLS certificate expired** — `journalctl -u mosquitto` will show it, and clients get `tls handshake failure`. Renew via certbot or regenerate self-signed.
 - **Permissions on `/etc/mosquitto/passwd/default.conf`** — must be `mosquitto:mosquitto 0640`, otherwise mosquitto can't read it (visible in logs: `Unable to open password file ... Permission denied`).
 
+## What the agent does NOT do
+
+- **Edit `/etc/mosquitto/mosquitto.conf` directly.** All custom config goes in `/etc/mosquitto/conf.d/*.conf` — the base file may be overwritten on package update.
+- **Set `per_listener_settings false`** in WB configs. The Unix-socket-anonymous + 1883-authed split depends on `per_listener_settings true`; flipping it locks out internal WB services.
+- **Use `mosquitto_passwd -c` on an already-populated file.** `-c` creates fresh, overwriting all existing users.
+- **`systemctl restart mosquitto`** for ACL or password changes — those reload with `systemctl reload mosquitto` (no downtime).
+- **Store broker passwords / TLS keys in a repo or commit them.** `/etc/mosquitto/passwd/`, `/etc/mosquitto/certs/`, `bridge_password` lines — keep out of version control.
+- **Bridge to an external broker without `cleansession false`** — QoS≥1 messages get dropped on disconnect.
+- **Use `bridge_insecure true`** outside of one-off debugging — it disables hostname verification.
+
+## When to ask the user
+
+- About to open port 1883 with `allow_anonymous true` on a network-reachable listener — confirm; this exposes the broker to LAN.
+- Choosing between self-signed TLS and Let's Encrypt — outcome depends on whether the controller has a public DNS name; ask.
+- Enabling a bridge to an external broker — confirm credentials and topic prefix (typos here are silent).
+- Replacing existing ACL with a stricter one — surface which users / services lose access (frontend, external_app may go quiet).
+- Certificate expiry approaching (< 30 days from `journalctl`) — ask whether to renew or accept the warning until later.
+
 ## Documentation
 
 - mosquitto.conf: `man mosquitto.conf`, <https://mosquitto.org/man/mosquitto-conf-5.html>

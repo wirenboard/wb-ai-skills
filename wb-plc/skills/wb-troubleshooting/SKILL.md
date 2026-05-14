@@ -151,6 +151,24 @@ Then copy:
 scp root@<HOST>:<path from ls output> ./
 ```
 
+## What the agent does NOT do
+
+- **Fix symptoms before identifying the root cause.** "Restarting the service made it work" is not a fix — surface the root cause.
+- **Collect the diagnostic archive unless the user asks** or it's a bug report. The archive is heavy; use direct SSH for routine diagnosis.
+- **`rm` files to free disk space without showing the user what's being deleted.** Especially under `/mnt/data/`, `/var/log/`.
+- **Restart services blindly** in a "try everything" loop. Each restart loses the chance to read the failure state.
+- **Run `reboot`** without the user's explicit OK — the controller may not come back cleanly (FIT in progress, broken filesystem).
+- **Edit configs** to "see if it helps". Back up first, then change one thing at a time.
+- **Trust the kernel mismatch warning silently** — surface it; firmware/kernel skew is a known cause of obscure failures.
+
+## When to ask the user
+
+- Root cause is uncertain — propose a hypothesis and ask before testing.
+- The fix requires a service restart that interrupts production (mqtt-serial, wb-rules, mosquitto) — confirm window.
+- About to clear logs or rotate them aggressively — confirm.
+- The diagnostic archive contains MQTT passwords / API tokens in configs — confirm whether to redact before sending to support.
+- The problem requires a full reboot — confirm timing; the controller is offline for ~60 seconds.
+
 ## Principle
 
 Diagnose -> read documentation -> explain the cause -> propose a solution -> wait for confirmation. Don't fix blindly.

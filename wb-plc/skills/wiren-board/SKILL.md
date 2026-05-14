@@ -261,3 +261,21 @@ ssh root@<HOST> 'wb-cli --json job run apt-upgrade "apt update && apt -y upgrade
 ssh root@<HOST> 'wb-cli --json job wait apt-upgrade'
 ssh root@<HOST> 'wb-cli --json job tail apt-upgrade'
 ```
+
+## What the agent does NOT do
+
+- **Call `wb-cli` without `--json`.** Human-mode output is unparseable. Already restated in CRITICAL RULES — it bears repeating because half the agent failures on WB skills trace back to this.
+- **Run long-running ops via plain SSH.** `apt`, tar, modbus firmware update — wrap in `wb-cli job run`. Plain SSH appears to hang and may timeout mid-operation, leaving the system half-changed.
+- **Install Docker via generic `apt install docker-ce`.** Breaks `/mnt/data` storage path. Use `wb-docker-manager.sh` from the WB community repo.
+- **Write to MQTT controls without understanding the effect.** Some `/devices/.../on` write closes a relay → drives a real physical output.
+- **Trigger factory reset / FIT upgrade** without explicit user confirmation — both are minutes-long, destructive operations.
+- **Decide which controller to act on** when discovery returns multiple — surface the list.
+- **Modify `git config`, SSH keys, or `/root/.ssh/authorized_keys`** on the controller as a side effect of another operation.
+
+## When to ask the user
+
+- Discovery returns more than one controller — ask which one.
+- About to run a firmware (FIT) upgrade or factory reset — confirm strongly; both rewrite the rootfs.
+- About to `apt upgrade` while the controller is in production — confirm window; restart-required packages will bounce services.
+- The user's request maps to two different skills (e.g. "no internet" could be `wb-network` or `wb-troubleshooting`) — confirm scope.
+- A wb-* tool isn't behaving as documented (output format differs from spec) — surface the discrepancy; do not silently rewrite logic around the new behavior.

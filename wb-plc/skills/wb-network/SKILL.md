@@ -226,6 +226,24 @@ Then `systemctl restart chrony`.
 
 WB uses nginx as a reverse proxy (web UI, API). For HTTPS/SSL: standard nginx configuration applies. WB-specific: `WebFetch('https://wiki.wirenboard.com/wiki/Nginx')` for any WB-specific paths or config locations. For Let's Encrypt / certbot — standard certbot docs.
 
+## What the agent does NOT do
+
+- **Edit `/etc/resolv.conf` by hand.** NetworkManager overwrites it. Use `nmcli connection modify <conn> ipv4.dns ...`.
+- **Drop the SSH-bearing network connection from inside the SSH session.** `nmcli con down eth0` when you ssh'd in over eth0 disconnects the agent permanently. Use `wb-cli job run` with a deferred reconnect, or stage via a secondary interface.
+- **Enable an AP on `wlan0` while it's connected as a client.** Same radio can't do both; one will drop. A second WiFi adapter (USB) is required.
+- **Bring up an OpenVPN that takes the default route** without confirming the local-network access path stays open — the agent (and the user) may lose connectivity to the controller.
+- **Modify `wb-connection-manager.conf` without `wb-cli confed`** — schema validation is mandatory for the failover logic.
+- **Restart `NetworkManager`** to apply a single change — use `nmcli connection up <conn>` / `nmcli device reapply <iface>` instead; full restart can drop SSH.
+
+## When to ask the user
+
+- About to change a connection priority that would cause failover to a different interface on a remote controller — confirm; if the new path is broken, the controller is unreachable.
+- Provider APN unknown — ask; without the right APN the modem stays `Locked` / `Registered` but no IP.
+- WiFi AP password change — confirm; existing clients drop.
+- DNS swap to a forwarder behind a firewall — confirm the path works from the controller.
+- About to set a static IP outside the current subnet's DHCP pool — confirm gateway / netmask.
+- Removing the last enabled uplink — confirm the user has an out-of-band way to recover.
+
 ## Documentation
 
 - NetworkManager: <https://networkmanager.dev/docs/>

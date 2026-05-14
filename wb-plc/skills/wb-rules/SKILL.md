@@ -212,3 +212,20 @@ For in-rules scheduling, use `defineRule` with a `cron` trigger — see examples
 - **cron 5 fields = almost certainly a bug** — prepend `0` for seconds
 - **`ps["obj"].foo = 5` without StorableObject** — won't persist
 - **Names with hyphens via dot notation** — SyntaxError
+
+## What the agent does NOT do
+
+- **Use ES6+ syntax** (`let`, `const`, arrow functions, template strings, destructuring). The wb-rules engine is **ES5 only**; ES6+ silently fails or breaks at parse time.
+- **Save a rule without checking logs.** Syntax errors in wb-rules are not surfaced to the caller — only `journalctl -u wb-rules` knows. After every save, tail the journal.
+- **Write `whenChanged` against the same control the rule writes to** — infinite loop, fills the journal.
+- **Run side effects** (`runShellCommand`, `mqtt.publish`, control writes) **inside `when` / `asSoonAs` condition functions** — they're called on every change.
+- **Delete or disable an existing rule** without first checking what it does and whether it's in production (the user may have written it months ago and forgotten).
+- **Use globals as cross-file state.** Each `*.js` file in `/etc/wb-rules/` runs in its own scope; share via modules under `/etc/wb-rules-modules/` or via `PersistentStorage`.
+
+## When to ask the user
+
+- About to deploy a rule to a controller that's currently running customer automation — confirm the deploy window (rule save = engine reload = a few seconds of skipped triggers).
+- A rule needs to call out to an external service (Telegram, email, REST) on a regular schedule — confirm the user expects the network load and side effects.
+- A virtual device the rule defines would shadow an existing real device — confirm renaming vs intentional override.
+- The rule modifies physical outputs (relays, dimmers) based on conditions — confirm the safe state on engine startup / reload.
+- Migrating a rule from one controller to another — confirm slave_id / device-name assumptions hold on the target.
