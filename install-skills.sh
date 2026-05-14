@@ -114,7 +114,7 @@ list_skills() {
 
 if [ "$ACTION" = "uninstall" ]; then
     count=0
-    for name in $(list_skills); do
+    while IFS= read -r name; do
         case "$TARGET" in
             claude)
                 target="$DEST/$name"
@@ -127,7 +127,7 @@ if [ "$ACTION" = "uninstall" ]; then
             rm -rf "$target"
             count=$((count + 1))
         fi
-    done
+    done < <(list_skills)
     echo "removed $count skills from $DEST"
     exit 0
 fi
@@ -135,7 +135,7 @@ fi
 mkdir -p "$DEST"
 
 count=0
-for name in $(list_skills); do
+while IFS= read -r name; do
     src_dir="$SKILLS_DIR/$name"
     src_skill="$src_dir/SKILL.md"
 
@@ -167,7 +167,7 @@ for name in $(list_skills); do
             ;;
     esac
     count=$((count + 1))
-done
+done < <(list_skills)
 
 mode_desc=$(case "$TARGET" in
     claude) echo "directories with SKILL.md + side files" ;;
