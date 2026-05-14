@@ -1,10 +1,84 @@
-# wb-cli
+# wb-ai-skills
 
 [![CI](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml)
 
-Command-line interface to a [Wiren Board](https://wirenboard.com) controller, plus a set of methodology skills for LLM agents that drive it over SSH.
+Two things in one repository, both built to help AI coding agents work with a [Wiren Board](https://wirenboard.com) controller:
 
-Runs **on the controller**. Built for LLM agents and operators: SSH in, call `wb-cli <command>`, get a structured JSON envelope back. Long-running commands draw a progress bar on stderr when the terminal is a TTY; JSON on stdout stays clean either way.
+1. **`wb-plc` plugin** — methodology skills for AI agents that drive a controller over SSH. Distributed as a Claude Code / GitHub Copilot CLI plugin and as plain markdown for any other agent. See [Skills](#skills) below.
+2. **`wb-cli` package** — Debian package installed *on* the controller. CLI with a stable JSON envelope contract, built so an agent can SSH in and call `wb-cli --json <command>` to get structured output. See [wb-cli](#wb-cli) below.
+
+The two are independent: you can use the skills without the controller package, and vice versa.
+
+---
+
+## Skills
+
+The `wb-plc/skills/` directory holds nine skills covering everything a remote agent needs to operate a WB controller: discovery, troubleshooting, network, MQTT, Modbus, automation rules, Zigbee, backup/restore, and writing custom software for the controller.
+
+| Skill | What it covers |
+|---|---|
+| `wiren-board` | Master entry: mDNS discovery, SSH conventions, `wb-cli` usage. **Load first.** |
+| `wb-troubleshooting` | Failed systemd units, disk, kernel/firmware mismatch, Docker, diagnostic archive. |
+| `wb-serial` | RS-485 / Modbus — custom templates, device configuration, bus diagnostics (CRC, timeouts). |
+| `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron, sensors). |
+| `wb-mqtt-broker` | Mosquitto MQTT broker — auth, ACLs, TLS, external bridges. |
+| `wb-network` | Ethernet, WiFi, 4G, OpenVPN, failover, DNS, hotspot. |
+| `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
+| `wb-controller-backup` | Full controller backup and restore. |
+| `wb-dev` | Writing software for WB — daemons, MQTT bridges, MQTT-RPC, cross-compilation, Debian packaging. |
+
+### Install for Claude Code or GitHub Copilot CLI (recommended)
+
+Both agents read the same plugin manifest. One command to register the marketplace, one to install the plugin:
+
+```
+/plugin marketplace add wirenboard/wb-ai-skills
+/plugin install wb-plc@wb-ai-skills
+```
+
+Updates: `/plugin marketplace update wb-ai-skills` then `/plugin update wb-plc@wb-ai-skills`.
+
+### Install for OpenCode, older Claude Code, or other agents
+
+Use `install-skills.sh` — it materializes the skills into the format each agent expects.
+
+```bash
+# Claude Code (skill format — directory with SKILL.md + side files)
+./install-skills.sh claude              # → ./.claude/skills/   (project-local)
+./install-skills.sh claude --global     # → ~/.claude/skills/   (user-wide)
+
+# OpenCode (flat .md per agent, frontmatter rewritten: allowed-tools → mode: primary)
+./install-skills.sh opencode            # → ./.opencode/agents/
+./install-skills.sh opencode --global   # → ~/.config/opencode/agents/
+
+# Any other agent (frontmatter trimmed to name + description)
+./install-skills.sh manual --dest /path/to/agent/prompts
+
+# Uninstall
+./install-skills.sh uninstall claude --global
+```
+
+`./install-skills.sh --help` lists all flags and defaults.
+
+### Install on Windows
+
+PowerShell — copy the skill directories from `wb-plc/skills/` to the agent's skills folder.
+
+| Agent | Destination |
+|---|---|
+| Claude Code (user-wide) | `%USERPROFILE%\.claude\skills\` |
+| Claude Code (project) | `.claude\skills\` inside the project |
+| OpenCode (user-wide) | `%APPDATA%\opencode\agents\` (flatten — extract SKILL.md as `<name>.md`, rewrite `allowed-tools:` to `mode: primary`) |
+
+### Install on the controller
+
+The `wb-cli` `.deb` also drops the skill markdowns into `/usr/share/wb-cli/skills/` so an agent that SSH'd in can read them locally.
+
+---
+
+## wb-cli
+
+Command-line tool that runs **on the controller**, exposing controller state and operations through a stable JSON contract.
 
 ```bash
 ssh root@wirenboard-A25NDEMJ wb-cli info
@@ -20,7 +94,7 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 # → {"data": {"device": "wb-mr6c_2", "control": "K1", "value": "1", "ok": true}}
 ```
 
-## Commands
+### Commands
 
 | Plugin | What it covers |
 |---|---|
@@ -29,35 +103,31 @@ ssh root@wirenboard-A25NDEMJ wb-cli --json dev wb-mr6c_2/K1 1
 | `cloud` | Wiren Board cloud-agent status |
 | `dev` | Devices and controls — list, read, write through the wb-rules `<device>/<control>` form |
 | `mqtt` | Raw MQTT: read retained, write, list, live subscribe |
-| `mqtt-debug` | Verbose mosquitto PUBLISH tracing — structured `{client_id, topic, qos, retain, …}` records, optional inline / background capture |
-| `confed` | Read and write service config files through wb-mqtt-confed (handles validation + service reload) |
+| `mqtt-debug` | Verbose mosquitto PUBLISH tracing |
+| `confed` | Read and write service config files through wb-mqtt-confed |
 | `rules` | Manage wb-rules automation scripts |
 | `history` | Time-series data from wb-mqtt-db (raw rows) |
-| `serial` | RS-485 / Modbus operations through wb-mqtt-serial and wb-device-manager (incl. `wb-fw` firmware update — folded in as a subcommand in 1.8.0) |
-| `serial-debug` | RS-485 driver debug capture (toggles wb-mqtt-serial's `Debug` control with auto-restore) |
+| `serial` | RS-485 / Modbus operations (incl. `wb-fw` firmware update) |
+| `serial-debug` | RS-485 driver debug capture |
 | `snapshot` | Capture and diff small JSON snapshots of controller state |
 | `job` | Long-running commands as transient systemd units |
 | `plugins` | Self-introspection: which commands this wb-cli build knows about |
 
-Each plugin has its own `--help` with full subcommand list, flags and worked examples — that's the authoritative reference and always matches the installed version:
+Each plugin has its own `--help`:
 
 ```bash
-wb-cli --help                  # top-level — all plugins
-wb-cli <plugin> --help         # subcommands of one plugin
+wb-cli --help                    # top-level — all plugins
+wb-cli <plugin> --help           # subcommands of one plugin
 wb-cli <plugin> <action> --help  # flags for one action
 ```
 
-## Output modes
+### Output modes
 
 `wb-cli` emits **human-friendly** output (tables / key-value lines) by default everywhere — including pipes and SSH without a TTY. JSON is opt-in via `--json` or `WB_CLI_OUTPUT=json`. A stderr spinner / progress bar is drawn for long-running calls only when stderr is a TTY, so JSON to stdout always stays clean.
 
-The default flipped to human in 1.0 because the previous "auto-detect based on `stdout.isatty()`" rule meant that piping wb-cli through `grep` got JSON — which is rarely what a human-on-SSH wants. LLM agents and scripts that need parsable output pass `--json` explicitly.
-
-Override anywhere:
-
 ```bash
 wb-cli --json dev               # force JSON (LLM agents / scripts)
-WB_CLI_OUTPUT=json wb-cli info  # same via env (good for shells)
+WB_CLI_OUTPUT=json wb-cli info  # same via env
 WB_CLI_NO_SPINNER=1 wb-cli ...  # silence the spinner regardless of mode
 ```
 
@@ -68,7 +138,7 @@ The JSON envelope is the stable, machine-readable contract:
 
 Exit codes: **0** success · **1** domain error · **2** usage · **3** environment · **130** SIGINT. Error codes are stable across releases.
 
-## Install on a controller
+### Install on a controller
 
 Once `wb-cli` is published to the Wiren Board apt repository:
 
@@ -87,66 +157,32 @@ apt-get install -y /tmp/wb-cli.deb     # resolves python3-mqttrpc / python3-wb-c
 
 The `.deb` is `Architecture: all` and works on any wb6/wb7 running Debian ≥ bullseye.
 
-## Skills for LLM agents
-
-The `skills/` directory holds nine methodology guides for LLM agents working with Wiren Board over SSH:
-
-| Skill | What it covers |
-|---|---|
-| `wiren-board` | Master entry: discovery, SSH conventions, wb-cli, install fallback. **Load first.** |
-| `wb-troubleshooting` | Failed units, disk, kernel mismatch, Docker, general diagnostics. |
-| `wb-serial` | RS-485/Modbus: custom templates, device config via confed, bus diagnostics (CRC, timeouts). |
-| `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron). |
-| `wb-mqtt-broker` | MQTT broker config: auth, ACL, TLS, bridges, `mqtt-debug` PUBLISH tracing. |
-| `wb-network` | WiFi, 4G/GSM, VPN, failover, modem diagnostics, NTP. |
-| `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
-| `wb-controller-backup` | Full controller backup and restore. |
-| `wb-dev` | Writing software / integrations for WB: custom daemons, protocol bridges, MQTT conventions, MQTT-RPC, codestyle, wbdev cross-compilation, Debian packaging. |
-
-Install for your agent runtime:
-
-**Linux / macOS** — use the install script:
-
-```bash
-./install-skills.sh claude              # → ./.claude/commands/
-./install-skills.sh claude --global     # → ~/.claude/commands/
-./install-skills.sh opencode            # → ./.opencode/agents/   (frontmatter rewritten)
-./install-skills.sh opencode --global   # → ~/.config/opencode/agents/
-./install-skills.sh manual --dest <dir> # → <dir>  (frontmatter stripped to name+description)
-
-./install-skills.sh uninstall claude --global   # remove installed skills
-```
-
-**Windows** — copy the files from `skills/` manually to the agent's commands folder:
-
-| Agent | Destination |
-|---|---|
-| Claude Code (user-wide) | `%USERPROFILE%\.claude\commands\` |
-| Claude Code (project) | `.claude\commands\` inside the project |
-| OpenCode (user-wide) | `%APPDATA%\opencode\agents\` |
-
-For OpenCode, also replace `allowed-tools:` with `mode: primary` in each file's frontmatter.
-
-The `.deb` also installs the skills into `/usr/share/wb-cli/skills/` on the controller, so an LLM agent can read them over SSH.
+---
 
 ## Architecture
 
 ```
-wb_cli/
-  cli.py              argparse root, lazy-imports the plugin module
-  context.py          CliContext with lazy handles (mqtt, rpc, systemd, ...)
-  plugin.py           BasePlugin
-  errors.py           error codes and exit codes
-  output.py           JSON envelope rendering
-  _registry.py        generated plugin list (make registry)
-  lib/                subsystem handles (controller, mqtt, mqtt_log, rpc, shell, systemd,
-                      journal, job, serial_conf, serial_port, modbus_crc, modbus_frame, templates)
-  commands/           one plugin per command group; serial/ is a subpackage (_register, _scan,
-                      _add, _actions, _plugin)
-tests/                pytest with FakeContext + a captured wb7 snapshot in tests/fixtures/
-skills/               LLM-facing skill guides, one .md per skill (see above)
-debian/               .deb packaging (Architecture: all)
-.github/workflows/    CI (lint + tests on py3.9/3.11, .deb build) and release on tag v*
+.claude-plugin/
+  marketplace.json   plugin marketplace manifest (Claude Code + Copilot CLI)
+  plugin.json        wb-plc plugin manifest
+
+wb-plc/skills/       LLM-facing skill guides — one directory per skill, with
+                     SKILL.md and optional references/, scripts/
+
+wb_cli/              Python package — argparse root, plugins, lib/, commands/
+  cli.py             argparse root, lazy-imports the plugin module
+  context.py         CliContext with lazy handles (mqtt, rpc, systemd, ...)
+  plugin.py          BasePlugin
+  errors.py          error codes and exit codes
+  output.py          JSON envelope rendering
+  _registry.py       generated plugin list (make registry)
+  lib/               subsystem handles
+  commands/          one plugin per command group
+
+tests/               pytest with FakeContext + a captured wb7 snapshot
+debian/              .deb packaging (Architecture: all)
+install-skills.sh    install skills into ~/.claude/skills, ~/.config/opencode/agents, etc.
+.github/workflows/   CI (lint + tests on py3.9/3.11, .deb build) and release on tag v*
 ```
 
 Background-job state lives at `/mnt/data/ai/wb-cli/jobs/<unit>.{sh,log,label,started}` — `wb-cli job` wraps `systemd-run --collect` and writes logs there.
@@ -177,39 +213,37 @@ Adding a new command? Drop `wb_cli/commands/<name>.py` with `PLUGIN = MyPlugin()
 
 ## Versioning
 
-`wb-cli` follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`):
+The repo ships **two artifacts with two independent versions**, because they evolve on different cadences:
 
-- **PATCH** (`0.1.0 → 0.1.1`) — bug fix, internal refactor, doc-only or CI-only change that ships in the next release.
-- **MINOR** (`0.1.0 → 0.2.0`) — new command, new subcommand, new option, new error code, new field in a JSON envelope. Existing callers keep working.
-- **MAJOR** (`0.1.0 → 1.0.0`) — backwards-incompatible change: a removed or renamed command, a changed JSON shape, a changed/removed error code, a changed exit code.
+- **`wb-cli` package version** — what gets installed on the controller (`.deb`). Bumped on CLI-level changes: new commands, JSON contract changes, error codes.
+- **`wb-plc` plugin version** — what AI agents pull from the marketplace. Bumped on skill-content changes: new skills, content edits, description improvements. **Iterates faster than the package** — a typo fix in a SKILL.md is a plugin bump, not a `.deb` rebuild.
 
-### When to bump
+Both follow [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`) but with version-stream-specific rules.
 
-Bump the version **in the same commit that introduces a user-visible change** — anything that affects the `.deb` contents or the JSON contract. Don't batch unrelated fixes under one bump; cut a fresh patch release per round of fixes.
+### `wb-cli` package version
 
-You can skip the bump for changes that don't affect what installs on a controller:
+Authoritative source: `debian/changelog`. Mirrored into `pyproject.toml` and `wb_cli/__init__.py` (a test in `tests/test_version.py` enforces the three agree).
 
-- CI / GitHub Actions workflow tweaks
-- Tests that don't change behaviour
-- README / SKILL.md / commit-message wording
-- `tests/fixtures/` snapshot updates
+- **PATCH** — bug fix, internal refactor, no contract change.
+- **MINOR** — new command, new subcommand, new option, new field in a JSON envelope, new error code.
+- **MAJOR** — backwards-incompatible: removed/renamed command, changed JSON shape, changed/removed error code, changed exit code.
 
-### How to bump
+Skip the bump for: CI tweaks, test-only changes, README wording, fixture updates.
 
-Three files have to agree (a test in `tests/test_version.py` enforces this):
+### `wb-plc` plugin version
 
-```
-debian/changelog       # authoritative; release.yml verifies tag matches
-pyproject.toml         # `version = "X.Y.Z"`
-wb_cli/__init__.py     # `__version__ = "X.Y.Z"`
-```
+Single source: `.claude-plugin/plugin.json` (`"version": "X.Y.Z"`). No mirror, no lockstep.
 
-Either run `dch -i` (Debian helper) and mirror the version into the two Python files, or edit all three by hand.
+- **PATCH** — typo, clarification, small description tweak inside an existing skill.
+- **MINOR** — new skill added, new section inside an existing skill, new triggering keywords in description.
+- **MAJOR** — backwards-incompatible: skill removed or renamed (would break references in user prompts and docs).
 
-### Cutting a release
+Users get the latest version automatically via `/plugin marketplace update wb-ai-skills` — no tag/release ceremony is required for plugin bumps.
+
+### Cutting a `wb-cli` release
 
 ```bash
-# 1. bump versions in lockstep, write a changelog entry
+# 1. bump three files in lockstep, write a changelog entry
 dch -i                                          # or edit debian/changelog
 sed -i 's/version = "[^"]\+"/version = "X.Y.Z"/' pyproject.toml
 sed -i 's/__version__ = "[^"]\+"/__version__ = "X.Y.Z"/' wb_cli/__init__.py
@@ -221,6 +255,18 @@ git push && git push origin vX.Y.Z
 ```
 
 `release.yml` checks that the tag matches `debian/changelog`, builds the `.deb`, and publishes a GitHub Release with the package attached.
+
+### Bumping the plugin
+
+Just edit `.claude-plugin/plugin.json`:
+
+```bash
+sed -i 's/"version": "[^"]\+"/"version": "X.Y.Z"/' .claude-plugin/plugin.json
+git commit -am "wb-plc X.Y.Z: <what changed>"
+git push
+```
+
+No tag — the marketplace reads `main` by default, users `/plugin marketplace update` to pick it up.
 
 ## Contributing
 
