@@ -1,0 +1,14 @@
+{
+  "name": "wb-ai-skills",
+  "owner": {
+    "name": "Wiren Board",
+    "url": "https://wirenboard.com"
+  },
+  "description": "Wiren Board AI skills — controller-facing knowledge for AI coding agents (Claude Code, GitHub Copilot CLI, Codex CLI).",
+  "plugins": [
+    {
+      "name": "wb-plc",
+      "source": "./"
+    }
+  ]
+}
