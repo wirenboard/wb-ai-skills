@@ -1,6 +1,6 @@
 ---
 name: wb-controller-backup
-description: "Backup and restore of a Wiren Board controller — collect an archive with configs, data and package lists; restore after firmware flash or on a new controller."
+description: "Backup and restore of a Wiren Board controller — collect a tar.gz with configs, /etc, data, package lists, network settings. Use when user wants to save controller state, prepare for firmware flash or controller replacement, transfer settings, restore after factory reset, roll back. NOT for diagnostic archive (that's wb-troubleshooting)."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
