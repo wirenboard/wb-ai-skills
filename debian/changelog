@@ -1,3 +1,12 @@
+wb-cli (1.8.4) stable; urgency=medium
+
+  * Align pyproject.toml and wb_cli.__version__ with debian/changelog.
+    1.8.3 was authored in the changelog but the two Python mirrors
+    were not bumped, leaving tests/test_version.py failing on every
+    subsequent PR until this release.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 May 2026 00:30:00 +0400
+
 wb-cli (1.8.3) stable; urgency=medium
 
   * Add homepage, no functional changes
