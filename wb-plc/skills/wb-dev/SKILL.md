@@ -155,6 +155,23 @@ The ATECCx08 chip stores the controller's private key in hardware — the key ne
 
 When developing services that must verify the controller's identity, use the chip-signed certificate as the client cert. Do not try to extract or copy private keys — that is intentionally impossible.
 
+## What the agent does NOT do
+
+- **Write a service that talks to its own internal bus or API without exposing state to MQTT.** Integrations invisible to the `/devices/.../controls/...` namespace can't be used by the web UI or wb-rules.
+- **Install Docker via `apt install docker-ce` directly.** Use `wb-docker-manager.sh` from the WB community repo — generic apt install breaks the `/mnt/data` storage path.
+- **Store Docker images or volumes on the root partition.** Limited space; use `/mnt/data/<project>/`.
+- **Add file-level lint disables** (`# pylint: disable=` at top of file, `# type: ignore` on a module) to ship — surface the issue instead.
+- **Try to extract the ATECCx08 private key.** It's hardware-bound by design; build flows around CSRs/signing on the chip.
+- **Cross-compile by sshing in and running `make` on the controller.** Use `wbdev` on the developer machine — controller RAM is too limited for serious builds.
+
+## When to ask the user
+
+- Borderline Docker-vs-deb decision (small daemon but with a heavy runtime dep) — surface trade-offs.
+- A new service needs to reserve a top-level MQTT prefix that overlaps with an existing driver — confirm naming.
+- The service will run as root — confirm there's no less-privileged option that satisfies the requirements.
+- About to commit large generated files (vendored deps, lockfiles >1 MB) — confirm.
+- Confed schema would significantly change an existing service's config layout — confirm migration plan.
+
 ## Useful references
 
 | Topic | URL |

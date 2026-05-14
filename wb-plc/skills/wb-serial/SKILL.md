@@ -204,6 +204,24 @@ For the frame types table, exact byte sequences (change slave_id by SN, change b
 - Wrong baud → COMPLETELY silent. Wrong stop bits → floating errors.
 - RS-485 in star topology works on short distances; for issues — recommend daisy chain.
 
+## What the agent does NOT do
+
+- **Edit `/etc/wb-mqtt-serial.conf` manually** (or via raw confed API). Use `wb-cli serial add-devices` — it fills required template params from defaults; manual edits cause `ports/Load` to return `[]` and break all bus scans.
+- **Run `modbus_client` / `wb-modbus-scanner`** while `wb-mqtt-serial` is active. They contend for the same port → false errors. Stop the driver first (agree with the user — that pauses ALL polling).
+- **Leave debug mode on after a diagnostic capture.** `wb-cli serial-debug` restores it automatically; raw-restart flows must re-disable explicitly or the journal fills the disk.
+- **Use slave_id 0 outside of the specific broadcast write** for "change baud/address for ALL WB devices at once". Slave_id 0 = broadcast — every device responds (or none reply).
+- **Pick `word_order: little_endian` by default.** Modbus byte order is big-endian — only override when a multi-register value is observably wrong (jumps by 65535×).
+- **Override a packaged template by reusing its `device_type`.** Custom templates with the same `device_type` silently win; use a prefix (`ACME-`, `BIDIR-`) to avoid confusion.
+
+## When to ask the user
+
+- About to broadcast-write reg 110 or 128 (slave_id 0) — confirm; this hits every WB device on the bus.
+- About to firmware-update a device while production polling is happening on the same bus — confirm the timing window.
+- Experiments (stop bits, baud, port timeouts) — confirm the rollback plan; back up `/etc/wb-mqtt-serial.conf` first.
+- Adding a custom protocol (non-Modbus) device to the same port as Modbus devices — confirm the per-device polling priorities; non-Modbus drivers can block Modbus scans.
+- A scan shows duplicate slave_ids — surface the candidates and confirm which one keeps the address.
+- About to enable a heavy polling channel (high `read_rate_limit_ms` but slow device) — confirm; rate-limit errors will start firing.
+
 ## Documentation
 
 - Template format: <https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md>

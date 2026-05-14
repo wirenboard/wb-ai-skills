@@ -1,3 +1,13 @@
+wb-cli (1.8.5) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.10.0 (harmonize:
+    add "What the agent does NOT do" + "When to ask the user" sections
+    to all 9 skills). CI stage "Check version has bumped" requires a
+    .deb release on every PR; follow-up to relax that for plugin-only
+    changes.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 May 2026 01:30:00 +0400
+
 wb-cli (1.8.4) stable; urgency=medium
 
   * Align pyproject.toml and wb_cli.__version__ with debian/changelog.

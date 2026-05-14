@@ -116,6 +116,24 @@ See **`references/restore.md`** for the full workflow — find backup → read R
 - Scattering files across `/tmp`, `/root`, `/mnt/data/backups` — everything in `/mnt/data/ai/wb-ai-skills/backups/`.
 - Skipping modified configs or custom systemd units — they also need to be in the archive.
 
+## What the agent does NOT do
+
+- **Invent backup utilities.** There is no `wb-backup`, `wbctl backup`, `backup.sh` — use the 3-phase flow.
+- **Stop after the snapshot.** A `wb-cli snapshot save` is verification material, NOT a backup. Continue to Phase 2.
+- **Run `tar` in plain SSH.** Long-running ops use `wb-cli --json job run` (or raw `systemd-run`) — plain SSH times out mid-archive.
+- **Back up `/mnt/data/.docker/`.** That's Docker daemon storage (images, layers); restored via `docker compose pull`. Backing it up wastes 2-10 GB.
+- **Dump raw audit output to the user.** Always categorize: extra packages / custom files / modified configs / user dirs / Docker.
+- **Modify the core-tar script.** It captures `/mnt/data/etc` recursively and the required `/etc/*` paths; ad-hoc edits break restore.
+- **Scatter files across `/tmp`, `/root`, `/mnt/data/backups`.** Everything goes under `/mnt/data/ai/wb-ai-skills/backups/`.
+
+## When to ask the user
+
+- Total archive size after the heuristic exceeds **2 GB** — surface the size breakdown and ask which directories to trim.
+- The audit lists a package the agent doesn't recognize — ask which paths to capture (config locations are package-specific).
+- Restore: about to overwrite existing files in `/etc` from `audit-files.tar.gz` — confirm the user wants those overwritten (their current customizations may be different).
+- Restore: the user wants "back to as it was" but the controller currently has additional customizations not in the backup — clarify whether to wipe-and-restore or merge.
+- A package in the audit is installed via Docker (e.g. zigbee2mqtt in `/mnt/data`) but also has a deb installed — clarify which one to back up.
+
 ## Documentation
 
 - FIT update: <https://wirenboard.com/wiki/Wirenboard_Firmware_Update>
