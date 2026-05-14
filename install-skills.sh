@@ -2,38 +2,52 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILLS_DIR="$SCRIPT_DIR/skills"
+SKILLS_DIR="$SCRIPT_DIR/wb-plc/skills"
 
 if [ ! -d "$SKILLS_DIR" ]; then
-    echo "error: skills/ directory not found at $SKILLS_DIR" >&2
+    echo "error: skills directory not found at $SKILLS_DIR" >&2
     exit 1
 fi
 
 usage() {
     cat <<'EOF'
-Install or uninstall wb-ai-skills for Claude Code, OpenCode, or any other AI agent.
+Install or uninstall wb-ai-skills for Claude Code, OpenCode, or any other AI
+agent.
+
+When possible, prefer the marketplace path instead of this script:
+
+  /plugin marketplace add wirenboard/wb-ai-skills
+  /plugin install wb-plc@wb-ai-skills
+
+It works for Claude Code and GitHub Copilot CLI out of the box. This script
+exists for agents without marketplace support (older Claude Code, OpenCode,
+miscellaneous LLM agents).
 
 Usage:
   install-skills.sh <target> [options]
   install-skills.sh uninstall <target> [options]
 
 Targets:
-  claude    Copy skills to the Claude Code commands directory.
-  opencode  Copy skills to the OpenCode agents directory.
-            Rewrites frontmatter: allowed-tools -> mode: primary.
-  manual    Copy skills to a custom directory (--dest required).
-            Strips frontmatter to name + description only — safe for
-            any agent that does not know Claude- or OpenCode-specific fields.
+  claude    Copy each skill directory (SKILL.md + references/ + scripts/) to
+            the Claude Code skills directory. Preserves the native skill
+            layout with all supporting files.
+  opencode  Extract each SKILL.md to a flat <name>.md in the OpenCode agents
+            directory. Rewrites frontmatter: allowed-tools -> mode: primary.
+            Side files (references/, scripts/) are NOT copied — they only
+            make sense in agents that read skills as directories.
+  manual    Extract each SKILL.md to a flat <name>.md in --dest. Strips
+            frontmatter to name + description only — safe for any agent that
+            does not know Claude- or OpenCode-specific fields.
 
 Options:
   --global        Use the user-level directory instead of the project-local one:
-                    claude   ~/.claude/commands/
+                    claude   ~/.claude/skills/
                     opencode ~/.config/opencode/agents/
   --dest <dir>    Override the destination directory (works with all targets).
   -h, --help      Show this help and exit.
 
 Default destinations (no --global / --dest):
-  claude   ./.claude/commands/
+  claude   ./.claude/skills/
   opencode ./.opencode/agents/
 
 Examples:
@@ -41,7 +55,7 @@ Examples:
   ./install-skills.sh claude --global              # user-wide Claude Code
   ./install-skills.sh opencode --global            # user-wide OpenCode
   ./install-skills.sh manual --dest ~/my-agent/prompts
-  ./install-skills.sh uninstall claude --global    # remove user-wide Claude Code skills
+  ./install-skills.sh uninstall claude --global    # remove user-wide skills
 EOF
     exit "${1:-0}"
 }
@@ -70,7 +84,7 @@ resolve_dest() {
     case "$TARGET" in
         claude)
             [ -n "$DEST" ] && return
-            DEST=$([ "$GLOBAL" = 1 ] && echo "$HOME/.claude/commands" || echo "./.claude/commands")
+            DEST=$([ "$GLOBAL" = 1 ] && echo "$HOME/.claude/skills" || echo "./.claude/skills")
             ;;
         opencode)
             [ -n "$DEST" ] && return
@@ -89,14 +103,28 @@ resolve_dest() {
 
 resolve_dest
 
+# List skill names (subdirectory names under wb-plc/skills/ that contain SKILL.md).
+list_skills() {
+    for dir in "$SKILLS_DIR"/*/; do
+        [ -d "$dir" ] || continue
+        [ -f "${dir}SKILL.md" ] || continue
+        basename "$dir"
+    done
+}
+
 if [ "$ACTION" = "uninstall" ]; then
     count=0
-    for src in "$SKILLS_DIR"/*.md; do
-        [ -f "$src" ] || continue
-        name="$(basename "$src")"
-        target="$DEST/$name"
+    for name in $(list_skills); do
+        case "$TARGET" in
+            claude)
+                target="$DEST/$name"
+                ;;
+            opencode|manual)
+                target="$DEST/$name.md"
+                ;;
+        esac
         if [ -e "$target" ] || [ -L "$target" ]; then
-            rm -f "$target"
+            rm -rf "$target"
             count=$((count + 1))
         fi
     done
@@ -107,26 +135,27 @@ fi
 mkdir -p "$DEST"
 
 count=0
-for src in "$SKILLS_DIR"/*.md; do
-    [ -f "$src" ] || continue
-    name="$(basename "$src")"
+for name in $(list_skills); do
+    src_dir="$SKILLS_DIR/$name"
+    src_skill="$src_dir/SKILL.md"
 
     case "$TARGET" in
         claude)
-            rm -f "$DEST/$name"
-            cp "$src" "$DEST/$name"
+            # Copy the whole skill directory (SKILL.md + references/ + scripts/ + ...)
+            target_dir="$DEST/$name"
+            rm -rf "$target_dir"
+            cp -r "$src_dir" "$target_dir"
             ;;
         opencode)
-            # opencode wants flat .md; replace `allowed-tools:` with `mode: primary`
-            sed 's/^allowed-tools:.*/mode: primary/' "$src" > "$DEST/$name"
+            # OpenCode wants a flat .md per agent; rewrite frontmatter.
+            sed 's/^allowed-tools:.*/mode: primary/' "$src_skill" > "$DEST/$name.md"
             ;;
         manual)
-            # Strip frontmatter to name+description only (agent-neutral)
+            # Strip frontmatter to name+description only (agent-neutral).
             awk '
-                BEGIN { in_fm=0; done=0; printed=0 }
+                BEGIN { in_fm=0; done=0 }
                 /^---$/ && !done {
                     if (!in_fm) { in_fm=1; print; next }
-                    # closing ---: emit minimal frontmatter then the rest
                     print "---"; done=1; in_fm=0; next
                 }
                 in_fm {
@@ -134,15 +163,15 @@ for src in "$SKILLS_DIR"/*.md; do
                     next
                 }
                 { print }
-            ' "$src" > "$DEST/$name"
+            ' "$src_skill" > "$DEST/$name.md"
             ;;
     esac
     count=$((count + 1))
 done
 
 mode_desc=$(case "$TARGET" in
-    claude) echo "copies" ;;
-    opencode) echo "copies (opencode frontmatter)" ;;
-    manual) echo "copies (frontmatter: name+description only)" ;;
+    claude) echo "directories with SKILL.md + side files" ;;
+    opencode) echo "flat .md with opencode frontmatter" ;;
+    manual) echo "flat .md with frontmatter trimmed to name+description" ;;
 esac)
 echo "installed $count skills -> $DEST ($mode_desc)"
