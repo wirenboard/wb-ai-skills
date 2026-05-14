@@ -1,6 +1,6 @@
 ---
 name: wb-rules
-description: "Wiren Board rules engine. ES5 JavaScript in /etc/wb-rules/*.js. defineRule, defineVirtualDevice, PersistentStorage, timers, cron. Load for automation tasks."
+description: "Wiren Board rules engine for automation — ES5 JavaScript in /etc/wb-rules/*.js. defineRule, defineVirtualDevice, PersistentStorage, timers, cron, MQTT bindings, virtual controls. Use when user wants to write an automation rule, schedule something, react to a sensor, create a virtual device, or debug a wb-rules script. NOT for custom daemons (wb-dev)."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 

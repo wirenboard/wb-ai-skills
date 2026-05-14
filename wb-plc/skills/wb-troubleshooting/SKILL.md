@@ -1,6 +1,6 @@
 ---
 name: wb-troubleshooting
-description: "General diagnostics for issues on a Wiren Board controller. Failed services, low disk space, kernel mismatch, Docker, iptables, diagnostic archive. NOT for serial/Modbus — for that there's `wb-serial` skill."
+description: "General Wiren Board controller diagnostics — failed systemd services, low disk space, kernel/firmware mismatch, Docker, iptables, diagnostic archive (wb-diag-collect), boot issues, web UI inaccessible. Use when user says controller is broken, not working, service down, asks for logs for support, or needs a diagnostic archive. NOT for serial/Modbus (use wb-serial), NOT for network-only issues (use wb-network)."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
