@@ -1,3 +1,22 @@
+wb-cli (1.8.2) stable; urgency=medium
+
+  * skills: moved from flat skills/<name>.md to directory-format
+    wb-plc/skills/<name>/SKILL.md. The .deb now installs them to
+    /usr/share/wb-cli/skills/<name>/SKILL.md (was /usr/share/wb-cli/skills/<name>.md).
+  * skills: 7 of 9 descriptions reworded with explicit "Use when..." trigger
+    phrases and common user-facing keywords for better skill activation in
+    AI agents. wb-serial and wb-zigbee left as-is (already specific enough).
+  * marketplace: this repo is now a Claude Code / Copilot CLI plugin
+    marketplace. The wb-plc plugin (skills only) can be installed via
+    `/plugin marketplace add wirenboard/wb-ai-skills` then
+    `/plugin install wb-plc@wb-ai-skills`. Plugin version is tracked
+    independently in .claude-plugin/plugin.json (starts at 1.9.0).
+  * install-skills.sh rewritten for the directory format; Claude target
+    now installs to ~/.claude/skills/ (was ~/.claude/commands/, the wrong
+    location for the skill mechanism).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 14 May 2026 18:24:00 +0400
+
 wb-cli (1.8.1) stable; urgency=medium
 
   * ci: add Jenkinsfile invoking buildDebArchAll from the shared

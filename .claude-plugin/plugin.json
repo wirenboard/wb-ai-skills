@@ -1,0 +1,11 @@
+{
+  "name": "wb-plc",
+  "description": "Wiren Board controller skills — operate, configure, troubleshoot WB hardware via SSH and wb-cli.",
+  "version": "1.9.0",
+  "author": {
+    "name": "Wiren Board",
+    "url": "https://wirenboard.com"
+  },
+  "license": "MIT",
+  "skills": "./wb-plc/skills/"
+}

@@ -1,6 +1,6 @@
 ---
 name: wb-network
-description: Network configuration of a Wiren Board controller — NetworkManager, wb-connection-manager, ethernet/wifi/4G/OpenVPN, static IP, failover, DNS. Hotspot setup.
+description: "Network configuration on a Wiren Board controller — NetworkManager, wb-connection-manager, Ethernet/WiFi/4G/OpenVPN, static IP, failover priorities, DNS, hotspot. Use when user mentions networking, can't reach controller, no internet, ping fails, IP address, WiFi setup, 4G modem, VPN."
 allowed-tools: Bash Read Write WebFetch
 ---
 

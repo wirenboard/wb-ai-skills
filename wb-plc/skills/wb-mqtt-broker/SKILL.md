@@ -1,6 +1,6 @@
 ---
 name: wb-mqtt-broker
-description: Administering mosquitto on a Wiren Board controller — listeners, users, ACLs, bridges to external brokers, TLS. /etc/mosquitto/conf.d/.
+description: "Mosquitto MQTT broker administration on Wiren Board — listeners, users, ACLs, password files, TLS, bridges to external brokers. /etc/mosquitto/conf.d/. Use when user mentions MQTT broker config, mosquitto, MQTT auth/password, MQTT TLS, external MQTT bridge, broker not running, MQTT client can't connect from outside."
 allowed-tools: Bash Read Write WebFetch
 ---
 

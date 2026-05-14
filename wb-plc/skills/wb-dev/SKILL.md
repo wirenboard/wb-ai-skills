@@ -1,6 +1,6 @@
 ---
 name: wb-dev
-description: "Writing software or integrations for Wiren Board: custom daemons, protocol bridges (e.g. Zigbee2MQTT → WB MQTT, Modbus → MQTT), MQTT conventions, MQTT-RPC services, wbdev cross-compilation, Debian packaging. NOT for wb-rules JS automation."
+description: "Writing software FOR Wiren Board controllers — custom daemons (C++/Python/Go), MQTT bridges (Zigbee2MQTT → WB, Modbus → WB, custom hardware), MQTT-RPC services, wbdev cross-compilation, Debian packaging, /devices/X/controls/Y topic conventions. Use when user wants to write a daemon, integration bridge, or hardware adapter. NOT for wb-rules JS automation."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
