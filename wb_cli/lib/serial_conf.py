@@ -19,9 +19,7 @@ _INHERITED_UART_KEYS = ("baud_rate", "parity", "data_bits", "stop_bits")
 
 # Real baud rates the RPCs accept. A device template stores its baud as the
 # Modbus register code (real / 100, e.g. 96 → 9600); normalised below.
-_REAL_BAUD_RATES = frozenset(
-    {110, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400}
-)
+_REAL_BAUD_RATES = frozenset({110, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400})
 
 
 def _normalize_baud(value: Any) -> Any:
