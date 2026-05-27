@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-
 from wb_cli.errors import WbCliError
 from wb_cli.lib import serial_conf
 
