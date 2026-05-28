@@ -878,6 +878,27 @@ def test_modbus_fw_check_render_single_no_device_type():
     assert "slave_id=4" in out
 
 
+def test_modbus_fw_check_render_single_sanitizes_garbage():
+    """Single-device render must also strip raw bytes / HTML — same defence as bulk."""
+    result = {
+        "slave_id": 145,
+        "device_type": "ENGO EFAN",
+        "port": "/dev/ttyRS485-1",
+        "can_update": True,
+        "fw": "\x5e\xff\x32",
+        "available_fw": "",
+        "bootloader": "\x0f",
+        "available_bootloader": "<html><title>404</title></html>",
+    }
+    out = _render_check_one(result)
+    assert "\xff" not in out
+    assert "\x0f" not in out
+    assert "<html>" not in out
+    assert "<title>" not in out
+    assert "firmware:   ? -> ?" in out
+    assert "bootloader: ? -> ?" in out
+
+
 def test_modbus_fw_check_render_bulk_device_type_column():
     """Bulk check render table includes device_type column header and value."""
     rows = [

@@ -400,16 +400,21 @@ def _find_entry(state: dict, slave_id: int, port: str):
 
 def _render_check_one(result: dict) -> str:
     verdict = "update available" if result["can_update"] else "up to date"
-    device_type = result.get("device_type") or ""
-    header = f"{verdict}  (slave_id={result['slave_id']}, port={result['port']}"
+    device_type = _sanitize_cell(result.get("device_type"))
+    port = _sanitize_cell(result.get("port", "?"))
+    header = f"{verdict}  (slave_id={result['slave_id']}, port={port}"
     if device_type:
         header += f", {device_type}"
     header += ")"
+    fw = _sanitize_version_cell(result.get("fw")) or "?"
+    available_fw = _sanitize_version_cell(result.get("available_fw")) or "?"
+    bootloader = _sanitize_version_cell(result.get("bootloader")) or "?"
+    available_bootloader = _sanitize_version_cell(result.get("available_bootloader")) or "?"
     return "\n".join(
         [
             header,
-            f"  firmware:   {result.get('fw', '?')} -> {result.get('available_fw', '?')}",
-            f"  bootloader: {result.get('bootloader', '?')} -> " f"{result.get('available_bootloader', '?')}",
+            f"  firmware:   {fw} -> {available_fw}",
+            f"  bootloader: {bootloader} -> {available_bootloader}",
         ]
     )
 
