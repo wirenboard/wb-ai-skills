@@ -878,6 +878,27 @@ def test_modbus_fw_check_render_single_no_device_type():
     assert "slave_id=4" in out
 
 
+def test_modbus_fw_check_render_single_sanitizes_garbage():
+    """Single-device render must also strip raw bytes / HTML — same defence as bulk."""
+    result = {
+        "slave_id": 145,
+        "device_type": "ENGO EFAN",
+        "port": "/dev/ttyRS485-1",
+        "can_update": True,
+        "fw": "\x5e\xff\x32",
+        "available_fw": "",
+        "bootloader": "\x0f",
+        "available_bootloader": "<html><title>404</title></html>",
+    }
+    out = _render_check_one(result)
+    assert "\xff" not in out
+    assert "\x0f" not in out
+    assert "<html>" not in out
+    assert "<title>" not in out
+    assert "firmware:   ? -> ?" in out
+    assert "bootloader: ? -> ?" in out
+
+
 def test_modbus_fw_check_render_bulk_device_type_column():
     """Bulk check render table includes device_type column header and value."""
     rows = [
@@ -895,6 +916,97 @@ def test_modbus_fw_check_render_bulk_device_type_column():
     out = _render_check_bulk(rows)
     assert "device_type" in out
     assert "WB-MR6C" in out
+
+
+def test_modbus_fw_check_render_bulk_sanitizes_garbage_cells():
+    """ENGO EFAN: raw bytes in fw + S3 404 XML body in available_bootloader must not leak into the table."""
+    s3_404_body = (
+        "\n<html>\n<head><title>404 Not Found</title></head>\n"
+        "<body>\n<h1>404 Not Found</h1>\n<ul>\n<li>Code: NoSuchKey</li>\n"
+        "</ul>\n</body>\n</html>"
+    )
+    rows = [
+        {
+            "slave_id": 4,
+            "device_type": "WB-MR6C",
+            "port": "/dev/ttyRS485-1",
+            "fw": "1.0",
+            "available_fw": "1.0",
+            "can_update": False,
+            "bootloader": "1.0",
+            "available_bootloader": "1.0",
+        },
+        {
+            "slave_id": 145,
+            "device_type": "ENGO EFAN",
+            "port": "/dev/ttyRS485-1",
+            "fw": "\x0fF",
+            "available_fw": "",
+            "can_update": True,
+            "bootloader": "\x5e\xff\x32",
+            "available_bootloader": s3_404_body,
+        },
+    ]
+    out = _render_check_bulk(rows)
+    assert "\x0f" not in out
+    assert "\xff" not in out
+    assert "<html>" not in out
+    assert "<" not in out and ">" not in out
+    # ENGO row must show "?" for each junk version cell (fw, bootloader, available_bootloader).
+    engo_line = next(line for line in out.splitlines() if line.startswith("145"))
+    assert engo_line.count("?") >= 3, f"expected ?-placeholders for junk cells: {engo_line!r}"
+
+
+def test_modbus_fw_check_render_bulk_splits_errors_into_separate_block():
+    """ERROR rows go to a dedicated ``errors (N):`` block below the main table with full messages."""
+    rows = [
+        {
+            "slave_id": 23,
+            "device_type": "WB-MR6CU",
+            "port": "/dev/ttyRS485-1",
+            "fw": "1.26.3",
+            "available_fw": "1.26.3",
+            "can_update": True,
+            "bootloader": "1.5.5",
+            "available_bootloader": "1.5.5",
+        },
+        {
+            "slave_id": 3,
+            "device_type": "XY-MD0X",
+            "port": "/dev/ttyRS485-1",
+            "error": (
+                "RPC call to 'wb-device-manager/fw-update/GetFirmwareInfo' "
+                "failed: Error: illegal data value [-32000]: None"
+            ),
+        },
+        {
+            "slave_id": 2841,
+            "device_type": "Milur 107S",
+            "port": "/dev/ttyRS485-2",
+            "error": (
+                "RPC call to 'wb-device-manager/fw-update/GetFirmwareInfo' "
+                "failed: Error: Request timeout [-32600]: Serial protocol error: "
+                "request timed out [-32000]: None"
+            ),
+        },
+    ]
+    out = _render_check_bulk(rows)
+    assert "checked 3 device(s):  (1 ok/update, 2 errors)" in out
+    # Main table has the ok row but not the error rows.
+    assert "WB-MR6CU" in out
+    main_section, _, error_section = out.partition("errors (2):")
+    assert "XY-MD0X" not in main_section
+    assert "Milur 107S" not in main_section
+    # Error block contains both errors with the RPC wrapper stripped and no `: None` tail.
+    assert "XY-MD0X" in error_section
+    assert "illegal data value [-32000]" in error_section
+    assert "Milur 107S" in error_section
+    assert "Request timeout [-32600]: Serial protocol error: request timed out [-32000]" in error_section
+    assert "RPC call to" not in error_section
+    assert ": None" not in error_section
+    # /dev/ prefix stripped for compactness.
+    assert "/dev/ttyRS485-1" not in out
+    assert "ttyRS485-1" in out
 
 
 # ---------------------------------------------------------------------------

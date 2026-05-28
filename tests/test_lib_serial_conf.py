@@ -126,6 +126,67 @@ def test_list_devices_no_filter_returns_all():
     assert len(serial_conf.list_devices(content)) == 2
 
 
+def test_iter_devices_normalizes_code_baud_rate():
+    """A device-level baud stored as a register code (real / 100) is expanded.
+
+    WB templates write the override as 96 / 1152; the RPC schema wants the
+    real rate (9600 / 115200).
+    """
+    content = {
+        "ports": [
+            {
+                "path": "/dev/ttyRS485-1",
+                "baud_rate": 9600,
+                "devices": [
+                    {"slave_id": 97, "device_type": "tpl1_wb_mao4", "baud_rate": 1152},
+                    {"slave_id": 28, "device_type": "WB-MCM8", "baud_rate": 96},
+                ],
+            }
+        ]
+    }
+    devs = list(serial_conf.iter_devices(content))
+    assert devs[0]["port"]["baud_rate"] == 115200
+    assert devs[1]["port"]["baud_rate"] == 9600
+
+
+def test_iter_devices_keeps_real_baud_rate():
+    """A real baud rate (already in the enum) passes through untouched."""
+    content = {
+        "ports": [
+            {
+                "path": "/dev/ttyRS485-1",
+                "baud_rate": 9600,
+                "devices": [
+                    {"slave_id": 7, "device_type": "wb-mr6c", "baud_rate": 115200},
+                    {"slave_id": 8, "device_type": "wb-mr6c"},  # inherits 9600
+                ],
+            }
+        ]
+    }
+    devs = list(serial_conf.iter_devices(content))
+    assert devs[0]["port"]["baud_rate"] == 115200
+    assert devs[1]["port"]["baud_rate"] == 9600
+
+
+def test_iter_devices_coerces_string_slave_id():
+    """slave_id stored as a string is coerced to int for the RPC schema."""
+    content = {
+        "ports": [
+            {
+                "path": "/dev/ttyRS485-1",
+                "devices": [
+                    {"slave_id": "73", "device_type": "wb-mr6c"},
+                    {"slave_id": 42, "device_type": "wb-mdm3"},
+                ],
+            }
+        ]
+    }
+    devs = list(serial_conf.iter_devices(content))
+    assert devs[0]["slave_id"] == 73
+    assert isinstance(devs[0]["slave_id"], int)
+    assert devs[1]["slave_id"] == 42
+
+
 def test_iter_devices_empty_content():
     assert not list(serial_conf.iter_devices({}))
     assert not list(serial_conf.iter_devices({"ports": []}))
