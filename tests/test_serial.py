@@ -932,9 +932,9 @@ def test_modbus_fw_check_render_bulk_sanitizes_garbage_cells():
     assert "\x0f" not in out
     header_width = len(lines[1])
     for row_line in lines[3:]:
-        assert len(row_line) == header_width, (
-            f"row width mismatch: {len(row_line)} vs header {header_width} ({row_line!r})"
-        )
+        assert (
+            len(row_line) == header_width
+        ), f"row width mismatch: {len(row_line)} vs header {header_width} ({row_line!r})"
 
 
 # ---------------------------------------------------------------------------
