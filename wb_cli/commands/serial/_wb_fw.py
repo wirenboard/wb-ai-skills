@@ -417,16 +417,59 @@ def _render_check_one(result: dict) -> str:
 _CELL_MAX_LEN = 64
 
 
-def _sanitize_cell(value, max_len: int = _CELL_MAX_LEN) -> str:
-    """Strip control chars and clamp width — third-party fw strings and S3 404 bodies have shown up here."""
+def _sanitize_cell(value, max_len: int | None = _CELL_MAX_LEN) -> str:
+    """Strip control chars; optionally clamp width."""
     text = "" if value is None else str(value)
     cleaned = "".join(ch for ch in text if ord(ch) >= 0x20 and ord(ch) != 0x7F)
-    if len(cleaned) > max_len:
+    if max_len is not None and len(cleaned) > max_len:
         cleaned = cleaned[: max_len - 1] + "…"
     return cleaned
 
 
+def _sanitize_version_cell(value, max_len: int = _CELL_MAX_LEN) -> str:
+    """Versions are printable ASCII — anything else is junk (raw device bytes, S3 404 bodies)."""
+    text = "" if value is None else str(value)
+    if not text:
+        return ""
+    if any(not 0x20 <= ord(ch) <= 0x7E or ch in "<>" for ch in text):
+        return "?"
+    if len(text) > max_len:
+        return text[: max_len - 1] + "…"
+    return text
+
+
+def _short_port(path) -> str:
+    """Drop the /dev/ prefix for compact display."""
+    text = _sanitize_cell(path)
+    return text[5:] if text.startswith("/dev/") else text
+
+
+def _shorten_rpc_error(message: str) -> str:
+    """Strip RPC wrapper noise (``RPC call to '...' failed: Error: …: None``)."""
+    text = _sanitize_cell(message or "", max_len=None)
+    marker = "failed: Error: "
+    if marker in text:
+        text = text.split(marker, 1)[1]
+    if text.endswith(": None"):
+        text = text[: -len(": None")]
+    return text
+
+
 def _render_check_bulk(rows) -> str:
+    ok_rows = [r for r in rows if "error" not in r]
+    err_rows = [r for r in rows if "error" in r]
+    lines = [f"checked {len(rows)} device(s):  ({len(ok_rows)} ok/update, {len(err_rows)} errors)"]
+    if ok_rows:
+        lines.append("")
+        lines.extend(_render_ok_table(ok_rows))
+    if err_rows:
+        lines.append("")
+        lines.append(f"errors ({len(err_rows)}):")
+        lines.extend(_render_error_block(err_rows))
+    return "\n".join(lines)
+
+
+def _render_ok_table(ok_rows) -> list[str]:
     cols = [
         "slave_id",
         "device_type",
@@ -437,31 +480,43 @@ def _render_check_bulk(rows) -> str:
         "available_bootloader",
         "status",
     ]
-    has_error = any("error" in row for row in rows)
-    if has_error:
-        cols.append("error")
     table = []
-    for row in rows:
-        status = "ERROR" if "error" in row else ("update" if row.get("can_update") else "ok")
-        entry = {
-            "slave_id": _sanitize_cell(row.get("slave_id", "?")),
-            "device_type": _sanitize_cell(row.get("device_type")),
-            "port": _sanitize_cell(row.get("port", "?")),
-            "fw": _sanitize_cell(row.get("fw")),
-            "available_fw": _sanitize_cell(row.get("available_fw")),
-            "bootloader": _sanitize_cell(row.get("bootloader")),
-            "available_bootloader": _sanitize_cell(row.get("available_bootloader")),
-            "status": status,
-        }
-        if has_error:
-            err = row.get("error") or ""
-            entry["error"] = _sanitize_cell(err.splitlines()[0]) if err else ""
-        table.append(entry)
+    for row in ok_rows:
+        table.append(
+            {
+                "slave_id": _sanitize_cell(row.get("slave_id", "?")),
+                "device_type": _sanitize_cell(row.get("device_type")),
+                "port": _short_port(row.get("port", "?")),
+                "fw": _sanitize_version_cell(row.get("fw")),
+                "available_fw": _sanitize_version_cell(row.get("available_fw")),
+                "bootloader": _sanitize_version_cell(row.get("bootloader")),
+                "available_bootloader": _sanitize_version_cell(row.get("available_bootloader")),
+                "status": "update" if row.get("can_update") else "ok",
+            }
+        )
     widths = {c: max(len(c), *(len(r[c]) for r in table)) for c in cols}
-    header = "  ".join(c.ljust(widths[c]) for c in cols)
-    sep = "  ".join("-" * widths[c] for c in cols)
-    body = ["  ".join(r[c].ljust(widths[c]) for c in cols) for r in table]
-    return "\n".join([f"checked {len(rows)} device(s):", header, sep, *body])
+    out = [
+        "  ".join(c.ljust(widths[c]) for c in cols),
+        "  ".join("-" * widths[c] for c in cols),
+    ]
+    out.extend("  ".join(r[c].ljust(widths[c]) for c in cols) for r in table)
+    return out
+
+
+def _render_error_block(err_rows) -> list[str]:
+    table = []
+    for row in err_rows:
+        table.append(
+            {
+                "slave_id": _sanitize_cell(row.get("slave_id", "?")),
+                "device_type": _sanitize_cell(row.get("device_type")),
+                "port": _short_port(row.get("port", "?")),
+                "message": _sanitize_cell(_shorten_rpc_error(row.get("error", "")), max_len=None),
+            }
+        )
+    prefix_cols = ["slave_id", "device_type", "port"]
+    widths = {c: max(len(r[c]) for r in table) for c in prefix_cols}
+    return ["  " + "  ".join(r[c].ljust(widths[c]) for c in prefix_cols) + "  " + r["message"] for r in table]
 
 
 def _render_update_bulk(result: dict) -> str:
