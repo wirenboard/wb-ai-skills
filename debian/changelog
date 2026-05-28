@@ -3,8 +3,12 @@ wb-cli (1.8.6) stable; urgency=medium
   * Fix serial wb-fw / fw-params "Validation failed": iter_devices now
     coerces a string slave_id to int and expands a register-code
     baud_rate (real/100, e.g. 96/1152) to the real rate before the RPC.
+  * serial wb-fw check: rewrite human-mode render. ERROR rows go to a
+    dedicated `errors (N):` block with full untruncated messages; version
+    cells with garbage from the RPC (raw bytes, S3 404 bodies) collapse
+    to "?" instead of breaking the table.
 
- -- Valerii Trofimov <valeriy.trofimov@wirenboard.com>  Wed, 27 May 2026 16:24:00 +0300
+ -- Valerii Trofimov <valeriy.trofimov@wirenboard.com>  Tue, 28 May 2026 15:01:00 +0300
 
 wb-cli (1.8.5) stable; urgency=medium
 
