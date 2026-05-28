@@ -414,6 +414,18 @@ def _render_check_one(result: dict) -> str:
     )
 
 
+_CELL_MAX_LEN = 64
+
+
+def _sanitize_cell(value, max_len: int = _CELL_MAX_LEN) -> str:
+    """Strip control chars and clamp width — third-party fw strings and S3 404 bodies have shown up here."""
+    text = "" if value is None else str(value)
+    cleaned = "".join(ch for ch in text if ord(ch) >= 0x20 and ord(ch) != 0x7F)
+    if len(cleaned) > max_len:
+        cleaned = cleaned[: max_len - 1] + "…"
+    return cleaned
+
+
 def _render_check_bulk(rows) -> str:
     cols = [
         "slave_id",
@@ -432,17 +444,18 @@ def _render_check_bulk(rows) -> str:
     for row in rows:
         status = "ERROR" if "error" in row else ("update" if row.get("can_update") else "ok")
         entry = {
-            "slave_id": str(row.get("slave_id", "?")),
-            "device_type": row.get("device_type") or "",
-            "port": row.get("port", "?"),
-            "fw": str(row.get("fw") or ""),
-            "available_fw": str(row.get("available_fw") or ""),
-            "bootloader": str(row.get("bootloader") or ""),
-            "available_bootloader": str(row.get("available_bootloader") or ""),
+            "slave_id": _sanitize_cell(row.get("slave_id", "?")),
+            "device_type": _sanitize_cell(row.get("device_type")),
+            "port": _sanitize_cell(row.get("port", "?")),
+            "fw": _sanitize_cell(row.get("fw")),
+            "available_fw": _sanitize_cell(row.get("available_fw")),
+            "bootloader": _sanitize_cell(row.get("bootloader")),
+            "available_bootloader": _sanitize_cell(row.get("available_bootloader")),
             "status": status,
         }
         if has_error:
-            entry["error"] = (row.get("error") or "").splitlines()[0] if row.get("error") else ""
+            err = row.get("error") or ""
+            entry["error"] = _sanitize_cell(err.splitlines()[0]) if err else ""
         table.append(entry)
     widths = {c: max(len(c), *(len(r[c]) for r in table)) for c in cols}
     header = "  ".join(c.ljust(widths[c]) for c in cols)

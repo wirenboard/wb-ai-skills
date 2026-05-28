@@ -897,6 +897,46 @@ def test_modbus_fw_check_render_bulk_device_type_column():
     assert "WB-MR6C" in out
 
 
+def test_modbus_fw_check_render_bulk_sanitizes_garbage_cells():
+    """ENGO EFAN: 0x0F bytes in fw + S3 404 XML body in available_bootloader must not break the table."""
+    s3_404_body = (
+        "\n<html>\n<head><title>404 Not Found</title></head>\n"
+        "<body>\n<h1>404 Not Found</h1>\n<ul>\n<li>Code: NoSuchKey</li>\n"
+        "</ul>\n</body>\n</html>"
+    )
+    rows = [
+        {
+            "slave_id": 4,
+            "device_type": "WB-MR6C",
+            "port": "/dev/ttyRS485-1",
+            "fw": "1.0",
+            "available_fw": "1.0",
+            "can_update": False,
+            "bootloader": "1.0",
+            "available_bootloader": "1.0",
+        },
+        {
+            "slave_id": 145,
+            "device_type": "ENGO EFAN",
+            "port": "/dev/ttyRS485-1",
+            "fw": "\x0fF",
+            "available_fw": "",
+            "can_update": True,
+            "bootloader": "\x0f",
+            "available_bootloader": s3_404_body,
+        },
+    ]
+    out = _render_check_bulk(rows)
+    lines = out.splitlines()
+    assert len(lines) == 5, f"expected 5 lines, got {len(lines)}: {lines!r}"
+    assert "\x0f" not in out
+    header_width = len(lines[1])
+    for row_line in lines[3:]:
+        assert len(row_line) == header_width, (
+            f"row width mismatch: {len(row_line)} vs header {header_width} ({row_line!r})"
+        )
+
+
 # ---------------------------------------------------------------------------
 # send-modbus: PDU build, response parsing
 # ---------------------------------------------------------------------------
