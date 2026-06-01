@@ -1,3 +1,14 @@
+wb-cli (1.8.7) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.11.0 (new skill
+    wb-mod-slots: repurpose MOD slots via wb-hwconf-helper — raw UART
+    or bit-banged I2C on slot pins, with per-board capability matrix
+    and pinout). CI stage "Check version has bumped" requires a .deb
+    release on every PR; follow-up to relax that for plugin-only
+    changes.
+
+ -- Pavel Gasheev <pavel.gasheev@wirenboard.com>  Fri, 29 May 2026 17:18:40 +0300
+
 wb-cli (1.8.6) stable; urgency=medium
 
   * Fix serial wb-fw / fw-params "Validation failed": iter_devices now
