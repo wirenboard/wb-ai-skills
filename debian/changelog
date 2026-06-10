@@ -1,3 +1,12 @@
+wb-cli (1.8.8) stable; urgency=medium
+
+  * .gitmodules: codestyle submodule now uses an HTTPS URL instead of
+    SSH. Claude Code installs the wb-plc plugin over HTTPS, so the SSH
+    submodule failed with "Permission denied (publickey)" for anyone
+    without a GitHub SSH key. codestyle is public, so HTTPS needs no auth.
+
+ -- Friskes <arseniy.astafev@wirenboard.com>  Wed, 10 Jun 2026 16:12:34 +0300
+
 wb-cli (1.8.7) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.11.0 (new skill
