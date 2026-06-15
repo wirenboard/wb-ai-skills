@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/wirenboard/wb-ai-skills/actions/workflows/ci.yml)
 
+*English · [Русский](README.ru.md)*
+
 Two things in one repository, both built to help AI coding agents work with a [Wiren Board](https://wirenboard.com) controller:
 
 1. **`wb-plc` plugin** — methodology skills for AI agents that drive a controller over SSH. Distributed as a Claude Code / GitHub Copilot CLI plugin and as plain markdown for any other agent. See [Skills](#skills) below.
