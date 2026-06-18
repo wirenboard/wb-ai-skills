@@ -1,3 +1,11 @@
+wb-cli (1.8.9) stable; urgency=medium
+
+  * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in
+    grep -E alternation (\| → |) so the probe correctly detects whether
+    wb-mqtt-zigbee or wb-zigbee2mqtt is installed.
+
+ -- Anzic23 <xk.anzor@gmail.com>  Thu, 18 Jun 2026 18:17:14 +0300
+
 wb-cli (1.8.8) stable; urgency=medium
 
   * .gitmodules: codestyle submodule now uses an HTTPS URL instead of
