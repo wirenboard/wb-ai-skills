@@ -1,3 +1,14 @@
+wb-cli (1.8.9) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.11.1. wb-serial template-format reference:
+    the deprecated wb-mqtt-serial measurement control types (voltage,
+    current, power, temperature, ...) are now flagged as deprecated in
+    favour of type:"value" + units, the canonical example no longer uses
+    "voltage", and the units guidance points at the conventions unit
+    table (deg C, not the degree-symbol form). INT-1154.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Wed, 01 Jul 2026 18:21:58 +0300
+
 wb-cli (1.8.8) stable; urgency=medium
 
   * .gitmodules: codestyle submodule now uses an HTTPS URL instead of

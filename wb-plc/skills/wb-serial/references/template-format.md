@@ -17,7 +17,7 @@
         "address": 0,
         "format": "u16",
         "scale": 0.1,
-        "type": "voltage",
+        "type": "value",
         "units": "V"
       }
     ]
@@ -39,8 +39,8 @@
 | `scale` | Multiplier `value = raw * scale` |
 | `offset` | Added after scale |
 | `round_to` | Round to N digits |
-| `type` | MQTT control type: `switch`, `value`, `voltage`, `current`, `power`, `energy_power`, `temperature`, `pressure`, `range`, `text`, `pushbutton` |
-| `units` | Units (V, A, °C, mWh) |
+| `type` | MQTT control type. Use `switch`, `value`, `range`, `text`, `pushbutton`. ⚠️ Measurement types (`voltage`, `current`, `power`, `power_consumption`, `temperature`, `pressure`, `lux`, …) are **deprecated** — use `type: "value"` + `units` instead (see WARNING below) |
+| `units` | Units string, exactly as in conventions `#### Units` (e.g. `V`, `A`, `W`, `kWh`, `deg C`, `%`, `Pa`, `Hz`). **Not** `°C`, not Cyrillic, no unlisted `kW`/`mWh` |
 | `error_value` | If raw == this, control publishes error |
 | `unsupported_value` | If raw == this, control isn't published |
 | `read_rate_limit_ms` | Don't poll more often than once every N ms |
@@ -50,6 +50,15 @@
 | `condition` | Expression on `parameters` fields — channel only visible if true |
 | `group` | Group ID for UI |
 | `word_order` | `big_endian` (default) or `little_endian` for multi-register values |
+
+### ⚠️ Deprecated control types → `value` + `units`
+
+WB MQTT conventions mark the specialized measurement `type`s as **deprecated**:
+> ⚠️ WARNING: These control types are deprecated. It is recommended to use `units` property instead.
+
+Deprecated: `temperature`, `rel_humidity`, `atmospheric_pressure`, `rainfall`, `wind_speed`, `power`, `power_consumption`, `voltage`, `water_flow`, `water_consumption`, `resistance`, `concentration`, `heat_power`, `heat_energy`, `current`, `pressure`, `lux`, `sound_level`.
+
+**Treat any of these in a new template as a blocker** — future wb-mqtt-serial versions may drop support and the control breaks. Instead use `type: "value"` and set the unit explicitly via `units` (from conventions `#### Units`): `voltage`→`{"type":"value","units":"V"}`, `current`→`A`, `power`→`W`, `power_consumption`→`kWh`, `temperature`→`{"type":"value","units":"deg C"}`. `switch`, `value`, `range`, `text`, `pushbutton` are not measurement types — keep them. Source of truth: <https://github.com/wirenboard/conventions> (README, Controls / `#### Units`).
 
 ### Endianness
 
