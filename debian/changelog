@@ -8,7 +8,7 @@ wb-cli (1.8.10) stable; urgency=medium
     wirenboard/conventions). SKILL.md now defers JSON authoring and offline
     schema validation to that skill; the on-controller specifics (template
     locations, device_type override, on-bus format/scale/word_order iteration)
-    already live in SKILL.md and template-workflow.md. FW-1454.
+    already live in SKILL.md and template-workflow.md.
 
  -- Ilia Skochilov <ilia.skochilov@wirenboard.com>  Mon, 13 Jul 2026 14:58:31 +0300
 
