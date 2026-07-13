@@ -1,10 +1,21 @@
-wb-cli (1.8.9) stable; urgency=medium
+wb-cli (1.8.10) stable; urgency=medium
 
   * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in
     grep -E alternation (\| → |) so the probe correctly detects whether
     wb-mqtt-zigbee or wb-zigbee2mqtt is installed.
 
- -- Anzic23 <xk.anzor@gmail.com>  Thu, 18 Jun 2026 18:17:14 +0300
+ -- Anzic23 <xk.anzor@gmail.com>  Mon, 13 Jul 2026 23:22:17 +0300
+
+wb-cli (1.8.9) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.11.1. wb-serial template-format reference:
+    the deprecated wb-mqtt-serial measurement control types (voltage,
+    current, power, temperature, ...) are now flagged as deprecated in
+    favour of type:"value" + units, the canonical example no longer uses
+    "voltage", and the units guidance points at the conventions unit
+    table (deg C, not the degree-symbol form). INT-1154.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Wed, 01 Jul 2026 18:21:58 +0300
 
 wb-cli (1.8.8) stable; urgency=medium
 
