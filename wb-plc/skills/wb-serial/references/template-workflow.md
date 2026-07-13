@@ -1,5 +1,11 @@
 # Template creation, device parameters, firmware-version lookup
 
+This is the **on-controller** flow — scan, add, test on the bus, read/write firmware
+parameters. The template JSON format and conformance rules (fields, enums, deprecated
+types, `units`, endianness, offline schema validation) belong to the authoritative
+`mqtt-serial-template` skill; for a controller-free authoring path see its
+`authoring-workflow.md`, and use its `validate.py` before loading a template here.
+
 ## Template creation workflow
 
 ### 1. Device documentation

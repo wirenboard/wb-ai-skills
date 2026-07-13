@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wb-cli"
-version = "1.8.9"
+version = "1.8.10"
 description = "Command-line interface to a Wiren Board controller"
 requires-python = ">=3.9"
 authors = [{name = "Wiren Board Team", email = "info@wirenboard.com"}]

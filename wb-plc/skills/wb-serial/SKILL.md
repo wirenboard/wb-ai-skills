@@ -50,6 +50,17 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 # Part 1 — Templates and device configuration
 
+> **Authoring / validating the template JSON itself is owned by the `mqtt-serial-template`
+> skill** (plugin `wb-mqtt-serial-template`) — the authoritative source for channel fields,
+> `reg_type`/`format`/`type` enums, deprecated types, `units`, `enum`/`enum_titles`,
+> `condition`, endianness, and offline schema validation (`validate.py`, `.json` and
+> `.json.jinja`). **`wb-serial` is the on-controller side** — getting that template onto a
+> live controller and testing it on the bus. When you write or check the JSON, use
+> `mqtt-serial-template` (and its `validate.py`); this skill keeps no template-format
+> reference of its own. The controller-side specifics stay here: where templates live and
+> the `device_type` override (below), and on-bus `format`/`scale`/`word_order` iteration
+> (Pitfalls + `references/template-workflow.md`).
+
 ## Where templates live
 
 | Directory | What | Editable? |
@@ -59,8 +70,6 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 | `/etc/wb-mqtt-serial.conf.d/confs/*.conf` | Custom parts of the main config | Less commonly used |
 
 `wb-mqtt-serial` scans both directories at start. A custom template with the same `device_type` as a packaged one **overrides** the packaged one.
-
-For the full template JSON layout (minimal example, channel fields, parameters, groups, translations, endianness, string/varstring) — see **`references/template-format.md`**.
 
 For the 6-step creation workflow, the `fw-params` read/write flow, listing devices and ports, and device firmware-version lookup — see **`references/template-workflow.md`**.
 
