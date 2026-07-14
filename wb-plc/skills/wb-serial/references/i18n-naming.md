@@ -38,8 +38,8 @@ For JSON schemas rendered by the web UI (confed / json-editor) the standard is s
 ```json
 "title": "device_config_title",
 "translations": {
-  "en": {"device_config_title": "Actuator Configuration"},
-  "ru": {"device_config_title": "Настройка привода"}
+  "en": {"device_config_title": "Sensor Configuration"},
+  "ru": {"device_config_title": "Настройка датчика"}
 }
 ```
 
@@ -49,9 +49,9 @@ Rationale: schema strings (titles, descriptions, enum labels, group headers) are
 
 For every field walk the chain **config key ↔ translation key ↔ enum value ↔ displayed text**. All four must tell the same story. Acceptance test: reading the raw config *without* the schema, you can guess what is selected in the editor.
 
-- **An enum value reads like its label.** Value `widget_command` under the label "Widget Command" — good. Value `bus_command` under "Widget Command" — fails the test: nobody reading the config guesses what the editor shows.
-- **A field name matches its label's meaning.** `liveness_interval_ms` labelled "Connection Check Interval" — rename one of them (either `connection_check_interval_ms`, or a "Liveness ..." label).
-- **Translation keys derive from the config key.** Parameter `learning_type` with value `widget_command` → key `learning_type_widget_command`; parameter `in0_mode` → `in0_mode_title`. A translation key that shares no stem with its config key is a smell.
-- **Internal names (`definitions.*`, `$ref` targets) match the page vocabulary.** A definition named `device` on a page that calls the thing "Actuator" should be `actuator`.
+- **An enum value reads like its label.** Value `night_mode` under the label "Night Mode" — good. Value `mode_2` under "Night Mode" — fails the test: nobody reading the config guesses what the editor shows.
+- **A field name matches its label's meaning.** `sleep_delay_s` labelled "Backlight Off Delay" — rename one of them (either `backlight_off_delay_s`, or a "Sleep ..." label).
+- **Translation keys derive from the config key.** Parameter `work_mode` with value `night_mode` → key `work_mode_night_mode`; parameter `in0_mode` → `in0_mode_title`. A translation key that shares no stem with its config key is a smell.
+- **Internal names (`definitions.*`, `$ref` targets) match the page vocabulary.** A definition named `module` on a page that calls the thing "Sensor" should be `sensor`.
 
 These mismatches are invisible in the UI (the label renders fine) and surface only when someone reads or edits the raw config — which is exactly when they are most confusing. Check the chain before shipping, not after.
