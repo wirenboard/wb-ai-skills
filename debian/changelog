@@ -8,7 +8,7 @@ wb-cli (1.8.10) stable; urgency=medium
     channel-field table, format enum and deprecated-type list inline. SKILL.md
     and template-workflow.md point there too. The on-controller specifics
     (template locations, device_type override, device.id topic rules, on-bus
-    format/scale/word_order iteration) stay in this skill. FW-1454.
+    format/scale/word_order iteration) stay in this skill.
 
  -- Ilia Skochilov <ilia.skochilov@wirenboard.com>  Mon, 13 Jul 2026 14:58:31 +0300
 
