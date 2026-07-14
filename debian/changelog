@@ -1,3 +1,11 @@
+wb-cli (1.8.10) stable; urgency=medium
+
+  * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in
+    grep -E alternation (\| → |) so the probe correctly detects whether
+    wb-mqtt-zigbee or wb-zigbee2mqtt is installed.
+
+ -- Anzic23 <xk.anzor@gmail.com>  Mon, 13 Jul 2026 23:22:17 +0300
+
 wb-cli (1.8.9) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.11.1. wb-serial template-format reference:
