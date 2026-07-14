@@ -50,8 +50,8 @@ Rationale: schema strings (titles, descriptions, enum labels, group headers) are
 For every field walk the chain **config key ↔ translation key ↔ enum value ↔ displayed text**. All four must tell the same story. Acceptance test: reading the raw config *without* the schema, you can guess what is selected in the editor.
 
 - **An enum value reads like its label.** Value `night_mode` under the label "Night Mode" — good. Value `mode_2` under "Night Mode" — fails the test: nobody reading the config guesses what the editor shows.
-- **A field name matches its label's meaning.** `sleep_delay_s` labelled "Backlight Off Delay" — rename one of them (either `backlight_off_delay_s`, or a "Sleep ..." label).
-- **Translation keys derive from the config key.** Parameter `work_mode` with value `night_mode` → key `work_mode_night_mode`; parameter `in0_mode` → `in0_mode_title`. A translation key that shares no stem with its config key is a smell.
+- **A field name matches its label's meaning.** A field named `sleep_delay_s` labelled "Backlight Off Delay" leaves the config reader unsure it is the same setting. Align them: rename the field to `backlight_off_delay_s`, or relabel to "Sleep Delay".
+- **Translation keys derive from the config key.** Parameter `work_mode` with value `night_mode` → key `work_mode_night_mode`; parameter `in0_mode` → keys `in0_mode_title`, `in0_mode_description`. If a key shares no stem with its config key (parameter `in0_mode`, key `first_input_title`), you can't find the parameter from the key or the key from the parameter — rename the key.
 - **Internal names (`definitions.*`, `$ref` targets) match the page vocabulary.** A definition named `module` on a page that calls the thing "Sensor" should be `sensor`.
 
 These mismatches are invisible in the UI (the label renders fine) and surface only when someone reads or edits the raw config — which is exactly when they are most confusing. Check the chain before shipping, not after.
