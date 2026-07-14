@@ -62,6 +62,8 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 For the full template JSON layout (minimal example, channel fields, parameters, groups, translations, endianness, string/varstring) — see **`references/template-format.md`**.
 
+For translation-key style (synthetic key vs English-text key), en/ru capitalization rules, json-editor/confed schema i18n, and the config-key ↔ translation-key ↔ enum-value ↔ label coherence check — see **`references/i18n-naming.md`**.
+
 For the 6-step creation workflow, the `fw-params` read/write flow, listing devices and ports, and device firmware-version lookup — see **`references/template-workflow.md`**.
 
 ## Adding a device to wb-mqtt-serial

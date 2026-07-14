@@ -1,3 +1,15 @@
+wb-cli (1.8.10) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.12.0: new wb-serial
+    reference i18n-naming.md — translation-key style for device templates
+    (synthetic keys for template title and parameter titles/descriptions,
+    English text as the key for channels/groups/enum_titles), en/ru
+    capitalization rules, json-editor/confed schema i18n (synthetic keys
+    + translations.en/ru), and the config-key <-> translation-key <->
+    enum-value <-> label coherence check.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 14 Jul 2026 17:30:00 +0300
+
 wb-cli (1.8.9) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.11.1. wb-serial template-format reference:
