@@ -1,14 +1,14 @@
 wb-cli (1.8.10) stable; urgency=medium
 
-  * wb-plc plugin bumped to 1.11.2. wb-serial: drop the duplicated template
-    format guidance. references/template-format.md is removed entirely — the
-    channel-field table, format enum and deprecated-control-type list it kept
-    are owned by the authoritative mqtt-serial-template skill (plugin
-    wb-mqtt-serial-template) and their live sources (driver JSON Schema,
-    wirenboard/conventions). SKILL.md now defers JSON authoring and offline
-    schema validation to that skill; the on-controller specifics (template
-    locations, device_type override, on-bus format/scale/word_order iteration)
-    already live in SKILL.md and template-workflow.md.
+  * wb-plc plugin bumped to 1.11.2. wb-serial: stop keeping a drift-prone copy
+    of the template format rules. references/template-format.md now points at
+    the public upstream sources of truth — the wb-mqtt-serial driver JSON
+    Schema, wirenboard/conventions (units, deprecated control types, naming)
+    and wb-mqtt-serial docs/template.md — instead of reproducing the
+    channel-field table, format enum and deprecated-type list inline. SKILL.md
+    and template-workflow.md point there too. The on-controller specifics
+    (template locations, device_type override, device.id topic rules, on-bus
+    format/scale/word_order iteration) stay in this skill. FW-1454.
 
  -- Ilia Skochilov <ilia.skochilov@wirenboard.com>  Mon, 13 Jul 2026 14:58:31 +0300
 

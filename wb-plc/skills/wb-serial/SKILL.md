@@ -50,16 +50,15 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 # Part 1 — Templates and device configuration
 
-> **Authoring / validating the template JSON itself is owned by the `mqtt-serial-template`
-> skill** (plugin `wb-mqtt-serial-template`) — the authoritative source for channel fields,
-> `reg_type`/`format`/`type` enums, deprecated types, `units`, `enum`/`enum_titles`,
-> `condition`, endianness, and offline schema validation (`validate.py`, `.json` and
-> `.json.jinja`). **`wb-serial` is the on-controller side** — getting that template onto a
-> live controller and testing it on the bus. When you write or check the JSON, use
-> `mqtt-serial-template` (and its `validate.py`); this skill keeps no template-format
-> reference of its own. The controller-side specifics stay here: where templates live and
-> the `device_type` override (below), and on-bus `format`/`scale`/`word_order` iteration
-> (Pitfalls + `references/template-workflow.md`).
+> **The template JSON format has one canonical definition — the public upstream sources:**
+> the [driver JSON Schema](https://github.com/wirenboard/wb-mqtt-serial/blob/master/wb-mqtt-serial-device-template.schema.json),
+> [wirenboard/conventions](https://github.com/wirenboard/conventions) (units, deprecated
+> control types, naming) and [wb-mqtt-serial `docs/template.md`](https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md).
+> This skill points at them instead of keeping a drift-prone copy — see
+> `references/template-format.md`. `wb-serial` itself is the **on-controller side**: getting
+> a template onto a live controller and testing it on the bus, where the controller-specific
+> facts live (template locations and the `device_type` override below, on-bus
+> `format`/`scale`/`word_order` iteration in Pitfalls + `references/template-workflow.md`).
 
 ## Where templates live
 
