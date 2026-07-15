@@ -1,14 +1,40 @@
-wb-cli (1.8.10) stable; urgency=medium
+wb-cli (1.8.13) stable; urgency=medium
 
-  * No functional changes. wb-plc plugin bumped to 1.12.0: new wb-serial
-    reference i18n-naming.md — translation-key style for device templates
-    (synthetic keys for template title and parameter titles/descriptions,
-    English text as the key for channels/groups/enum_titles), en/ru
-    capitalization rules, json-editor/confed schema i18n (synthetic keys
-    + translations.en/ru), and the config-key <-> translation-key <->
-    enum-value <-> label coherence check.
+  * No functional changes. wb-plc plugin bumped to 1.13.0: new wb-serial
+    reference i18n-naming.md — translation-key conventions shared by
+    device templates and json-editor/confed schemas (the displayed
+    English text is the key by default; synthetic keys for the template
+    title and for long or shared strings), en/ru capitalization rules,
+    and the config-key <-> translation-key <-> enum-value <-> label
+    coherence check.
 
  -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 14 Jul 2026 17:30:00 +0300
+
+wb-cli (1.8.12) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.12.0. New wb-rca skill: root-cause
+    investigation methodology for WB field problems and regressions —
+    reproduce on a test stand, ground claims in git/upstream, A/B-test
+    versions, prove, and file a proof-backed bug report; ships a
+    worked-case reference (mosquitto #3192 counter-leak, systemd BindsTo).
+    Also added the missing wb-mod-slots row to the README skills table.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Fri, 03 Jul 2026 18:40:15 +0300
+
+wb-cli (1.8.11) stable; urgency=medium
+
+  * codestyle: bump submodule 9be03b5 -> 6162cb6 (remove embedded-team
+    codestyle, pylint support for Python 3.13).
+
+ -- Alexander Degtyarev <a.degtyarev@struhe.com>  Wed, 15 Jul 2026 12:00:00 +0300
+
+wb-cli (1.8.10) stable; urgency=medium
+
+  * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in
+    grep -E alternation (\| → |) so the probe correctly detects whether
+    wb-mqtt-zigbee or wb-zigbee2mqtt is installed.
+
+ -- Anzic23 <xk.anzor@gmail.com>  Mon, 13 Jul 2026 23:22:17 +0300
 
 wb-cli (1.8.9) stable; urgency=medium
 

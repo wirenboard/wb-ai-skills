@@ -28,7 +28,7 @@ WB converters turn Z2M devices into native WB MQTT (`/devices/...`) so wb-rules 
 | **wb-mqtt-zigbee** (new) | `/devices/zigbee_*/controls/*` | Bidirectional controls, support via `/on` |
 | **wb-zigbee2mqtt** (old, `1.x`) | `/devices/0x<ieee>/controls/*` (topic name = full IEEE address) | Read-only bridge, control via `wb-cli mqtt write zigbee2mqtt/<friendly>/set` |
 
-Which one is installed — determine via `dpkg -l | grep -E 'wb-(mqtt-zigbee\|zigbee2mqtt)'` and check device names on the bus:
+Which one is installed — determine via `dpkg -l | grep -E 'wb-(mqtt-zigbee|zigbee2mqtt)'` and check device names on the bus:
 ```bash
 ssh root@<HOST> wb-cli --json mqtt list '/devices/+/meta/name'
 ```

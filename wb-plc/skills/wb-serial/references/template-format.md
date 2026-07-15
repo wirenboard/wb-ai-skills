@@ -125,4 +125,4 @@ Modbus is byte big-endian, but for u32/s32/float the **word** order (16-bit regi
 }
 ```
 
-Both `en` and `ru` sections. Key style: template `title` and parameter titles/descriptions — synthetic keys (`<MODEL>_template_title`, `<param_id>_title`); channel names, group titles, `enum_titles` — English text as the key. For the full key-style table, capitalization rules and the config-key ↔ translation-key ↔ enum-value ↔ label coherence check — see **`i18n-naming.md`**.
+Both `en` and `ru` sections. Key style: the displayed English text is the key by default (channel names, group titles, `enum_titles`, parameter titles); synthetic keys for the template `title` (`<MODEL>_template_title`) and for long or shared strings (`<param_id>_description`). For the full key-style table, capitalization rules and the config-key ↔ translation-key ↔ enum-value ↔ label coherence check — see **`i18n-naming.md`**.

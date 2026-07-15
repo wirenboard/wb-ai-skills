@@ -1,30 +1,30 @@
 # Translations & naming — templates and json-editor schemas
 
-How to name config keys, translation keys and enum values so the raw JSON stays readable and the UI stays translatable. Conventions distilled from factory `wb-mqtt-serial` templates (reference example: `config-wb-m1w2.json`).
+How to name config keys, translation keys and enum values so the raw JSON stays readable and the UI stays translatable. The base convention is documented in the `wb-mqtt-serial` README: a translation entry is `"<lang>": "<English string>": "<translation>"` — **the displayed English text is the key by default**; synthetic keys are the exception, not the rule.
 
 ## Device templates (`wb-mqtt-serial`) — what serves as the translation key
 
 | Text | Key style | Example |
 |------|-----------|---------|
-| Template `title` | synthetic key `<MODEL>_template_title` | `WB-M1W2_template_title` |
-| Parameter title / description | synthetic key `<param_id>_title` / `<param_id>_description` | `temperature_readings_filter_deg_title` |
+| Template `title` | synthetic key; for new templates use the canonical form `<MODEL>_template_title` (factory templates vary in style) | `WB-MXXX_template_title` |
 | Channel names, group titles, `enum_titles` | English text **is** the key | `"Uptime"`, `"HW Info"` |
+| Parameter title / description | English text is the key **by default**; a synthetic key (`<param_id>_title` / `<param_id>_description`) only for long descriptions or strings shared across templates | `"Baud rate"`; long: `baud_rate_description` |
 
 Rules:
 
 - **Both `en` and `ru` sections are present.**
 - `en` holds entries only where the displayed text differs from the key: `"Uptime": "Uptime (s)"`. Short English labels that display as-is need no `en` entry.
-- `ru` translates everything: template title, group titles, channel names, parameter titles/descriptions, `enum_titles`.
+- In **new** templates `ru` translates everything: template title, group titles, channel names, parameter titles/descriptions, `enum_titles`. Existing factory templates vary (some translate only the title) — don't copy their gaps.
 - Capitalization: EN — Each Word Capitalized (`Board Temperature`); RU — только первое слово с большой (`Температура платы`); abbreviations (`VOC`, `MQTT`, `RAM`) always caps in both.
 
 ```json
 "translations": {
   "en": {
-    "WB-M1W2_template_title": "WB-M1W2 (2-channel temperature measurement module)",
+    "WB-MXXX_template_title": "WB-MXXX (2-channel relay module)",
     "Uptime": "Uptime (s)"
   },
   "ru": {
-    "WB-M1W2_template_title": "WB-M1W2 (2-канальный преобразователь для термометров 1-Wire)",
+    "WB-MXXX_template_title": "WB-MXXX (2-канальный модуль реле)",
     "HW Info": "Данные модуля",
     "Uptime": "Время работы (с)"
   }
@@ -33,17 +33,15 @@ Rules:
 
 ## json-editor / confed schemas (custom drivers, config editors)
 
-For JSON schemas rendered by the web UI (confed / json-editor) the standard is stricter: **every UI string is a synthetic key**, never raw English text, and `translations` carries both `en` and `ru`:
+JSON schemas rendered by the web UI (confed / json-editor) follow the **same convention** as device templates: titles and labels are English text, `translations.ru` maps English → Russian (factory example: `wb-mqtt-mbgate.schema.json` — `"Enabled"`, `"Modbus unit ID"` as keys). Synthetic keys are used for the schema root title/description and for long or shared strings, where they keep diffs small and make the en/ru pair explicit:
 
 ```json
-"title": "device_config_title",
+"description": "device_config_description",
 "translations": {
-  "en": {"device_config_title": "Sensor Configuration"},
-  "ru": {"device_config_title": "Настройка датчика"}
+  "en": {"device_config_description": "Long description of what this configuration page controls."},
+  "ru": {"device_config_description": "Длинное описание того, чем управляет эта страница настроек."}
 }
 ```
-
-Rationale: schema strings (titles, descriptions, enum labels, group headers) are longer and change more often than template channel names; a synthetic key keeps diffs small and makes the en/ru pair explicit.
 
 ## Naming coherence — the chain check
 
