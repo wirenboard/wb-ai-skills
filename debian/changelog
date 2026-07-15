@@ -1,3 +1,14 @@
+wb-cli (1.8.13) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.12.2. wb-dev codestyle reference: the
+    Python key-differences summary now includes the multi-line
+    docstring rule (nothing after the opening triple quotes, closing
+    quotes on their own line), mirroring wirenboard/codestyle PR #123.
+    Versions assume the mirrored-constants PRs (1.8.11, 1.8.12) merge
+    first.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 13:00:00 +0300
+
 wb-cli (1.8.10) stable; urgency=medium
 
   * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in

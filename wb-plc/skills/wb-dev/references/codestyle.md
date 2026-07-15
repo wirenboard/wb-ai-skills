@@ -35,6 +35,7 @@ Base: PEP8. Key differences:
 - **Double quotes** for strings: `"string"` (not `'string'`)
 - Type annotations required
 - Trailing comma after last element in multi-line collections
+- Docstrings are **always multi-line**, even for a one-sentence text: nothing on the line after the opening `"""`, text starts on the next line, closing `"""` on its own line. Not enforced by the linters — reviewers check it
 
 **Tools — run before every commit:**
 
