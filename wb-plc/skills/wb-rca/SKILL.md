@@ -58,7 +58,7 @@ teardown + a mosquitto counter-leak bug (roots). Prove each arrow independently.
 
 ### 5. Refute, don't assert
 Each hypothesis gets an experiment that could kill it. Report refutations as first-class results
-("гипотеза X опровергнута: …"). A hypothesis that survives a genuine refutation attempt is worth far
+("hypothesis X refuted: …"). A hypothesis that survives a genuine refutation attempt is worth far
 more than one merely asserted.
 
 ### 6. Close the chain end-to-end
@@ -72,7 +72,7 @@ what turns "likely cause" into "proven cause".
 ## Pitfalls (WB-specific, read the world right)
 - **`code=killed, signal=TERM`** in `systemctl status` = systemd **stopped** the unit (dependency /
   `systemctl stop`), **not** the kernel OOM-killer (that sends SIGKILL/9).
-- **mosquitto `memory_limit` is a предохранитель, not a killer** — on hit it logs `Client … disconnected
+- **mosquitto `memory_limit` is a safety valve, not a killer** — on hit it logs `Client … disconnected
   due to out of memory` and drops the client; the broker keeps running. "out of memory" in the log
   ≠ a crash.
 - **`$SYS/broker/heap/current` growing while RSS (`/proc/<pid>/status`) stays flat = a memory *counter*

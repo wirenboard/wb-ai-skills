@@ -10,7 +10,7 @@ facts. Names/IPs are placeholders — substitute the real stand.
 [catalyst: a client emitting MQTT v5 packets WITH properties]        ← THE REGRESSION
    → mosquitto bug #3192: memory-COUNTER leak (RSS stays flat)       [present in old & new mosquitto]
    → counter climbs to WB config memory_limit 100M                    [active for years, not new]
-   → broker refuses clients ("... disconnected due to out of memory") [предохранitель, not a crash]
+   → broker refuses clients ("... disconnected due to out of memory") [safety valve, not a crash]
    → continued v5-property traffic while pegged → mosquitto self-exits (non-clean)   ← trigger
    → systemd: mosquitto inactive → zigbee2mqtt has BindsTo=mosquitto  → z2m killed by SIGTERM
    → Restart=always does NOT revive it (dependency teardown = success) → Zigbee dead until reboot
