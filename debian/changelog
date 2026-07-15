@@ -1,3 +1,17 @@
+wb-cli (1.8.14) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.13.0. wb-dev: new references/testing.md —
+    how tests are organized in WB Python services (tests/ layout with
+    golden files in tests/data, pytest black-box style, WB fixture
+    patterns: fake sysroot, factory mocks, autouse state reset; run
+    levels: local pytest, pybuild during .deb build, Jenkins coverage
+    flags). Patterns distilled from wb-cloud-agent, wb-nm-helper,
+    wb-diag-collect, wb-ai-skills. SKILL.md gets a Testing section
+    pointing at it. Version assumes the open 1.8.11-1.8.13 PRs merge
+    first.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 14:00:00 +0300
+
 wb-cli (1.8.10) stable; urgency=medium
 
   * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in

@@ -122,6 +122,12 @@ Canonical configs (clang-format, pyproject.toml, find-python-files) live in <htt
 
 For naming rules, exact CLI invocations and config paths — see **`references/codestyle.md`**.
 
+## Testing
+
+Tests are pytest, live in `tests/` at the repo root (with `__init__.py` — pybuild discovers the suite by package), and mock everything at the process boundary: no live MQTT broker, network, or hardware in unit tests. Fixture data is captured from real controllers into `tests/data/`, not hand-invented. The suite runs at three levels: locally (`pytest`), by pybuild during the .deb build, and in CI via the Jenkinsfile coverage flags (`defaultRunCoverage`, `defaultCoverageMin`).
+
+For the layout, WB fixture patterns (fake sysroot in `tmp_path`, factory mocks, autouse state reset, golden files), run commands and coverage thresholds — see **`references/testing.md`**.
+
 ## MQTT conventions and MQTT-RPC
 
 Every integration on WB must expose state through the `/devices/<id>/controls/<id>` topic space; the web UI, wb-rules, and other services consume that namespace. All `/meta` topics are retained; `/meta/error` doubles as the LWT. Specific typed controls (`temperature`, `voltage`) are deprecated — use `type: value` + `units`.
