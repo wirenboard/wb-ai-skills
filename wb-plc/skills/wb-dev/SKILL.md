@@ -124,6 +124,8 @@ For naming rules, exact CLI invocations and config paths — see **`references/c
 
 ## Testing
 
+Tests are added **when the service has logic worth protecting** — they are not a mandatory part of every project, and the service template intentionally ships without them. When the need arises, follow **`references/testing.md`**.
+
 Tests are pytest, live in `tests/` at the repo root (with `__init__.py` — pybuild discovers the suite by package), and mock everything at the process boundary: no live MQTT broker, network, or hardware in unit tests. Fixture data is captured from real controllers into `tests/data/`, not hand-invented. The suite runs at three levels: locally (`pytest`), by pybuild during the .deb build, and in CI via the Jenkinsfile coverage flags (`defaultRunCoverage`, `defaultCoverageMin`).
 
 For the layout, WB fixture patterns (fake sysroot in `tmp_path`, factory mocks, autouse state reset, golden files), run commands and coverage thresholds — see **`references/testing.md`**.

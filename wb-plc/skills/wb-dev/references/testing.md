@@ -1,10 +1,12 @@
 # Testing WB Python services
 
-How tests are organized in Wiren Board Python projects. The service template
-(`wb-python-service-template`) does not ship tests — the patterns below are distilled from
-production repos: `wb-cloud-agent`, `wb-nm-helper`, `wb-diag-collect`, `wb-ai-skills`.
-Process rules (what must be tested before a PR) live in the `wb-git`/`wb-development` skills;
-this is the engineering how-to.
+How tests are organized in Wiren Board Python projects — **when they are needed**. Tests are
+added as the need arises (non-trivial logic, parsing, regressions worth locking), not
+unconditionally: the service template (`wb-python-service-template`) intentionally ships
+without them, and their absence is not a gap to "fix" on every project. When you do add
+tests, follow the patterns below — distilled from production repos: `wb-cloud-agent`,
+`wb-nm-helper`, `wb-diag-collect`, `wb-ai-skills`. Process rules (what must be tested before
+a PR) live in the `wb-git`/`wb-development` skills; this is the engineering how-to.
 
 ## Layout
 
