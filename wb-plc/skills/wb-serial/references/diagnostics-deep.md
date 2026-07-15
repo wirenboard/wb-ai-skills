@@ -155,6 +155,6 @@ ssh root@<HOST> "cp /etc/wb-mqtt-serial.conf /etc/wb-mqtt-serial.conf.bak-$(date
 - **Stop bits**: try 1 and 2 via `modbus_client_rpc -s 1` / `-s 2`
 - **Speed**: broadcast `modbus_client_rpc -a 0 -t 6 -r 110 ... 96` → change port via confed. Errors gone = cable/termination
 - **Isolation**: `wb-cli confed load /etc/wb-mqtt-serial.conf` → flip the suspect device's `"enabled": false` → `wb-cli confed save`. Errors gone on the rest = this device interferes
-- **Timeouts**: `response_timeout_ms`, `guard_interval_us` in port config. If your own service depends on these values, don't copy them as constants — see "Constants that mirror controller settings" in the wb-dev skill
+- **Timeouts**: `response_timeout_ms`, `guard_interval_us` in port config
 
 **Roll everything back after experiments.**
