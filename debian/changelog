@@ -1,4 +1,4 @@
-wb-cli (1.8.10) stable; urgency=medium
+wb-cli (1.8.12) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.12.0. New wb-rca skill: root-cause
     investigation methodology for WB field problems and regressions —
@@ -8,6 +8,21 @@ wb-cli (1.8.10) stable; urgency=medium
     Also added the missing wb-mod-slots row to the README skills table.
 
  -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Fri, 03 Jul 2026 18:40:15 +0300
+
+wb-cli (1.8.11) stable; urgency=medium
+
+  * codestyle: bump submodule 9be03b5 -> 6162cb6 (remove embedded-team
+    codestyle, pylint support for Python 3.13).
+
+ -- Alexander Degtyarev <a.degtyarev@struhe.com>  Wed, 15 Jul 2026 12:00:00 +0300
+
+wb-cli (1.8.10) stable; urgency=medium
+
+  * wb-plc/wb-zigbee: fix converter-detection probe — unescape pipe in
+    grep -E alternation (\| → |) so the probe correctly detects whether
+    wb-mqtt-zigbee or wb-zigbee2mqtt is installed.
+
+ -- Anzic23 <xk.anzor@gmail.com>  Mon, 13 Jul 2026 23:22:17 +0300
 
 wb-cli (1.8.9) stable; urgency=medium
 
