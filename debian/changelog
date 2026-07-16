@@ -24,7 +24,6 @@ wb-cli (1.8.11) stable; urgency=medium
     codestyle, pylint support for Python 3.13).
 
  -- Alexander Degtyarev <a.degtyarev@struhe.com>  Wed, 15 Jul 2026 12:00:00 +0300
->>>>>>> origin/main
 
 wb-cli (1.8.10) stable; urgency=medium
 
