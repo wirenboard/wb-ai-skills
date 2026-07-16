@@ -15,13 +15,15 @@ The two are independent: you can use the skills without the controller package, 
 
 ## Skills
 
-The `wb-plc/skills/` directory holds nine skills covering everything a remote agent needs to operate a WB controller: discovery, troubleshooting, network, MQTT, Modbus, automation rules, Zigbee, backup/restore, and writing custom software for the controller.
+The `wb-plc/skills/` directory holds eleven skills covering everything a remote agent needs to operate a WB controller: discovery, troubleshooting, root-cause investigation, network, MQTT, Modbus, MOD slots, automation rules, Zigbee, backup/restore, and writing custom software for the controller.
 
 | Skill | What it covers |
 |---|---|
 | `wiren-board` | Master entry: mDNS discovery, SSH conventions, `wb-cli` usage. **Load first.** |
 | `wb-troubleshooting` | Failed systemd units, disk, kernel/firmware mismatch, Docker, diagnostic archive. |
+| `wb-rca` | Root-cause investigation of field problems & regressions — reproduce, ground claims, A/B versions, prove, file a bug report. |
 | `wb-serial` | RS-485 / Modbus — custom templates, device configuration, bus diagnostics (CRC, timeouts). |
+| `wb-mod-slots` | Reconfigure WB MOD slots (UART / I2C / CAN / SPI / 1-Wire) via `wb-hwconf-helper` and device-tree overlays. |
 | `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron, sensors). |
 | `wb-mqtt-broker` | Mosquitto MQTT broker — auth, ACLs, TLS, external bridges. |
 | `wb-network` | Ethernet, WiFi, 4G, OpenVPN, failover, DNS, hotspot. |

@@ -1,11 +1,31 @@
-wb-cli (1.8.11) stable; urgency=medium
+wb-cli (1.8.13) stable; urgency=medium
 
-  * wb-plc plugin bumped to 1.12.0. wb-dev: new "Constants that mirror
+  * wb-plc plugin bumped to 1.13.0. wb-dev: new "Constants that mirror
     controller settings" section — a value owned by a controller/driver
     setting (port response timeout, baud rate, poll interval) must be
-    read from its source or exposed as a service setting, not hardcoded.
+    read from its source or exposed as a service setting, not hardcoded;
+    a field omitted from the owner's config means the owner's default
+    applies (e.g. wb-mqtt-serial response_timeout_ms).
 
  -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 12:00:00 +0300
+
+wb-cli (1.8.12) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.12.0. New wb-rca skill: root-cause
+    investigation methodology for WB field problems and regressions —
+    reproduce on a test stand, ground claims in git/upstream, A/B-test
+    versions, prove, and file a proof-backed bug report; ships a
+    worked-case reference (mosquitto #3192 counter-leak, systemd BindsTo).
+    Also added the missing wb-mod-slots row to the README skills table.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Fri, 03 Jul 2026 18:40:15 +0300
+
+wb-cli (1.8.11) stable; urgency=medium
+
+  * codestyle: bump submodule 9be03b5 -> 6162cb6 (remove embedded-team
+    codestyle, pylint support for Python 3.13).
+
+ -- Alexander Degtyarev <a.degtyarev@struhe.com>  Wed, 15 Jul 2026 12:00:00 +0300
 
 wb-cli (1.8.10) stable; urgency=medium
 
