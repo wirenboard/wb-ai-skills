@@ -115,8 +115,14 @@ Modbus is byte big-endian, but for u32/s32/float the **word** order (16-bit regi
 
 ```json
 "translations": {
+  "en": {
+    "ACME-EM100_template_title": "ACME EM-100 (1-phase energy meter)"
+  },
   "ru": {
+    "ACME-EM100_template_title": "ACME EM-100 (1-фазный счётчик электроэнергии)",
     "Voltage": "Напряжение"
   }
 }
 ```
+
+Both `en` and `ru` sections. Key style: the displayed English text is the key by default (channel names, group titles, `enum_titles`, parameter titles); synthetic keys for the template `title` (`<MODEL>_template_title`) and for long or shared strings (`<param_id>_description`). For the full key-style table, capitalization rules and the config-key ↔ translation-key ↔ enum-value ↔ label coherence check — see **`i18n-naming.md`**.
