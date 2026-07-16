@@ -1,6 +1,6 @@
-wb-cli (1.8.13) stable; urgency=medium
+wb-cli (1.8.15) stable; urgency=medium
 
-  * No functional changes. wb-plc plugin bumped to 1.13.0: new wb-serial
+  * No functional changes. wb-plc plugin bumped to 1.13.2: new wb-serial
     reference i18n-naming.md — translation-key conventions shared by
     device templates and json-editor/confed schemas (the displayed
     English text is the key by default; synthetic keys for the template
