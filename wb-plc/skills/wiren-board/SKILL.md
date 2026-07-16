@@ -228,6 +228,14 @@ Common pages: `Docker`, `Modbus`, `Home_Assistant`, `Wiren_Board_Cloud`, `wb-rul
 | Full controller backup and restore | `/wb-controller-backup` |
 | Zigbee devices via zigbee2mqtt (pairing, OTA, native vs Docker) | `/wb-zigbee` |
 | Software development / integrations for WB (custom daemons, protocol bridges, MQTT conventions, MQTT-RPC, Debian packaging) | `/wb-dev` |
+| Reproduce a reported bug, find/prove the root cause, investigate a regression ("broke after an update"), write a defensible bug report | `/wb-rca` |
+| Test / reproduce a bug in the web UI (homeui) in a real browser | `/wb-webui-test` |
+
+**Which of the "something is wrong" skills?** They are complementary lanes, not rivals:
+- **Fix it / restore service now**, generic diagnostics, diag archive → `/wb-troubleshooting`.
+- **Prove *why* it broke**, reproduce it, confirm a regression, produce a bug report → `/wb-rca`.
+- The symptom is in the **web UI** and you need to see it in a browser → `/wb-webui-test` (hand off to `/wb-rca` once you need the root cause).
+- A specific bus/domain misbehaves → the component skill (`/wb-serial`, `/wb-network`, `/wb-zigbee`, `/wb-mqtt-broker`), escalating to `/wb-rca` to prove a cross-version regression.
 
 ## Third-party integrations
 
