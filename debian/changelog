@@ -7,6 +7,38 @@ wb-cli (1.8.16) stable; urgency=medium
 
  -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 13:00:00 +0300
 
+wb-cli (1.8.15) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.13.2: new wb-serial
+    reference i18n-naming.md — translation-key conventions shared by
+    device templates and json-editor/confed schemas (the displayed
+    English text is the key by default; synthetic keys for the template
+    title and for long or shared strings), en/ru capitalization rules,
+    and the config-key <-> translation-key <-> enum-value <-> label
+    coherence check.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 14 Jul 2026 17:30:00 +0300
+
+wb-cli (1.8.14) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.13.1. wb-serial diagnostics-deep: the
+    response_timeout_ms / guard_interval_us line now cross-links to the
+    wb-dev "Constants that mirror controller settings" rule. Follow-up
+    to the wb-dev mirrored-constants PR.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 12:30:00 +0300
+
+wb-cli (1.8.13) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.13.0. wb-dev: new "Constants that mirror
+    controller settings" section — a value owned by a controller/driver
+    setting (port response timeout, baud rate, poll interval) must be
+    read from its source or exposed as a service setting, not hardcoded;
+    a field omitted from the owner's config means the owner's default
+    applies (e.g. wb-mqtt-serial response_timeout_ms).
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 12:00:00 +0300
+
 wb-cli (1.8.12) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.12.0. New wb-rca skill: root-cause
