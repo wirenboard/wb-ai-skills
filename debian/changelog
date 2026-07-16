@@ -1,13 +1,29 @@
-wb-cli (1.8.13) stable; urgency=medium
+wb-cli (1.8.16) stable; urgency=medium
 
-  * wb-plc plugin bumped to 1.12.2. wb-dev codestyle reference: the
+  * wb-plc plugin bumped to 1.13.3. wb-dev codestyle reference: the
     Python key-differences summary now includes the multi-line
     docstring rule (nothing after the opening triple quotes, closing
     quotes on their own line), mirroring wirenboard/codestyle PR #123.
-    Versions assume the mirrored-constants PRs (1.8.11, 1.8.12) merge
-    first.
 
  -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 13:00:00 +0300
+
+wb-cli (1.8.12) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.12.0. New wb-rca skill: root-cause
+    investigation methodology for WB field problems and regressions —
+    reproduce on a test stand, ground claims in git/upstream, A/B-test
+    versions, prove, and file a proof-backed bug report; ships a
+    worked-case reference (mosquitto #3192 counter-leak, systemd BindsTo).
+    Also added the missing wb-mod-slots row to the README skills table.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Fri, 03 Jul 2026 18:40:15 +0300
+
+wb-cli (1.8.11) stable; urgency=medium
+
+  * codestyle: bump submodule 9be03b5 -> 6162cb6 (remove embedded-team
+    codestyle, pylint support for Python 3.13).
+
+ -- Alexander Degtyarev <a.degtyarev@struhe.com>  Wed, 15 Jul 2026 12:00:00 +0300
 
 wb-cli (1.8.10) stable; urgency=medium
 
