@@ -12,7 +12,6 @@ over time, and a second copy drifts. Every link below is public; an agent can re
 | `units` string — exact form (`deg C`, not `°C`; no unlisted `kW`/`mWh`) | [wirenboard/conventions](https://github.com/wirenboard/conventions) → `#### Units` |
 | Deprecated measurement control types → `type:"value"` + `units` | [wirenboard/conventions](https://github.com/wirenboard/conventions) → Controls |
 | MQTT topic names (`name`), control types, text style | conventions + [wirenboard/wb-standards](https://github.com/wirenboard/wb-standards) (WB-STD-001/002) |
-| Prose walkthrough of every field | [wb-mqtt-serial `docs/template.md`](https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md) |
 
 Read the value list from the **current** schema/conventions, not from memory — a hardcoded
 copy is the main source of false "invalid value" findings.

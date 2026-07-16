@@ -53,7 +53,7 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 > **The template JSON format has one canonical definition — the public upstream sources:**
 > the [driver JSON Schema](https://github.com/wirenboard/wb-mqtt-serial/blob/master/wb-mqtt-serial-device-template.schema.json),
 > [wirenboard/conventions](https://github.com/wirenboard/conventions) (units, deprecated
-> control types, naming) and [wb-mqtt-serial `docs/template.md`](https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md).
+> control types, naming).
 > This skill points at them instead of keeping a drift-prone copy — see
 > `references/template-format.md`. `wb-serial` itself is the **on-controller side**: getting
 > a template onto a live controller and testing it on the bus, where the controller-specific
@@ -232,7 +232,7 @@ For the frame types table, exact byte sequences (change slave_id by SN, change b
 
 ## Documentation
 
-- Template format: <https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md>
+- Template format (JSON Schema): <https://github.com/wirenboard/wb-mqtt-serial/blob/master/wb-mqtt-serial-device-template.schema.json>
 - RS-485: <https://wiki.wirenboard.com/wiki/RS-485>
 - Modbus: <https://wiki.wirenboard.com/wiki/Modbus>
 - Common registers: <https://wiki.wirenboard.com/wiki/Common_Modbus_Registers>

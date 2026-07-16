@@ -2,9 +2,8 @@
 
 This is the **on-controller** flow — scan, add, test on the bus, read/write firmware
 parameters. The template JSON format and conformance rules (fields, enums, deprecated
-types, `units`, endianness) live in the public upstream sources — the driver JSON Schema,
-`wirenboard/conventions` and `wb-mqtt-serial/docs/template.md`; see
-`references/template-format.md` for the links.
+types, `units`, endianness) live in the public upstream sources — the driver JSON Schema
+and `wirenboard/conventions`; see `references/template-format.md` for the links.
 
 ## Template creation workflow
 
