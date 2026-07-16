@@ -1,6 +1,6 @@
 ---
 name: wb-troubleshooting
-description: "General Wiren Board controller diagnostics — failed systemd services, low disk space, kernel/firmware mismatch, Docker, iptables, diagnostic archive (wb-diag-collect), boot issues, web UI inaccessible. Use when user says controller is broken, not working, service down, asks for logs for support, or needs a diagnostic archive. NOT for serial/Modbus (use wb-serial), NOT for network-only issues (use wb-network)."
+description: "General Wiren Board controller diagnostics — failed systemd services, low disk space, kernel/firmware mismatch, Docker, iptables, diagnostic archive (wb-diag-collect), boot issues, web UI inaccessible. Use when user says controller is broken, not working, service down, asks for logs for support or help to un-break it, or needs a diagnostic archive. This is the symptom→FIX lane (restore service); when the goal is to reproduce, prove WHY it broke, confirm a regression, or write a bug report, use wb-rca instead. NOT for serial/Modbus (use wb-serial), NOT for network-only issues (use wb-network)."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
