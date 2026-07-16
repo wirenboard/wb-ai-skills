@@ -1,3 +1,12 @@
+wb-cli (1.8.14) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.13.1. wb-serial diagnostics-deep: the
+    response_timeout_ms / guard_interval_us line now cross-links to the
+    wb-dev "Constants that mirror controller settings" rule. Follow-up
+    to the wb-dev mirrored-constants PR.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 15 Jul 2026 12:30:00 +0300
+
 wb-cli (1.8.13) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.13.0. wb-dev: new "Constants that mirror
