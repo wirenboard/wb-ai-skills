@@ -1,3 +1,15 @@
+wb-cli (1.8.15) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.13.2: new wb-serial
+    reference i18n-naming.md — translation-key conventions shared by
+    device templates and json-editor/confed schemas (the displayed
+    English text is the key by default; synthetic keys for the template
+    title and for long or shared strings), en/ru capitalization rules,
+    and the config-key <-> translation-key <-> enum-value <-> label
+    coherence check.
+
+ -- Ilya Tikhonyuk <ilya.tikhonyuk@wirenboard.com>  Tue, 14 Jul 2026 17:30:00 +0300
+
 wb-cli (1.8.14) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.13.1. wb-serial diagnostics-deep: the
