@@ -136,6 +136,18 @@ Drop a JSON Schema at `/etc/wb-mqtt-confed/schemas/<name>.schema.json` to get a 
 
 For the schema skeleton, full `configFile` parameter table, WB-specific extensions (`_format: checkbox`, `wb-autocomplete`, etc.) and install instructions — see **`references/confed-schema.md`**.
 
+## Constants that mirror controller settings
+
+Some values in service code are really *someone else's setting*: the RS-485 port response timeout of `wb-mqtt-serial`, a port baud rate, a driver poll interval. Hardcoding such a value as a plain constant breaks silently — the user changes the setting in the web UI (or a firmware/driver update changes the default), and the code keeps living with the stale copy.
+
+Rules, in order of preference:
+
+1. **Read the value from its source.** The setting's owner is the single source of truth: the owner's config file, an RPC, or — for services that publish their settings — an MQTT topic. For `wb-mqtt-serial` specifically that means `/etc/wb-mqtt-serial.conf` (port `response_timeout_ms`, `baud_rate`, ...) or the `config/Load` RPC; it does not publish port settings to MQTT. Read at startup (or on config reload) instead of copying the number. **A field omitted from the config is not "no value"** — the owner's built-in default applies (e.g. `response_timeout_ms` is usually absent from a live `/etc/wb-mqtt-serial.conf`; the effective 500 ms comes from the driver's schema default). Mirror that default for the omitted case.
+2. **If reading is impossible or too costly** — promote it to a setting of *your own* service (confed schema above): default equal to the source's current default (including the owner's built-in default for fields omitted from its config), description naming where the value comes from.
+3. **If it must stay a constant** — the name states the source (`WB_MQTT_SERIAL_DEFAULT_RESPONSE_TIMEOUT_MS`, not `TIMEOUT`), a comment names the setting it must match, and if the live value is readable at run time, the service logs a warning on mismatch at startup.
+
+Review test: the user changes the mirrored setting in the web UI — does the service keep working correctly without a rebuild?
+
 ## ATECCx08 hardware security chip
 
 Wiki: <https://wiki.wirenboard.com/wiki/CryptodevATECCx08_Auth>
@@ -161,6 +173,7 @@ When developing services that must verify the controller's identity, use the chi
 - **Install Docker via `apt install docker-ce` directly.** Use `wb-docker-manager.sh` from the WB community repo — generic apt install breaks the `/mnt/data` storage path.
 - **Store Docker images or volumes on the root partition.** Limited space; use `/mnt/data/<project>/`.
 - **Add file-level lint disables** (`# pylint: disable=` at top of file, `# type: ignore` on a module) to ship — surface the issue instead.
+- **Hardcode a controller or driver setting as a bare constant** (port response timeout, baud rate, poll interval). Read it from the owning config/RPC or follow the "Constants that mirror controller settings" rules above.
 - **Try to extract the ATECCx08 private key.** It's hardware-bound by design; build flows around CSRs/signing on the chip.
 - **Cross-compile by sshing in and running `make` on the controller.** Use `wbdev` on the developer machine — controller RAM is too limited for serious builds.
 
