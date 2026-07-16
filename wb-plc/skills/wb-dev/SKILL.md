@@ -142,8 +142,8 @@ Some values in service code are really *someone else's setting*: the RS-485 port
 
 Rules, in order of preference:
 
-1. **Read the value from its source.** The setting's owner is the single source of truth: the driver config (`/etc/wb-mqtt-serial.conf` — port `response_timeout_ms`, `baud_rate`, ...), an RPC, or an MQTT topic. Read it at startup (or on config reload) instead of copying the number.
-2. **If reading is impossible or too costly** — promote it to a setting of *your own* service (confed schema above): default equal to the source's current default, description naming where the value comes from.
+1. **Read the value from its source.** The setting's owner is the single source of truth: the owner's config file, an RPC, or — for services that publish their settings — an MQTT topic. For `wb-mqtt-serial` specifically that means `/etc/wb-mqtt-serial.conf` (port `response_timeout_ms`, `baud_rate`, ...) or the `config/Load` RPC; it does not publish port settings to MQTT. Read at startup (or on config reload) instead of copying the number. **A field omitted from the config is not "no value"** — the owner's built-in default applies (e.g. `response_timeout_ms` is usually absent from a live `/etc/wb-mqtt-serial.conf`; the effective 500 ms comes from the driver's schema default). Mirror that default for the omitted case.
+2. **If reading is impossible or too costly** — promote it to a setting of *your own* service (confed schema above): default equal to the source's current default (including the owner's built-in default for fields omitted from its config), description naming where the value comes from.
 3. **If it must stay a constant** — the name states the source (`WB_MQTT_SERIAL_DEFAULT_RESPONSE_TIMEOUT_MS`, not `TIMEOUT`), a comment names the setting it must match, and if the live value is readable at run time, the service logs a warning on mismatch at startup.
 
 Review test: the user changes the mirrored setting in the web UI — does the service keep working correctly without a rebuild?
