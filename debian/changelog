@@ -1,3 +1,17 @@
+wb-cli (1.8.16) stable; urgency=medium
+
+  * wb-plc plugin bumped to 1.13.3. wb-serial: scope the skill to the
+    on-controller side only — deploying a template onto a live controller,
+    adding the device and testing it on the bus. Authoring the template JSON
+    format is out of scope, so the whole references/template-format.md file
+    (channel-field table, format enum, deprecated-type list, endianness,
+    parameters/groups/translations) is removed and the driver JSON Schema
+    link is dropped from SKILL.md. The on-controller specifics (template
+    locations, device_type override, device.id topic rules, on-bus
+    format/scale/word_order iteration) stay.
+
+ -- Ilia Skochilov <ilia.skochilov@wirenboard.com>  Tue, 21 Jul 2026 15:30:00 +0300
+
 wb-cli (1.8.15) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.13.2: new wb-serial
