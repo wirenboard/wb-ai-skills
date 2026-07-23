@@ -1,3 +1,14 @@
+wb-cli (1.8.16) stable; urgency=medium
+
+  * New bash completion for the wb-cli command: completes commands,
+    subcommands and option flags (structural, no controller access).
+    Generated from the argparse tree (wb_cli/_gen_completion.py,
+    `make completion`) so it tracks the command set, regenerated at
+    build time, and installed to
+    /usr/share/bash-completion/completions/wb-cli.
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Thu, 23 Jul 2026 23:00:00 +0400
+
 wb-cli (1.8.15) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.13.2: new wb-serial

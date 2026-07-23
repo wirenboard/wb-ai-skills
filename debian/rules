@@ -8,6 +8,7 @@ export PYBUILD_SYSTEM=distutils
 
 override_dh_auto_build:
 	python3 -m wb_cli._gen_registry
+	python3 -m wb_cli._gen_completion
 	dh_auto_build
 
 override_dh_auto_test:
