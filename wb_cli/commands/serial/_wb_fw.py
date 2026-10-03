@@ -302,6 +302,15 @@ def _update_background(ctx) -> dict:
         parts.append(str(args.slave_id))
     if args.port:
         parts += ["--port", shlex.quote(args.port)]
+        # Carry the UART overrides into the job. Without these the
+        # re-invoked wb-cli uses the 9600 default and times out on any
+        # bus running at a different baud.
+        parts += [
+            "--baud", str(args.baud),
+            "--parity", args.parity,
+            "--data-bits", str(args.data_bits),
+            "--stop-bits", str(args.stop_bits),
+        ]
     if getattr(args, "all", False):
         parts.append("--all")
     if getattr(args, "software_type", "firmware") != "firmware":
