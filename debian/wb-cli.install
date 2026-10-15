@@ -1,1 +1,2 @@
 wb-plc/skills/ usr/share/wb-cli/
+data/bash-completion/wb-cli usr/share/bash-completion/completions/

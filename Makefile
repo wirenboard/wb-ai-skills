@@ -2,7 +2,7 @@ CODESTYLE ?= codestyle
 # Exclude vendored snapshots and the codestyle submodule itself from lint.
 PYTHON_FILES := $(shell WB_PYTHON_FILES_EXCLUDE=tests/fixtures/ $(CODESTYLE)/python/ci/find-python-files | grep -v '^./codestyle/')
 
-.PHONY: fmt lint test cov clean registry
+.PHONY: fmt lint test cov clean registry completion
 
 fmt:
 	python3 -m black --config $(CODESTYLE)/python/config/pyproject.toml $(PYTHON_FILES)
@@ -22,6 +22,9 @@ cov:
 registry:
 	python3 -m wb_cli._gen_registry
 	python3 -m black --config $(CODESTYLE)/python/config/pyproject.toml --quiet wb_cli/_registry.py
+
+completion:
+	python3 -m wb_cli._gen_completion
 
 clean:
 	rm -rf build dist .coverage .pytest_cache htmlcov

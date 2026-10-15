@@ -15,14 +15,15 @@ The two are independent: you can use the skills without the controller package, 
 
 ## Skills
 
-The `wb-plc/skills/` directory holds eleven skills covering everything a remote agent needs to operate a WB controller: discovery, troubleshooting, root-cause investigation, network, MQTT, Modbus, MOD slots, automation rules, Zigbee, backup/restore, and writing custom software for the controller.
+The `wb-plc/skills/` directory holds thirteen skills covering everything a remote agent needs to operate a WB controller: discovery, troubleshooting, root-cause investigation, network, MQTT, Modbus, device templates, MOD slots, automation rules, Zigbee, backup/restore, writing custom software for the controller, and reviewing third-party packages before they go onto it.
 
 | Skill | What it covers |
 |---|---|
 | `wiren-board` | Master entry: mDNS discovery, SSH conventions, `wb-cli` usage. **Load first.** |
 | `wb-troubleshooting` | Failed systemd units, disk, kernel/firmware mismatch, Docker, diagnostic archive. |
 | `wb-rca` | Root-cause investigation of field problems & regressions — reproduce, ground claims, A/B versions, prove, file a bug report. |
-| `wb-serial` | RS-485 / Modbus — custom templates, device configuration, bus diagnostics (CRC, timeouts). |
+| `wb-serial` | RS-485 / Modbus — deploying and testing templates on the controller, device configuration, bus diagnostics (CRC, timeouts). |
+| `mqtt-serial-template` | Write, edit and review wb-mqtt-serial device templates (JSON) against the driver schema and the WB standard; schema validator included. |
 | `wb-mod-slots` | Reconfigure WB MOD slots (UART / I2C / CAN / SPI / 1-Wire) via `wb-hwconf-helper` and device-tree overlays. |
 | `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron, sensors). |
 | `wb-mqtt-broker` | Mosquitto MQTT broker — auth, ACLs, TLS, external bridges. |
@@ -30,6 +31,7 @@ The `wb-plc/skills/` directory holds eleven skills covering everything a remote 
 | `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
 | `wb-controller-backup` | Full controller backup and restore. |
 | `wb-dev` | Writing software for WB — daemons, MQTT bridges, MQTT-RPC, cross-compilation, Debian packaging. |
+| `wb-package-review` | Review a ready-made `.deb` (third-party integration/driver): architecture, template conformance, lintian, release matrix, install→reboot→purge on a test stand, idle CPU, findings for the author. |
 
 ### Install for Claude Code or GitHub Copilot CLI (recommended)
 

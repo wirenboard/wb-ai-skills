@@ -1201,3 +1201,40 @@ def test_wb_set_baud_rejects_non_100_multiple():
     with pytest.raises(WbCliError) as exc:
         _wb_set_baud(ctx)
     assert exc.value.code == "SERIAL_INVALID_BAUD"
+
+
+def _fw_update_bg_args_ns(**over):
+    ns = argparse.Namespace(
+        quiet=False,
+        subcmd="wb-fw",
+        wb_fw_action="update",
+        slave_id=92,
+        port="/dev/ttyRS485-1",
+        baud=115200,
+        parity="N",
+        data_bits=8,
+        stop_bits=2,
+        all=False,
+        software_type="firmware",
+        wait=False,
+        background=True,
+        output="/mnt/data/ai/wb-cli/fw.json",
+    )
+    for key, value in over.items():
+        setattr(ns, key, value)
+    return ns
+
+
+def test_wb_fw_update_background_preserves_uart_flags():
+    """--background must forward --baud; regression: job ran at 9600 -> timeout."""
+    job = MagicMock()
+    job.run.return_value = {"unit": "u", "log": "l"}
+    ctx = _ctx(args=_fw_update_bg_args_ns(), job=job)
+
+    _wb_fw_dispatch(ctx)
+
+    command = job.run.call_args[0][1]
+    assert "--baud 115200" in command
+    assert "--parity N" in command
+    assert "--data-bits 8" in command
+    assert "--stop-bits 2" in command

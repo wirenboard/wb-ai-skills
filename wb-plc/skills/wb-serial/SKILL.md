@@ -1,6 +1,6 @@
 ---
 name: wb-serial
-description: "Serial bus (RS-485/Modbus) on WB — custom templates, adding devices via confed, and diagnostics: CRC errors, timeouts, device not responding, slow polling, bus scan, health check."
+description: "Serial bus (RS-485/Modbus) on WB — deploying and testing custom templates on a live controller, adding devices via confed, and diagnostics: CRC errors, timeouts, device not responding, slow polling, bus scan, health check. NOT for authoring or validating the template JSON itself (fields, format, units, enums, translations) — that is mqtt-serial-template."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
@@ -17,7 +17,7 @@ allowed-tools: Bash Read Write WebFetch WebSearch
 
 ## When to load this skill
 
-- **Templates**: "no template for the device", "add a third-party Modbus device", "create a template", "how to add custom registers", "template for an energy meter", "Modbus thermometer".
+- **Templates on the controller**: "no template for the device", "add a third-party Modbus device", "deploy / test my template", "the value from the template is wrong on the bus", "Modbus thermometer". Writing, editing or reviewing the template JSON itself → `/mqtt-serial-template`.
 - **Diagnostics**: Modbus errors, CRC, timeouts, "device not responding", "data not updating", slow polling, read/write errors.
 
 **IMPORTANT for diagnostics: Act without pauses. DON'T ask permission for each step — the user ALREADY asked for diagnostics. Execute ALL steps in sequence: logs → debug → scan → health. DON'T stop with questions like "want to run debug?" — just do it. Report at the end.**
@@ -50,6 +50,12 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 # Part 1 — Templates and device configuration
 
+> `wb-serial` is the **on-controller side** of templates — getting a template onto a live
+> controller, adding the device, and iterating on the bus (`format`/`scale`/`word_order`, see
+> Pitfalls + `references/template-workflow.md`). Writing, editing and validating the template
+> JSON — fields, `format`, `units`, enums, translations, schema and WB-standard conformance —
+> is **`/mqtt-serial-template`** (same plugin). A field fix found on the bus goes back through it.
+
 ## Where templates live
 
 | Directory | What | Editable? |
@@ -60,11 +66,7 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 
 `wb-mqtt-serial` scans both directories at start. A custom template with the same `device_type` as a packaged one **overrides** the packaged one.
 
-For the full template JSON layout (minimal example, channel fields, parameters, groups, translations, endianness, string/varstring) — see **`references/template-format.md`**.
-
-For translation-key style (synthetic key vs English-text key), en/ru capitalization rules, json-editor/confed schema i18n, and the config-key ↔ translation-key ↔ enum-value ↔ label coherence check — see **`references/i18n-naming.md`**.
-
-For the 6-step creation workflow, the `fw-params` read/write flow, listing devices and ports, and device firmware-version lookup — see **`references/template-workflow.md`**.
+For the on-controller workflow (deploy a template, test it on the bus channel by channel), the `fw-params` read/write flow, listing devices and ports, and device firmware-version lookup — see **`references/template-workflow.md`**.
 
 ## Adding a device to wb-mqtt-serial
 
@@ -226,7 +228,6 @@ For the frame types table, exact byte sequences (change slave_id by SN, change b
 
 ## Documentation
 
-- Template format: <https://github.com/wirenboard/wb-mqtt-serial/blob/master/docs/template.md>
 - RS-485: <https://wiki.wirenboard.com/wiki/RS-485>
 - Modbus: <https://wiki.wirenboard.com/wiki/Modbus>
 - Common registers: <https://wiki.wirenboard.com/wiki/Common_Modbus_Registers>

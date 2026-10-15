@@ -1,3 +1,59 @@
+wb-cli (1.8.21) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.15.0: new skill
+    mqtt-serial-template — write, edit and review wb-mqtt-serial device
+    templates against the driver JSON Schema and the WB standard
+    (WB-STD-001..003), with a standalone schema validator
+    (scripts/validate.py; .json.jinja is rendered in a Jinja sandbox).
+    wb-serial now covers the controller side only (deploy, test on the
+    bus, diagnostics) and hands template authoring to it; its outdated
+    translation-key reference is removed.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 10:36:19 +0400
+
+wb-cli (1.8.20) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.14.1: wb-serial is
+    scoped to the on-controller side of templates — deploying a template
+    onto a live controller, adding the device and testing it on the bus.
+    The duplicated template-format reference (channel fields, format enum,
+    deprecated control types, endianness, parameters/groups/translations)
+    is removed; for authoring the template JSON the skill points to the
+    driver JSON Schema (wb-mqtt-serial-device-template.schema.json).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 09:29:13 +0400
+
+wb-cli (1.8.19) stable; urgency=medium
+
+  * serial wb-fw update --background: forward --baud / --parity /
+    --data-bits / --stop-bits to the scheduled job. The job used to run
+    at the 9600 8N2 defaults and timed out on buses at other speeds.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 08:57:44 +0400
+
+wb-cli (1.8.18) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.14.0: new
+    wb-package-review skill — review a ready-made .deb (usually a
+    third-party integration) before it goes onto WB controllers:
+    architecture walk-through, wb-python-service-template conformance,
+    WB lintian profile, release/Debian compatibility matrix from
+    wb-releases, install → reboot → purge on a test stand, idle CPU
+    measurement, independent re-check and a short findings message.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 13 Oct 2026 14:30:00 +0400
+
+wb-cli (1.8.17) stable; urgency=medium
+
+  * New bash completion for the wb-cli command: completes commands,
+    subcommands and option flags (structural, no controller access).
+    Generated from the argparse tree (wb_cli/_gen_completion.py,
+    `make completion`) so it tracks the command set, regenerated at
+    build time, and installed to
+    /usr/share/bash-completion/completions/wb-cli.
+
+ -- Nikolay Korotkiy <nikolay.korotkiy@wirenboard.com>  Thu, 23 Jul 2026 23:00:00 +0400
+
 wb-cli (1.8.16) stable; urgency=medium
 
   * wb-plc plugin bumped to 1.13.3. wb-dev codestyle reference: the
