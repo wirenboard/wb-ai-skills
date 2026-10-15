@@ -1,5 +1,9 @@
 # Template creation, device parameters, firmware-version lookup
 
+This is the **on-controller** flow — pick an existing template as a starter, deploy it, scan,
+add, test on the bus, read/write firmware parameters. Authoring the template JSON format
+itself (fields, enums, `units`) is out of scope for this skill.
+
 ## Template creation workflow
 
 ### 1. Device documentation
