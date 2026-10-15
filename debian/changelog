@@ -5,8 +5,8 @@ wb-cli (1.8.20) stable; urgency=medium
     onto a live controller, adding the device and testing it on the bus.
     The duplicated template-format reference (channel fields, format enum,
     deprecated control types, endianness, parameters/groups/translations)
-    is removed; authoring the template JSON is pointed to the
-    mqtt-serial-template skill (wb-agent-tools marketplace).
+    is removed; for authoring the template JSON the skill points to the
+    driver JSON Schema (wb-mqtt-serial-device-template.schema.json).
 
  -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 09:29:13 +0400
 

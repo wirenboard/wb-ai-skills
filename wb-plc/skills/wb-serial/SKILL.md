@@ -1,6 +1,6 @@
 ---
 name: wb-serial
-description: "Serial bus (RS-485/Modbus) on WB — deploying and testing custom templates on a live controller, adding devices via confed, and diagnostics: CRC errors, timeouts, device not responding, slow polling, bus scan, health check. NOT for authoring or validating template JSON (fields, format, units, enums) — that is mqtt-serial-template."
+description: "Serial bus (RS-485/Modbus) on WB — deploying and testing custom templates on a live controller, adding devices via confed, and diagnostics: CRC errors, timeouts, device not responding, slow polling, bus scan, health check. NOT for authoring or validating template JSON (fields, format, units, enums)."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
@@ -53,8 +53,10 @@ ssh root@<HOST> 'CID=ai-$(date +%s)-$(head -c4 /dev/urandom | od -An -tx1 | tr -
 > `wb-serial` is the **on-controller side** of templates — getting a template onto a live
 > controller, adding the device, and iterating on the bus (`format`/`scale`/`word_order`, see
 > Pitfalls + `references/template-workflow.md`). It does **not** author the template JSON
-> format itself — for channel fields, `format`, `units`, enums and schema conformance use the
-> `mqtt-serial-template` skill (`wb-agent-tools` marketplace).
+> format itself. The format is defined by the driver's JSON Schema
+> `wb-mqtt-serial-device-template.schema.json` — in the
+> [wb-mqtt-serial](https://github.com/wirenboard/wb-mqtt-serial) repo and on the controller in
+> `/usr/share/wb-mqtt-serial/`.
 
 ## Where templates live
 
