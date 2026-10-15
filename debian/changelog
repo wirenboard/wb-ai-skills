@@ -1,3 +1,11 @@
+wb-cli (1.8.22) stable; urgency=medium
+
+  * No functional changes. codestyle submodule bumped to 1e4141f
+    (trixie devenv for C++, multi-line docstring rule in python.ru.md);
+    linter configs are unchanged.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 15:33:56 +0400
+
 wb-cli (1.8.21) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.15.0: new skill
