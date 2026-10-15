@@ -1,6 +1,6 @@
 ---
 name: wb-rca
-description: "Root-cause investigation of Wiren Board field problems and regressions — reproduce, ground every claim in git/upstream, A/B versions, refute hypotheses experimentally, close the causal chain, and file a proof-backed bug report. Use when a support ticket / colleague says something broke (often 'after updating to release X'), when asked to reproduce a bug, find the root cause, prove why it happens, investigate a regression, or turn a vague complaint into a defensible bug report. Complements wb-troubleshooting (symptom→fix) with rigorous prove-it methodology."
+description: "Reproduce a reported Wiren Board problem and PROVE its root cause, then write a defensible bug report. Use whenever someone reports that something is broken, misbehaving, or 'unexpected' and wants it reproduced or explained — plain first-person reports count: 'I have a bug', 'reproduce it', 'it behaves strangely', 'why does this happen', 'broke/stopped after an update', 'dig into this', 'find the root cause', 'is this a regression', 'I need a bug report'. This is the PROVE-why lane — reach for it over wb-troubleshooting (symptom→fix / restore service) whenever the goal is to explain or reproduce rather than only un-break."
 ---
 
 # wb-rca — root-cause investigation of WB problems & regressions
