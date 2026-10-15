@@ -1,6 +1,6 @@
 ---
 name: wb-serial
-description: "Serial bus (RS-485/Modbus) on WB — deploying and testing custom templates on a live controller, adding devices via confed, and diagnostics: CRC errors, timeouts, device not responding, slow polling, bus scan, health check. NOT for authoring or validating template JSON (fields, format, units, enums)."
+description: "Serial bus (RS-485/Modbus) on WB — deploying and testing custom templates on a live controller, adding devices via confed, and diagnostics: CRC errors, timeouts, device not responding, slow polling, bus scan, health check."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
