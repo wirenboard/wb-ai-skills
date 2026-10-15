@@ -1,3 +1,11 @@
+wb-cli (1.8.18) stable; urgency=medium
+
+  * serial wb-fw update --background: forward --baud / --parity /
+    --data-bits / --stop-bits to the scheduled job. The job used to run
+    at the 9600 8N2 defaults and timed out on buses at other speeds.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 13 Oct 2026 16:48:39 +0400
+
 wb-cli (1.8.17) stable; urgency=medium
 
   * New bash completion for the wb-cli command: completes commands,
