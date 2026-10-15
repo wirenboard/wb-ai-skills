@@ -136,18 +136,25 @@ ssh root@<HOST> ip addr show
 
 | Path | What it is |
 |---|---|
-| `/` | rootfs (`/dev/root`), small: about 2 GB on wb8. Packages go here: apt installs into `/usr` and `/var/lib`, its cache is `/var/cache/apt` |
-| `/mnt/data` | data partition, the larger one |
+| `/` | rootfs (`/dev/root`), small: 2 GB (1 GB on controllers made before October 2023). Packages go here: apt installs into `/usr` and `/var/lib` |
+| `/mnt/data` | data partition, the rest of the eMMC |
 | `/root` | a directory, not a partition: a symlink to `/mnt/data/root` |
 | `/var/log` | bind-mounted from `/mnt/data/var/log` |
+| `/var/cache/apt`, `/var/lib/apt/lists` | moved to `/mnt/data` (wb-configs), so they don't eat `/` |
 
-When documentation says «корневой раздел» or «раздел /root», it means `/`. Free space for `apt upgrade` and the Debian transition is free space on `/`: check `df -h /`. `df -h /root` reports `/mnt/data`, which says nothing about room for packages.
+Parts of `/etc` (ssh keys, network connections, mosquitto and nginx configs, `wb-*.conf`) are symlinks into `/mnt/data/etc`.
+
+When documentation says «корневой раздел» (and when a user says «раздел /root»), it means `/`. Package upgrades need free space on **both** partitions: the Debian 13 transition (wb-2609) asks for 350 MB on `/` and 280 MB on `/mnt/data` on wb6/wb7, 450 MB and 310 MB on wb8. Check `df -h / /mnt/data`. `df -h /root` reports `/mnt/data`, which says nothing about room on `/`.
+
+After `--extend-rootfs` (wb-2609 and later) `/` takes the whole eMMC and `/mnt/data` becomes a plain directory on it.
 
 If the user's output is unclear, ask for (or run over SSH):
 
 ```bash
 findmnt -no TARGET,SOURCE / /mnt/data; ls -ld /root; df -h / /mnt/data
 ```
+
+Docs: [Wb-2609](https://wiki.wirenboard.com/wiki/Wb-2609), [Enlarging the rootfs partition](https://wiki.wirenboard.com/wiki/Enlarging_the_rootfs_partition), [Controller free space](https://wiki.wirenboard.com/wiki/Controller_Free_Space).
 
 ## Docker on WB
 
