@@ -1,3 +1,15 @@
+wb-cli (1.8.18) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.14.0: new
+    wb-package-review skill — review a ready-made .deb (usually a
+    third-party integration) before it goes onto WB controllers:
+    architecture walk-through, wb-python-service-template conformance,
+    WB lintian profile, release/Debian compatibility matrix from
+    wb-releases, install → reboot → purge on a test stand, idle CPU
+    measurement, independent re-check and a short findings message.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Tue, 13 Oct 2026 14:30:00 +0400
+
 wb-cli (1.8.17) stable; urgency=medium
 
   * New bash completion for the wb-cli command: completes commands,
