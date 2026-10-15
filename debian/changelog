@@ -1,3 +1,16 @@
+wb-cli (1.8.21) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.15.0: new skill
+    mqtt-serial-template — write, edit and review wb-mqtt-serial device
+    templates against the driver JSON Schema and the WB standard
+    (WB-STD-001..003), with a standalone schema validator
+    (scripts/validate.py; .json.jinja is rendered in a Jinja sandbox).
+    wb-serial now covers the controller side only (deploy, test on the
+    bus, diagnostics) and hands template authoring to it; its outdated
+    translation-key reference is removed.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 10:36:19 +0400
+
 wb-cli (1.8.20) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.14.1: wb-serial is

@@ -1,28 +1,25 @@
-# Template creation, device parameters, firmware-version lookup
+# Template deployment and testing, device parameters, firmware-version lookup
 
-This is the **on-controller** flow — pick an existing template as a starter, deploy it, scan,
-add, test on the bus, read/write firmware parameters. Authoring the template JSON format
-itself (fields, enums, `units`) is out of scope for this skill; the format is defined by
-`wb-mqtt-serial-device-template.schema.json` (wb-mqtt-serial repo, on the controller in
-`/usr/share/wb-mqtt-serial/`).
+This is the **on-controller** flow — deploy a template, add the device, test it on the bus,
+read/write firmware parameters. The template JSON itself (from the manufacturer's register
+map, validated against the schema and the WB standard) is written in `/mqtt-serial-template`.
 
-## Template creation workflow
+## Deploy-and-test workflow
 
-### 1. Device documentation
+### 1. Get the template
 
-`WebFetch` the manufacturer's manual — register table (addresses, types, scale). Without it, don't make a template; guessing = endless debugging.
-
-### 2. List existing templates and pick a starter
+Either a JSON written and validated in `/mqtt-serial-template`, or — to look at how a similar
+device is described — an existing template on the controller:
 
 ```bash
 ssh root@<HOST> wb-cli --json serial templates                  # list all template filenames
 ssh root@<HOST> wb-cli --json serial template wb-mr6c           # show full JSON of a template
 ```
 
-Copy a similar one as a starter:
+### 2. Deploy
 
 ```bash
-ssh root@<HOST> 'cp /usr/share/wb-mqtt-serial/templates/config-wb-mr6c.json /etc/wb-mqtt-serial.conf.d/templates/acme-em100.json'
+scp config-acme-em100.json root@<HOST>:/etc/wb-mqtt-serial.conf.d/templates/
 ```
 
 ### 3. Test on one channel
@@ -34,7 +31,7 @@ ssh root@<HOST> wb-cli --json dev <device.id>_<slave_id>
 ssh root@<HOST> wb-cli --json mqtt read '/devices/<device.id>_<slave_id>/controls/<channel>'
 ```
 
-If the value doesn't match expectations — tweak `format`, `scale`, `word_order`. Direct ground-truth measurement:
+If the value doesn't match expectations — iterate `format`, `scale`, `word_order` on the bus, then re-validate the edited JSON in `/mqtt-serial-template`. Direct ground-truth measurement:
 
 ```bash
 ssh root@<HOST> "modbus_client_rpc -m rtu -a <slave> -t 4 -r <addr> -c <count> -b <baud> -s 2 -p N <port>"
@@ -46,11 +43,7 @@ ssh root@<HOST> "modbus_client_rpc -m rtu -a <slave> -t 4 -r <addr> -c <count> -
 
 Add in batches of 5-10, after each — verify via MQTT.
 
-### 5. Parameters and groups
-
-When base telemetry works — add `parameters` for settings, `groups` for UI.
-
-### 6. Template in Git/backup
+### 5. Template in Git/backup
 
 A custom template won't survive FIT. Goes into backup automatically via `wb-controller-backup` skill (picks up `/etc/wb-mqtt-serial.conf.d/`).
 
