@@ -1,3 +1,12 @@
+wb-cli (1.8.23) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.15.1: wiren-board
+    routes reproduce / root-cause / regression tasks to wb-rca; wb-rca
+    description rewritten around user situations; wb-troubleshooting
+    marked as the symptom-to-fix lane with a handoff to wb-rca.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 16:11:00 +0400
+
 wb-cli (1.8.22) stable; urgency=medium
 
   * No functional changes. codestyle submodule bumped to 1e4141f
