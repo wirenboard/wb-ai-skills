@@ -22,7 +22,7 @@ The `wb-plc/skills/` directory holds twelve skills covering everything a remote 
 | `wiren-board` | Master entry: mDNS discovery, SSH conventions, `wb-cli` usage. **Load first.** |
 | `wb-troubleshooting` | Failed systemd units, disk, kernel/firmware mismatch, Docker, diagnostic archive. |
 | `wb-rca` | Root-cause investigation of field problems & regressions — reproduce, ground claims, A/B versions, prove, file a bug report. |
-| `wb-serial` | RS-485 / Modbus — custom templates, device configuration, bus diagnostics (CRC, timeouts). |
+| `wb-serial` | RS-485 / Modbus — deploying and testing templates on the controller, device configuration, bus diagnostics (CRC, timeouts). |
 | `wb-mod-slots` | Reconfigure WB MOD slots (UART / I2C / CAN / SPI / 1-Wire) via `wb-hwconf-helper` and device-tree overlays. |
 | `wb-rules` | wb-rules JavaScript automation (ES5, virtual devices, cron, sensors). |
 | `wb-mqtt-broker` | Mosquitto MQTT broker — auth, ACLs, TLS, external bridges. |
