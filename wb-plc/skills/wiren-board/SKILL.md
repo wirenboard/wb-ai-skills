@@ -134,24 +134,20 @@ ssh root@<HOST> ip addr show
 
 ## Storage layout
 
-Two layouts exist in the field, depending on how the controller was installed. Never assume one: answers about free space, backups or where files live depend on it.
+| Path | What it is |
+|---|---|
+| `/` | rootfs (`/dev/root`), small: about 2 GB on wb8. Packages go here: apt installs into `/usr` and `/var/lib`, its cache is `/var/cache/apt` |
+| `/mnt/data` | data partition, the larger one |
+| `/root` | a directory, not a partition: a symlink to `/mnt/data/root` |
+| `/var/log` | bind-mounted from `/mnt/data/var/log` |
 
-| | Older factory layout | Current layout |
-|---|---|---|
-| `/` | rootfs, small (about 2 GB on wb8) | the same |
-| `/mnt/data` | data partition (the larger one) | the same |
-| `/root` | a separate partition | a symlink to `/mnt/data/root` |
-| `/var/log` | check with `findmnt /var/log` | bind-mounted from `/mnt/data/var/log` |
+When documentation says «корневой раздел» or «раздел /root», it means `/`. Free space for `apt upgrade` and the Debian transition is free space on `/`: check `df -h /`. `df -h /root` reports `/mnt/data`, which says nothing about room for packages.
 
-Packages go to `/`: apt installs into `/usr` and `/var/lib`, and its cache is `/var/cache/apt`. Free space on `/` is what limits `apt upgrade`; `df -h /root` on the current layout reports `/mnt/data`, not rootfs.
-
-Before answering anything that depends on the layout, find out which one the controller has. Run it yourself over SSH, or ask the user to run it and paste the output:
+If the user's output is unclear, ask for (or run over SSH):
 
 ```bash
-findmnt -no TARGET,SOURCE / /root /mnt/data; ls -ld /root; df -h / /root /mnt/data
+findmnt -no TARGET,SOURCE / /mnt/data; ls -ld /root; df -h / /mnt/data
 ```
-
-`/root` listed by `findmnt` with its own device means a separate partition; `ls -ld` showing `/root -> /mnt/data/root` means the current layout. When documentation names a partition ambiguously («раздел /root»), say which layout the answer assumes.
 
 ## Docker on WB
 
