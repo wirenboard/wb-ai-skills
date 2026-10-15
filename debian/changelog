@@ -1,3 +1,13 @@
+wb-cli (1.8.24) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.15.2: the
+    wiren-board skill describes the controller storage layout: / is the
+    rootfs where packages go, /root is a directory on /mnt/data, and
+    upgrades (the Debian 13 transition) need free space on both / and
+    /mnt/data.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 16:50:21 +0400
+
 wb-cli (1.8.23) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.15.1: wiren-board

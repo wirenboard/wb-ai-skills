@@ -132,6 +132,27 @@ ssh root@<HOST> apt install <package>
 ssh root@<HOST> ip addr show
 ```
 
+## Storage layout
+
+Two layouts exist in the field, depending on how the controller was installed. Never assume one: answers about free space, backups or where files live depend on it.
+
+| | Older factory layout | Current layout |
+|---|---|---|
+| `/` | rootfs, small (about 2 GB on wb8) | the same |
+| `/mnt/data` | data partition (the larger one) | the same |
+| `/root` | a separate partition | a symlink to `/mnt/data/root` |
+| `/var/log` | check with `findmnt /var/log` | bind-mounted from `/mnt/data/var/log` |
+
+Packages go to `/`: apt installs into `/usr` and `/var/lib`, and its cache is `/var/cache/apt`. Free space on `/` is what limits `apt upgrade`; `df -h /root` on the current layout reports `/mnt/data`, not rootfs.
+
+Before answering anything that depends on the layout, find out which one the controller has. Run it yourself over SSH, or ask the user to run it and paste the output:
+
+```bash
+findmnt -no TARGET,SOURCE / /root /mnt/data; ls -ld /root; df -h / /root /mnt/data
+```
+
+`/root` listed by `findmnt` with its own device means a separate partition; `ls -ld` showing `/root -> /mnt/data/root` means the current layout. When documentation names a partition ambiguously («раздел /root»), say which layout the answer assumes.
+
 ## Docker on WB
 
 Standard Docker CE installed via `wb-docker-manager.sh`. Key WB-specific rule: **all Docker data and compose projects go in `/mnt/data/`** (larger partition, survives firmware updates).
