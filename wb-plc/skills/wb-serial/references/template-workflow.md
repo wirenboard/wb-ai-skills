@@ -1,5 +1,11 @@
 # Template creation, device parameters, firmware-version lookup
 
+This is the **on-controller** flow — pick an existing template as a starter, deploy it, scan,
+add, test on the bus, read/write firmware parameters. Authoring the template JSON format
+itself (fields, enums, `units`) is out of scope for this skill; the format is defined by
+`wb-mqtt-serial-device-template.schema.json` (wb-mqtt-serial repo, on the controller in
+`/usr/share/wb-mqtt-serial/`).
+
 ## Template creation workflow
 
 ### 1. Device documentation

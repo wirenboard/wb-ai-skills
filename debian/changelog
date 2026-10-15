@@ -1,3 +1,15 @@
+wb-cli (1.8.20) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.14.1: wb-serial is
+    scoped to the on-controller side of templates — deploying a template
+    onto a live controller, adding the device and testing it on the bus.
+    The duplicated template-format reference (channel fields, format enum,
+    deprecated control types, endianness, parameters/groups/translations)
+    is removed; for authoring the template JSON the skill points to the
+    driver JSON Schema (wb-mqtt-serial-device-template.schema.json).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 15 Oct 2026 09:29:13 +0400
+
 wb-cli (1.8.19) stable; urgency=medium
 
   * serial wb-fw update --background: forward --baud / --parity /
