@@ -1,3 +1,11 @@
+wb-cli (1.8.24) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.16.0: new skill
+    wb-mqtt-python-lib for Python services on the WB MQTT library.
+    wb-dev points Python services to it.
+
+ -- Valerii Trofimov <valeriy.trofimov@wirenboard.com>  Mon, 09 Nov 2026 12:50:00 +0300
+
 wb-cli (1.8.23) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.15.1: wiren-board
