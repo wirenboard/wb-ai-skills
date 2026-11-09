@@ -130,6 +130,8 @@ MQTT-RPC uses paired topics `/rpc/v1/<driver>/<service>/<method>/<client_id>{,/r
 
 For the full topic structure, naming rules, meta JSON shapes, control types table, publishing rules, MQTT-RPC details, and the Python reference implementation — see **`references/mqtt-conventions.md`**.
 
+A Python service publishes and reads devices through wb-mqtt-python-lib instead of hand-written paho code — see the `wb-mqtt-python-lib` skill.
+
 ## JSON editor (confed) — configuration UI for services
 
 Drop a JSON Schema at `/etc/wb-mqtt-confed/schemas/<name>.schema.json` to get a "Device configurations" page in the web UI for free. `wb-mqtt-confed` renders the schema as a form, validates on save, writes the config file, and restarts the service. Plain-JSON configs need no converters; custom formats use `toJSON`/`fromJSON`.

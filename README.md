@@ -15,7 +15,7 @@ The two are independent: you can use the skills without the controller package, 
 
 ## Skills
 
-The `wb-plc/skills/` directory holds thirteen skills covering everything a remote agent needs to operate a WB controller: discovery, troubleshooting, root-cause investigation, network, MQTT, Modbus, device templates, MOD slots, automation rules, Zigbee, backup/restore, writing custom software for the controller, and reviewing third-party packages before they go onto it.
+The `wb-plc/skills/` directory holds skills covering everything a remote agent needs to operate a WB controller. Each skill is listed in the table below.
 
 | Skill | What it covers |
 |---|---|
@@ -31,6 +31,7 @@ The `wb-plc/skills/` directory holds thirteen skills covering everything a remot
 | `wb-zigbee` | Zigbee via zigbee2mqtt (pairing, OTA, native vs Docker). |
 | `wb-controller-backup` | Full controller backup and restore. |
 | `wb-dev` | Writing software for WB — daemons, MQTT bridges, MQTT-RPC, cross-compilation, Debian packaging. |
+| `wb-mqtt-python-lib` | Python services on wb-mqtt-python-lib (`python3-wb-mqtt-lib`) — own devices, reading and commanding devices of other drivers. |
 | `wb-package-review` | Review a ready-made `.deb` (third-party integration/driver): architecture, template conformance, lintian, release matrix, install→reboot→purge on a test stand, idle CPU, findings for the author. |
 
 ### Install for Claude Code or GitHub Copilot CLI (recommended)
