@@ -1,3 +1,11 @@
+wb-cli (1.8.24) stable; urgency=medium
+
+  * Update LICENSE: Automation Technologies, LLC (Wiren Board) as the copyright holder,
+    2026 as the first publication year
+  * Fill debian/copyright in the DEP-5 format
+
+ -- Ekaterina Volkova <ekaterina.volkova@wirenboard.com>  Thu, 12 Nov 2026 15:46:43 +0300
+
 wb-cli (1.8.23) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.15.1: wiren-board
