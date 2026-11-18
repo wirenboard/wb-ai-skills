@@ -1,6 +1,6 @@
 ---
 name: wiren-board
-description: "Master skill for Wiren Board (WB) controllers — load FIRST whenever user mentions Wiren Board, wirenboard.com, wb6/wb7/wb8/wb-msw hardware, or any wb-* tool. Provides: controller discovery via mDNS, SSH access patterns, wb-cli usage (always --json from an agent!), documentation lookup, common troubleshooting entry point."
+description: "Master skill for Wiren Board (WB) controllers — load FIRST whenever user mentions Wiren Board, wirenboard.com, wb6/wb7/wb8/wb-msw hardware, or any wb-* tool, plain how-to questions included. Provides: controller discovery via mDNS, SSH access patterns, wb-cli usage (always --json from an agent!), documentation lookup, common troubleshooting entry point. Use when the user asks how to find a controller on the network, log in to it (SSH, web UI), see which devices are connected, or read or set a control."
 allowed-tools: Bash Read Write WebFetch WebSearch
 ---
 
