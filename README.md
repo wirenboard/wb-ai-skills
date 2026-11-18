@@ -35,6 +35,8 @@ The `wb-plc/skills/` directory holds thirteen skills covering everything a remot
 
 ### Install for Claude Code or GitHub Copilot CLI (recommended)
 
+Wiren Board staff signed in to Claude Code with the company's claude.ai account already have `wb-plc`: it comes through the organisation's marketplace in claude.ai, which lists it in [`wirenboard/wb-agent-tools`](https://github.com/wirenboard/wb-agent-tools). Nothing to install; the commands below are for everyone else.
+
 Both agents read the same plugin manifest. One command to register the marketplace, one to install the plugin:
 
 ```

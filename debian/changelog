@@ -1,3 +1,11 @@
+wb-cli (1.8.24) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.15.2: README notes
+    that Wiren Board staff get wb-plc through the organisation's
+    marketplace in claude.ai.
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Wed, 18 Nov 2026 23:46:00 +0300
+
 wb-cli (1.8.23) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.15.1: wiren-board
