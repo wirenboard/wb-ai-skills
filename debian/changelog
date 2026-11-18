@@ -1,3 +1,11 @@
+wb-cli (1.8.25) stable; urgency=medium
+
+  * No functional changes. wb-plc plugin bumped to 1.16.0: the wiren-board
+    description also covers plain how-to questions about a controller
+    (find it, log in, see connected devices, read or set a control).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 19 Nov 2026 00:35:00 +0300
+
 wb-cli (1.8.24) stable; urgency=medium
 
   * No functional changes. CI: lint and tests run on ubuntu-24.04, which
