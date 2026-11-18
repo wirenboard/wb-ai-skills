@@ -1,3 +1,10 @@
+wb-cli (1.8.24) stable; urgency=medium
+
+  * No functional changes. CI: lint and tests run on ubuntu-24.04, which
+    still has Python 3.9 (ubuntu-latest moved to 26.04 without it).
+
+ -- Alexander Degtyarev <a.degtyarev@wirenboard.com>  Thu, 19 Nov 2026 00:20:00 +0300
+
 wb-cli (1.8.23) stable; urgency=medium
 
   * No functional changes. wb-plc plugin bumped to 1.15.1: wiren-board
